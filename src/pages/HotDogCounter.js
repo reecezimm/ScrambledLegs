@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import styled from 'styled-components';
 import { Link } from 'react-router-dom';
+import Footer from '../components/Footer';
 import { initializeApp } from 'firebase/app';
 import { getDatabase, ref, onValue, set, push, update } from 'firebase/database';
 
@@ -86,6 +87,7 @@ const BackButton = styled(Link)`
   display: flex;
   align-items: center;
   transition: all 0.2s ease;
+  z-index: 90;
   
   &:hover {
     background: rgba(255, 255, 255, 0.2);
@@ -94,6 +96,11 @@ const BackButton = styled(Link)`
   &::before {
     content: "←";
     margin-right: 8px;
+  }
+  
+  @media (max-width: 480px) {
+    font-size: 12px;
+    padding: 6px 10px;
   }
 `;
 
@@ -261,22 +268,91 @@ const UserDisplay = styled.div`
   font-size: 0.9rem;
   color: white;
   backdrop-filter: blur(10px);
-`;
-
-const Branding = styled.div`
-  position: relative;
-  text-align: center;
-  font-family: 'Inter', sans-serif;
-  font-size: 1.2rem;
-  color: #666;
-  letter-spacing: 1px;
-  margin-top: 40px;
-  margin-bottom: 20px;
+  z-index: 90;
   
   @media (max-width: 480px) {
-    font-size: 1rem;
-    margin-top: 30px;
-    margin-bottom: 15px;
+    font-size: 0.8rem;
+    padding: 0.4rem 0.8rem;
+    right: 0.8rem;
+    top: 0.8rem;
+  }
+`;
+
+const Leaderboard = styled.div`
+  width: 100%;
+  margin-top: 2rem;
+  padding: 1rem;
+  background: rgba(255, 107, 107, 0.1);
+  border-radius: 1rem;
+  border: 1px solid rgba(255, 107, 107, 0.2);
+`;
+
+const LogButton = styled.button`
+  margin-top: 2rem;
+  background: rgba(255, 107, 107, 0.3);
+  border: 2px solid rgba(255, 107, 107, 0.4);
+  color: white;
+  padding: 0.8rem 1.8rem;
+  border-radius: 2rem;
+  cursor: pointer;
+  transition: all 0.3s ease;
+  font-size: 1.1rem;
+  font-weight: 600;
+  box-shadow: 0 0 20px rgba(255, 107, 107, 0.4);
+  
+  &:hover {
+    background: rgba(255, 107, 107, 0.4);
+    transform: translateY(-2px);
+  }
+  
+  @media (max-width: 480px) {
+    font-size: 0.9rem;
+    padding: 0.7rem 1.4rem;
+  }
+`;
+
+const LogOverlay = styled.div`
+  position: fixed;
+  top: 0;
+  right: 0;
+  width: 100%;
+  max-width: 400px;
+  height: 100vh;
+  background: rgba(26, 26, 26, 0.95);
+  backdrop-filter: blur(20px);
+  transform: translateX(100%);
+  transition: transform 0.3s ease;
+  z-index: 1001;
+  box-shadow: -10px 0 30px rgba(0, 0, 0, 0.3);
+  
+  &.active {
+    transform: translateX(0);
+  }
+  
+  @media (max-width: 480px) {
+    max-width: 100%;
+  }
+`;
+
+const LogHeader = styled.div`
+  padding: 1.5rem;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+`;
+
+const LogClose = styled.button`
+  background: none;
+  border: none;
+  color: white;
+  cursor: pointer;
+  font-size: 1.5rem;
+  opacity: 0.5;
+  transition: opacity 0.3s ease;
+  
+  &:hover {
+    opacity: 1;
   }
 `;
 
@@ -624,10 +700,9 @@ function HotDogCounter() {
       )}
       
       <BackButton to="/">Back to Home</BackButton>
+      {username && <UserDisplay>Logged in as: {username}</UserDisplay>}
       
       <Container>
-        {username && <UserDisplay>Logged in as: {username}</UserDisplay>}
-        
         <Title>Hot Dog Counter</Title>
         <Count>{count}</Count>
         <Subtitle>Hot Dogs Devoured</Subtitle>
@@ -651,11 +726,130 @@ function HotDogCounter() {
           <StreakMessage>{getStreakMessage(streak)}</StreakMessage>
         </StreakContainer>
         
-        <Branding>
-          presented by <BrandingSpan>Scrambled Legs</BrandingSpan>
-          <Trademark>™</Trademark>
-        </Branding>
+        <Leaderboard>
+          <div className="leaderboard-title" style={{ fontSize: '1.3rem', marginBottom: '1rem', color: '#FFE66D', fontWeight: 600 }}>
+            🌭 Grease Missile Captains 🌭
+          </div>
+          
+          {leaderboard.map((leader, index) => {
+            const medal = index === 0 ? '🥇' : index === 1 ? '🥈' : '🥉';
+            return (
+              <div key={leader.username} style={{ 
+                display: 'flex', 
+                alignItems: 'center', 
+                padding: '0.7rem',
+                marginBottom: '0.5rem',
+                background: 'rgba(255, 255, 255, 0.05)',
+                borderRadius: '0.5rem'
+              }}>
+                <div style={{ fontSize: '1.3rem', marginRight: '0.7rem' }}>{medal}</div>
+                <div style={{ 
+                  fontWeight: 500, 
+                  color: 'white', 
+                  flex: 1, 
+                  textAlign: 'left',
+                  overflow: 'hidden',
+                  textOverflow: 'ellipsis',
+                  whiteSpace: 'nowrap'
+                }}>{leader.username}</div>
+                <div style={{ 
+                  fontWeight: 700, 
+                  color: '#FF6B6B', 
+                  margin: '0 1rem' 
+                }}>{leader.count || 0} 🌭</div>
+              </div>
+            );
+          })}
+          
+          {behindFirstPlace > 0 && (
+            <div style={{ 
+              fontSize: '0.8rem',
+              color: '#888',
+              marginTop: '0.3rem',
+              textAlign: 'center'
+            }}>
+              {behindFirstPlace} hot dogs behind first place
+            </div>
+          )}
+          
+          {behindFirstPlace === 0 && leaderboard.length > 0 && leaderboard[0]?.username === username && (
+            <div style={{ 
+              fontSize: '0.8rem',
+              color: '#888',
+              marginTop: '0.3rem',
+              textAlign: 'center'
+            }}>
+              🏆 You're in first place!
+            </div>
+          )}
+        </Leaderboard>
+        
+        <LogButton onClick={() => setIsLogOpen(true)}>
+          🌭 Hot Dog History
+        </LogButton>
+        
+        <Footer />
       </Container>
+      
+      <LogOverlay className={isLogOpen ? 'active' : ''}>
+        <LogHeader>
+          <h2>Global Hot Dog History</h2>
+          <LogClose onClick={() => setIsLogOpen(false)}>×</LogClose>
+        </LogHeader>
+        <div style={{ 
+          padding: '1rem',
+          height: 'calc(100vh - 5rem)',
+          overflowY: 'auto'
+        }}>
+          {groupLogsByDay(globalLogs).map(group => (
+            <div key={group.label} style={{
+              marginBottom: '2rem'
+            }}>
+              <div style={{
+                color: '#888',
+                fontSize: '0.9rem',
+                marginBottom: '0.5rem',
+                padding: '0 0.5rem'
+              }}>
+                {group.label}
+              </div>
+              
+              {group.items.map(item => {
+                // Check if this user is on the leaderboard
+                const leaderIndex = leaderboard.findIndex(leader => leader.username === item.username);
+                const medal = leaderIndex === 0 ? '🥇' : 
+                            leaderIndex === 1 ? '🥈' : 
+                            leaderIndex === 2 ? '🥉' : '';
+                
+                return (
+                  <div key={item.id} style={{
+                    padding: '0.75rem',
+                    background: 'rgba(255, 255, 255, 0.05)',
+                    borderRadius: '0.5rem',
+                    marginBottom: '0.5rem',
+                    display: 'flex',
+                    alignItems: 'center',
+                    gap: '0.5rem',
+                  }}>
+                    {medal && <span style={{ fontSize: '1.2rem' }}>{medal}</span>}
+                    <span style={{
+                      fontWeight: 500,
+                      color: '#FFE66D',
+                    }}>{item.username}</span>
+                    <span style={{
+                      color: '#888',
+                      fontSize: '0.8rem',
+                      marginLeft: 'auto',
+                    }}>
+                      {new Date(item.timestamp).toLocaleTimeString()}
+                    </span>
+                  </div>
+                );
+              })}
+            </div>
+          ))}
+        </div>
+      </LogOverlay>
     </PageContainer>
   );
 }

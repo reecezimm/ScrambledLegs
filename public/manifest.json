@@ -36,9 +36,11 @@
       "sizes": "180x180"
     }
   ],
-  "start_url": ".",
+  "start_url": "/",
+  "scope": "/",
   "display": "standalone",
   "orientation": "portrait",
   "theme_color": "#FFE66D",
-  "background_color": "#FF8800"
+  "background_color": "#FF8800",
+  "prefer_related_applications": false
 }

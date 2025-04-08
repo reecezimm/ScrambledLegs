@@ -1,5 +1,5 @@
 import React from 'react';
-import { BrowserRouter as Router, Routes, Route } from 'react-router-dom';
+import { BrowserRouter as Router, Routes, Route, Navigate } from 'react-router-dom';
 import Home from './pages/Home';
 import HotDogCounter from './pages/HotDogCounter';
 
@@ -12,7 +12,12 @@ function App() {
     <Router basename={basename}>
       <Routes>
         <Route path="/" element={<Home />} />
+        {/* Main route for hot dog counter */}
         <Route path="/hotdog-counter" element={<HotDogCounter />} />
+        {/* Support HD.html legacy route */}
+        <Route path="/hd.html" element={<Navigate to="/hotdog-counter" replace />} />
+        {/* Named route */}
+        <Route path="/hot-dog-counter" element={<Navigate to="/hotdog-counter" replace />} />
       </Routes>
     </Router>
   );

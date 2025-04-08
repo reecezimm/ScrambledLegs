@@ -1,6 +1,7 @@
 import React, { useEffect, useState } from 'react';
 import styled, { keyframes } from 'styled-components';
 import HotDogButton from '../components/HotDogButton';
+import Footer from '../components/Footer';
 
 const floatAnimation = keyframes`
   0% {
@@ -18,7 +19,7 @@ const HomeContainer = styled.div`
   display: flex;
   flex-direction: column;
   align-items: center;
-  justify-content: center;
+  justify-content: space-between;
   min-height: 100vh;
   padding: 20px;
   position: relative;
@@ -232,9 +233,7 @@ function Home() {
         </Disclaimer>
       </ContentContainer>
       
-      <Trademark>
-        ™ Scrambled Legs Mountain Biking Team {year}. All eggs reserved. {formattedDate}
-      </Trademark>
+      <Footer />
     </HomeContainer>
   );
 }
