@@ -1,10 +1,10 @@
 // Firebase Service Worker for background notifications
-// Version: 1.2.0 - Fixed for Push Notifications
+// Version: 1.5.1 - Fixed for Push Notifications
 // This file must be at the root of the domain to receive push notifications properly
 
-// Import the Firebase SDK scripts
-importScripts('https://www.gstatic.com/firebasejs/9.15.0/firebase-app-compat.js');
-importScripts('https://www.gstatic.com/firebasejs/9.15.0/firebase-messaging-compat.js');
+// Import the Firebase SDK scripts - using the correct version
+importScripts('https://www.gstatic.com/firebasejs/9.19.1/firebase-app-compat.js');
+importScripts('https://www.gstatic.com/firebasejs/9.19.1/firebase-messaging-compat.js');
 
 // Initialize Firebase
 firebase.initializeApp({
@@ -22,7 +22,7 @@ firebase.initializeApp({
 const messaging = firebase.messaging();
 
 // Track service worker version for debugging
-self.FIREBASE_SW_VERSION = '1.5.0'; // Updated with correct Firebase config
+self.FIREBASE_SW_VERSION = '1.5.1'; // Updated with correct Firebase config and imports
 console.log('[firebase-messaging-sw.js] Version:', self.FIREBASE_SW_VERSION);
 
 // Add a message handler for debugging and checking the service worker state
