@@ -150,43 +150,77 @@ if ('serviceWorker' in navigator) {
     console.log('[PWA] App was installed successfully');
   });
   
-  // Add refresh button in PWA mode (standalone or fullscreen)
+  /**
+   * Adds a refresh button when running in PWA mode to help users
+   * force refresh in case of any caching issues.
+   */
   const addRefreshButtonInPWAMode = () => {
     try {
-      // Only add button in PWA mode
-      if (window.matchMedia('(display-mode: standalone)').matches || 
-          window.matchMedia('(display-mode: fullscreen)').matches) {
-          
-        // Check if the button already exists
-        if (!document.getElementById('pwa-refresh-button')) {
-          const refreshButton = document.createElement('button');
-          refreshButton.id = 'pwa-refresh-button';
-          refreshButton.innerHTML = '↻ Refresh';
-          refreshButton.style.position = 'fixed';
-          refreshButton.style.bottom = '10px';
-          refreshButton.style.right = '10px';
-          refreshButton.style.zIndex = '9999';
-          refreshButton.style.padding = '8px 12px';
-          refreshButton.style.backgroundColor = '#FF8800';
-          refreshButton.style.color = 'white';
-          refreshButton.style.border = 'none';
-          refreshButton.style.borderRadius = '4px';
-          refreshButton.style.cursor = 'pointer';
-          refreshButton.style.boxShadow = '0 2px 5px rgba(0,0,0,0.2)';
-          
-          // Force a complete reset when clicked
-          refreshButton.addEventListener('click', () => {
-            console.log('[PWA] Manual refresh button clicked');
-            // Add a timestamp to avoid cache
-            window.location.href = '/?refresh=true&t=' + Date.now();
-          });
-          
-          // Add button to the document body
-          setTimeout(() => {
-            document.body.appendChild(refreshButton);
-          }, 1000);
-        }
+      // Check if we're running in PWA mode (standalone or fullscreen display modes)
+      const isPwaMode = window.matchMedia('(display-mode: standalone)').matches || 
+                        window.matchMedia('(display-mode: fullscreen)').matches ||
+                        (window.navigator.standalone === true); // For iOS
+      
+      if (!isPwaMode) {
+        return; // Not in PWA mode, don't add the button
       }
+          
+      // Check if the button already exists to avoid duplicates
+      if (document.getElementById('pwa-refresh-button')) {
+        return; // Button already exists
+      }
+      
+      // Create refresh button element with proper styling
+      const refreshButton = document.createElement('button');
+      refreshButton.id = 'pwa-refresh-button';
+      refreshButton.setAttribute('aria-label', 'Refresh application');
+      refreshButton.innerHTML = '↻ Refresh';
+      
+      // Apply styles
+      Object.assign(refreshButton.style, {
+        position: 'fixed',
+        bottom: '10px',
+        right: '10px',
+        zIndex: '9999',
+        padding: '8px 12px',
+        backgroundColor: '#FF8800',
+        color: 'white',
+        border: 'none',
+        borderRadius: '4px',
+        cursor: 'pointer',
+        boxShadow: '0 2px 5px rgba(0,0,0,0.2)',
+        fontFamily: 'sans-serif',
+        fontSize: '14px',
+        fontWeight: '500'
+      });
+      
+      // Add hover effect
+      refreshButton.onmouseover = () => {
+        refreshButton.style.backgroundColor = '#E67A00';
+      };
+      refreshButton.onmouseout = () => {
+        refreshButton.style.backgroundColor = '#FF8800';
+      };
+      
+      // Force a complete reset when clicked, using the refresh parameter
+      refreshButton.addEventListener('click', () => {
+        console.log('[PWA] Manual refresh button clicked');
+        
+        // Show feedback to user
+        refreshButton.textContent = 'Refreshing...';
+        refreshButton.disabled = true;
+        
+        // Navigate to homepage with refresh parameters
+        window.location.href = '/?refresh=true&t=' + Date.now();
+      });
+      
+      // Add button to the document body after a delay to ensure body is ready
+      setTimeout(() => {
+        // Double-check button doesn't already exist (could have been added during timeout)
+        if (!document.getElementById('pwa-refresh-button') && document.body) {
+          document.body.appendChild(refreshButton);
+        }
+      }, 1500);
     } catch (error) {
       console.error('[PWA] Error adding refresh button:', error);
     }
