@@ -498,6 +498,9 @@ function HotDogCounter() {
   const [lastEaten, setLastEaten] = useState(null);
   const [globalLogs, setGlobalLogs] = useState([]);
   const [randomQuote, setRandomQuote] = useState(null);
+  const [isLogOpen, setIsLogOpen] = useState(false);
+  const [leaderboard, setLeaderboard] = useState([]);
+  const [behindFirstPlace, setBehindFirstPlace] = useState(0);
   
   // Check for existing user on load
   useEffect(() => {
@@ -529,10 +532,49 @@ function HotDogCounter() {
       setGlobalLogs(logs.slice(0, 50)); // Get the most recent 50 logs
     });
     
+    // Set up leaderboard listener
+    const setupLeaderboardListener = () => {
+      const usersRef = ref(database, 'users');
+      
+      // Listen for any changes to user data
+      onValue(usersRef, (snapshot) => {
+        const userData = snapshot.val();
+        if (!userData) return;
+        
+        // Convert to array and sort by count
+        const leaders = Object.entries(userData)
+          .map(([key, value]) => ({
+            username: key,
+            ...value
+          }))
+          .sort((a, b) => b.count - a.count)
+          .slice(0, 3); // Take top 3
+        
+        setLeaderboard(leaders);
+        
+        // Calculate how many hot dogs behind first place
+        if (username && leaders.length > 0) {
+          const firstPlaceCount = leaders[0].count || 0;
+          
+          // Find current user's position and count
+          const currentUser = Object.entries(userData)
+            .find(([key]) => key === username);
+            
+          const currentUserCount = currentUser ? currentUser[1].count || 0 : 0;
+          
+          // Calculate the difference (if negative or zero, user is in first place)
+          const behind = Math.max(0, firstPlaceCount - currentUserCount);
+          setBehindFirstPlace(behind);
+        }
+      });
+    };
+    
+    setupLeaderboardListener();
+    
     return () => {
       // No need to explicitly detach listeners in the new Firebase SDK
     };
-  }, []);
+  }, [username]);
   
   const loadUserData = (user) => {
     const userRef = ref(database, `users/${user}`);
@@ -654,6 +696,60 @@ function HotDogCounter() {
     for (let i = 0; i < 20; i++) {
       setTimeout(() => createHotDog(), i * 130);
     }
+  };
+  
+  const groupLogsByDay = (logs) => {
+    const groups = {};
+    
+    logs.forEach(log => {
+      // Format the date as YYYY-MM-DD to use as group key
+      const date = new Date(log.timestamp);
+      const day = date.toISOString().split('T')[0];
+      
+      // Generate a human-readable label for the day
+      let dayLabel;
+      const today = new Date();
+      const yesterday = new Date(today);
+      yesterday.setDate(yesterday.getDate() - 1);
+      
+      const todayDate = today.toISOString().split('T')[0];
+      const yesterdayDate = yesterday.toISOString().split('T')[0];
+      
+      if (day === todayDate) {
+        dayLabel = 'Today';
+      } else if (day === yesterdayDate) {
+        dayLabel = 'Yesterday';
+      } else {
+        dayLabel = date.toLocaleDateString('en-US', {
+          weekday: 'long',
+          month: 'long',
+          day: 'numeric',
+          year: 'numeric'
+        });
+      }
+      
+      if (!groups[day]) {
+        groups[day] = {
+          label: dayLabel,
+          items: []
+        };
+      }
+      
+      groups[day].items.push(log);
+    });
+    
+    // Sort groups by date (most recent first) and sort items within groups
+    return Object.values(groups)
+      .sort((a, b) => {
+        // Extract date from first item in each group
+        const dateA = a.items[0]?.timestamp || 0;
+        const dateB = b.items[0]?.timestamp || 0;
+        return dateB - dateA;
+      })
+      .map(group => ({
+        ...group,
+        items: group.items.sort((a, b) => b.timestamp - a.timestamp)
+      }));
   };
   
   const incrementCount = () => {

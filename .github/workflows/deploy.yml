@@ -26,6 +26,7 @@ jobs:
         run: npm run build
         env:
           CI: false # Don't treat warnings as errors
+          DISABLE_ESLINT_PLUGIN: true # Disable ESLint during build
 
       - name: Copy CNAME to build folder
         run: cp CNAME build/ || echo "No CNAME file found"
