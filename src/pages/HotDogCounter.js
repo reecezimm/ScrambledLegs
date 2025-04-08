@@ -61,10 +61,12 @@ const PageContainer = styled.div`
   position: relative;
   color: white;
   min-height: 100vh;
+  min-height: -webkit-fill-available; /* For iOS Safari */
   display: flex;
   align-items: center;
   justify-content: center;
   font-family: 'Inter', sans-serif;
+  overflow-x: hidden;
 `;
 
 const BackButton = styled(Link)`
@@ -98,6 +100,16 @@ const Container = styled.div`
   width: 100%;
   max-width: 500px;
   text-align: center;
+  display: flex;
+  flex-direction: column;
+  min-height: 100vh;
+  justify-content: center;
+  
+  @media (max-height: 700px) {
+    padding: 1rem;
+    justify-content: flex-start;
+    margin-top: 60px;
+  }
 `;
 
 const Title = styled.h1`
@@ -208,14 +220,12 @@ const ButtonGlow = styled.div`
 `;
 
 const StreakContainer = styled.div`
-  position: fixed;
-  bottom: 60px;
-  left: 0;
-  right: 0;
+  position: relative;
   text-align: center;
   background: none;
   border: none;
   padding: 0.5rem;
+  margin-top: 20px;
   margin-bottom: 0;
   backdrop-filter: none;
 `;
@@ -248,15 +258,20 @@ const UserDisplay = styled.div`
 `;
 
 const Branding = styled.div`
-  position: fixed;
-  bottom: 20px;
-  left: 0;
-  right: 0;
+  position: relative;
   text-align: center;
   font-family: 'Inter', sans-serif;
   font-size: 1.2rem;
   color: #666;
   letter-spacing: 1px;
+  margin-top: 40px;
+  margin-bottom: 20px;
+  
+  @media (max-width: 480px) {
+    font-size: 1rem;
+    margin-top: 30px;
+    margin-bottom: 15px;
+  }
 `;
 
 const BrandingSpan = styled.span`

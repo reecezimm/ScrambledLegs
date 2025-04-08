@@ -84,6 +84,12 @@ const Disclaimer = styled.p`
   font-style: italic;
   text-align: center;
   line-height: 1.4;
+  padding: 0 20px;
+  
+  @media (max-width: 480px) {
+    font-size: 12px;
+    margin-top: 10px;
+  }
 `;
 
 const Trademark = styled.p`
@@ -96,6 +102,11 @@ const Trademark = styled.p`
   color: rgba(255, 255, 255, 0.5);
   margin: 0;
   padding: 0 20px;
+  
+  @media (max-width: 480px) {
+    font-size: 9px;
+    bottom: 10px;
+  }
 `;
 
 const FloatingEgg = styled.div`
@@ -109,15 +120,33 @@ const FloatingEgg = styled.div`
   left: ${props => props.left || '50%'};
   animation: ${floatAnimation} ${props => props.duration || '60s'} linear infinite alternate;
   animation-delay: ${props => props.delay || '0s'};
+  
+  @media (max-width: 768px) {
+    font-size: calc(${props => props.size || '36px'} * 0.8);
+  }
+  
+  @media (max-width: 480px) {
+    font-size: calc(${props => props.size || '36px'} * 0.7);
+  }
 `;
 
 function Home() {
   const [eggs, setEggs] = useState([]);
   
   useEffect(() => {
-    // Create 12 floating eggs with random properties
+    // Function to determine how many eggs to show based on screen width
+    const getEggCount = () => {
+      const width = window.innerWidth;
+      if (width <= 480) return 6; // Fewer eggs on mobile
+      if (width <= 768) return 8; // Medium count on tablets
+      return 12; // Full count on desktop
+    };
+    
+    // Create floating eggs with random properties
     const eggElements = [];
-    for (let i = 0; i < 12; i++) {
+    const eggCount = getEggCount();
+    
+    for (let i = 0; i < eggCount; i++) {
       eggElements.push({
         id: i,
         emoji: '🥚',
@@ -129,7 +158,39 @@ function Home() {
         delay: `-${Math.random() * 30}s`
       });
     }
+    
     setEggs(eggElements);
+    
+    // Update egg count on window resize
+    const handleResize = () => {
+      const newCount = getEggCount();
+      if (newCount !== eggElements.length) {
+        // Only update if count changed
+        const newEggs = [];
+        for (let i = 0; i < newCount; i++) {
+          if (i < eggElements.length) {
+            // Keep existing eggs
+            newEggs.push(eggElements[i]);
+          } else {
+            // Add new eggs if needed
+            newEggs.push({
+              id: i,
+              emoji: '🥚',
+              size: `${Math.random() * 24 + 24}px`,
+              opacity: Math.random() * 0.2 + 0.1,
+              top: `${Math.random() * 100}%`,
+              left: `${Math.random() * 100}%`,
+              duration: `${Math.random() * 60 + 30}s`,
+              delay: `-${Math.random() * 30}s`
+            });
+          }
+        }
+        setEggs(newEggs);
+      }
+    };
+    
+    window.addEventListener('resize', handleResize);
+    return () => window.removeEventListener('resize', handleResize);
   }, []);
   
   // Get current date for trademark

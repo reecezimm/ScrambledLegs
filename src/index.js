@@ -8,6 +8,11 @@ const GlobalStyle = createGlobalStyle`
     margin: 0;
     padding: 0;
     box-sizing: border-box;
+    -webkit-tap-highlight-color: transparent;
+  }
+  
+  html {
+    height: -webkit-fill-available;
   }
   
   body {
@@ -16,6 +21,9 @@ const GlobalStyle = createGlobalStyle`
     position: relative;
     overflow-x: hidden;
     min-height: 100vh;
+    min-height: -webkit-fill-available;
+    touch-action: manipulation;
+    -webkit-overflow-scrolling: touch; /* Smoother scrolling on iOS */
   }
 `;
 
@@ -26,3 +34,16 @@ root.render(
     <App />
   </React.StrictMode>
 );
+
+// Register service worker for PWA capabilities
+if ('serviceWorker' in navigator) {
+  window.addEventListener('load', () => {
+    navigator.serviceWorker.register('/service-worker.js')
+      .then(registration => {
+        console.log('ServiceWorker registration successful with scope: ', registration.scope);
+      })
+      .catch(error => {
+        console.log('ServiceWorker registration failed: ', error);
+      });
+  });
+}
