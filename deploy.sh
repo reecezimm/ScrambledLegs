@@ -28,6 +28,15 @@ echo "// This file forces service worker reloading" > build/sw-timestamp.js
 echo "// Version: $TIMESTAMP" >> build/sw-timestamp.js
 echo "const SW_TIMESTAMP = '$TIMESTAMP';" >> build/sw-timestamp.js
 
+# Make sure firebase-messaging-sw.js is at the root level (required for FCM)
+echo "Ensuring firebase-messaging-sw.js is properly placed..."
+if [ -f "build/firebase-messaging-sw.js" ]; then
+  echo "firebase-messaging-sw.js already exists in build"
+else
+  echo "Copying firebase-messaging-sw.js to build directory"
+  cp public/firebase-messaging-sw.js build/
+fi
+
 # Save the current branch name
 current_branch=$(git rev-parse --abbrev-ref HEAD)
 

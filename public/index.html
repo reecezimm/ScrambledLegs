@@ -28,8 +28,7 @@
   
   <!-- PWA manual reset script -->
   <script type="text/javascript">
-    // This script only handles the manual reset via URL parameter
-    // The main service worker registration is in index.js
+    // This script handles the manual reset via URL parameter and fixes notification permissions
     if ('serviceWorker' in navigator) {
       window.addEventListener('load', function() {
         // Check for "force refresh" parameter
@@ -39,8 +38,9 @@
         if (forceRefresh === 'true' || forceRefresh === '1') {
           console.log('[PWA] Manual reset requested via URL parameter');
           
-          // Clear session storage first
+          // Clear session storage and local storage FCM token
           sessionStorage.clear();
+          localStorage.removeItem('fcmToken');
           
           // Clear caches
           if ('caches' in window) {
@@ -52,19 +52,20 @@
                 })
               );
             }).then(function() {
-              // Then unregister service workers
+              // Then unregister all service workers
               return navigator.serviceWorker.getRegistrations();
             }).then(function(registrations) {
               return Promise.all(
                 registrations.map(function(registration) {
-                  console.log('[PWA] Unregistering service worker');
+                  console.log('[PWA] Unregistering service worker:', registration.scope);
                   return registration.unregister();
                 })
               );
             }).then(function() {
               // Then reload without the parameter
               console.log('[PWA] Reset complete, reloading without parameters');
-              const newUrl = window.location.pathname + window.location.hash;
+              const newUrl = window.location.pathname + 
+                             (window.location.hash ? window.location.hash : '');
               window.location.replace(newUrl);
             }).catch(function(err) {
               console.error('[PWA] Reset failed:', err);
@@ -72,6 +73,16 @@
               window.location.reload();
             });
           }
+        }
+        
+        // Fix for notification permission edge cases
+        if ('Notification' in window && Notification.permission === 'granted') {
+          // Check if we have a service worker and are missing a token
+          navigator.serviceWorker.getRegistration().then(function(registration) {
+            if (registration && !localStorage.getItem('fcmToken')) {
+              console.log('[PWA] Permission granted but no token stored - may need to resubscribe');
+            }
+          });
         }
       });
     }

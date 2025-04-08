@@ -20,9 +20,15 @@ const database = getDatabase(app);
 // Initialize messaging if browser supports it
 let messaging = null;
 try {
-  messaging = getMessaging(app);
+  // Check for service worker support
+  if ('serviceWorker' in navigator) {
+    messaging = getMessaging(app);
+    console.log('Firebase messaging initialized');
+  } else {
+    console.log('Service Workers not supported in this browser');
+  }
 } catch (error) {
-  console.log('Firebase messaging not supported in this browser');
+  console.error('Error initializing Firebase messaging:', error);
 }
 
 // VAPID key for web push notifications
@@ -33,15 +39,22 @@ const VAPID_KEY = "BEsmXUl-hHK0FAmHVdbUeZ3kDbSyhOPId-66fJ5NRJ44XFYy5MujmXiXKBp8M
  * @returns {Promise<string|null>} FCM token or null if not supported/allowed
  */
 export const requestNotificationPermission = async () => {
-  if (!messaging) return null;
+  // Check if messaging is supported in this browser
+  if (!messaging) {
+    console.error('Firebase messaging is not supported in this browser');
+    return null;
+  }
   
   try {
     // Check if notification permission is granted
     let permission = Notification.permission;
+    console.log('Current notification permission:', permission);
     
     // Request permission if not already granted
     if (permission !== 'granted') {
+      console.log('Requesting notification permission...');
       permission = await Notification.requestPermission();
+      console.log('Permission response:', permission);
     }
     
     if (permission !== 'granted') {
@@ -49,26 +62,73 @@ export const requestNotificationPermission = async () => {
       return null;
     }
 
-    // Get FCM token
-    const token = await getToken(messaging, { vapidKey: VAPID_KEY });
+    // Check if service worker is registered
+    let serviceWorkerRegistration = null;
+    try {
+      serviceWorkerRegistration = await navigator.serviceWorker.getRegistration();
+      if (!serviceWorkerRegistration) {
+        console.log('No service worker registration found. Waiting for service worker.');
+        // Wait for service worker registration
+        await new Promise(resolve => setTimeout(resolve, 1000));
+        serviceWorkerRegistration = await navigator.serviceWorker.getRegistration();
+      }
+      console.log('Service worker registration:', serviceWorkerRegistration);
+    } catch (swError) {
+      console.error('Service worker error:', swError);
+    }
+
+    // Get FCM token with explicit options
+    console.log('Getting FCM token with VAPID key:', VAPID_KEY);
+    const tokenOptions = { 
+      vapidKey: VAPID_KEY,
+      serviceWorkerRegistration
+    };
+    
+    // Try to get the token
+    let token = null;
+    try {
+      token = await getToken(messaging, tokenOptions);
+    } catch (tokenError) {
+      console.error('Error getting token, trying again without service worker option:', tokenError);
+      // Try without the service worker option as fallback
+      token = await getToken(messaging, { vapidKey: VAPID_KEY });
+    }
     
     if (token) {
-      console.log('FCM Token:', token);
+      console.log('FCM Token obtained successfully:', token);
       localStorage.setItem('fcmToken', token);
       
       // Store token in database
       try {
+        // Check if token is already in database
         const subscribersRef = ref(database, 'subscribers');
-        const newSubscriberRef = push(subscribersRef);
-        await set(newSubscriberRef, token);
-        console.log('Token saved to database');
+        const snapshot = await get(subscribersRef);
+        
+        if (snapshot.exists()) {
+          const subscribers = snapshot.val();
+          const tokenExists = Object.values(subscribers).includes(token);
+          
+          if (tokenExists) {
+            console.log('Token already exists in database');
+          } else {
+            // Add new token
+            const newSubscriberRef = push(subscribersRef);
+            await set(newSubscriberRef, token);
+            console.log('Token saved to database with ID:', newSubscriberRef.key);
+          }
+        } else {
+          // No subscribers yet, add first one
+          const newSubscriberRef = push(subscribersRef);
+          await set(newSubscriberRef, token);
+          console.log('First subscriber token saved to database');
+        }
       } catch (dbError) {
-        console.error('Error saving token to database:', dbError);
+        console.error('Error interacting with database:', dbError);
       }
       
       return token;
     } else {
-      console.log('No registration token available');
+      console.error('No registration token available');
       return null;
     }
   } catch (error) {
@@ -129,9 +189,20 @@ export const unsubscribeFromNotifications = async () => {
 
 /**
  * Check if user is subscribed to notifications
+ * @returns {boolean} true if subscribed, false otherwise
  */
 export const isSubscribedToNotifications = () => {
-  return !!localStorage.getItem('fcmToken');
+  const hasToken = !!localStorage.getItem('fcmToken');
+  
+  // Extra validation - if permission is denied but we have a token,
+  // that's an invalid state - clean it up
+  if (hasToken && Notification.permission === 'denied') {
+    console.log('Found token but permission is denied - cleaning up');
+    localStorage.removeItem('fcmToken');
+    return false;
+  }
+  
+  return hasToken;
 };
 
 /**

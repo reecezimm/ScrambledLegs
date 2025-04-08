@@ -3,7 +3,7 @@ import { BrowserRouter as Router, Routes, Route, Navigate } from 'react-router-d
 import Home from './pages/Home';
 import HotDogCounter from './pages/HotDogCounter';
 import AdminPage from './pages/AdminPage';
-import { setupMessageHandler } from './services/firebase';
+import { setupMessageHandler, requestNotificationPermission } from './services/firebase';
 
 // Get the basename from the environment or use an empty string
 // This ensures the router works correctly on GitHub Pages and local development
@@ -16,6 +16,34 @@ function App() {
       console.log('Notification clicked:', payload);
       // Handle notification click here if needed
     });
+    
+    // Check if service worker should be registered
+    const initializeServiceWorker = async () => {
+      // Only try to restore notifications if permission is already granted
+      // This avoids prompting for permission before user interaction
+      if (Notification.permission === 'granted') {
+        console.log('Notification permission already granted, checking token');
+        
+        // Check if we have a token in localStorage
+        const hasToken = !!localStorage.getItem('fcmToken');
+        
+        if (!hasToken) {
+          console.log('Permission granted but no token found, attempting to get a new token');
+          // Try to get a new token without showing any UI
+          try {
+            const token = await requestNotificationPermission();
+            if (token) {
+              console.log('Successfully restored FCM token on app load');
+            }
+          } catch (error) {
+            console.error('Failed to restore FCM token:', error);
+          }
+        }
+      }
+    };
+    
+    // Run initialization
+    initializeServiceWorker();
     
     return () => {
       // Cleanup subscription

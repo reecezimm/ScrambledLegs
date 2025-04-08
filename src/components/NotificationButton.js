@@ -75,23 +75,45 @@ const NotificationButton = () => {
   const [permissionState, setPermissionState] = useState(Notification.permission);
 
   useEffect(() => {
-    // Check subscription status
-    setIsSubscribed(isSubscribedToNotifications());
+    const checkSubscriptionStatus = async () => {
+      // Get current subscription status
+      const isCurrentlySubscribed = isSubscribedToNotifications();
+      console.log('Subscription check:', isCurrentlySubscribed ? 'Subscribed' : 'Not subscribed');
+      setIsSubscribed(isCurrentlySubscribed);
+      
+      // Get current permission state
+      const currentPermission = Notification.permission;
+      console.log('Current notification permission:', currentPermission);
+      setPermissionState(currentPermission);
+      
+      // If permission is granted but we don't have a token, something went wrong
+      // This can happen if the token was cleared or expired
+      if (currentPermission === 'granted' && !isCurrentlySubscribed) {
+        console.log('Permission granted but no token - will request new token');
+        // Show button to let user resubscribe
+        setIsVisible(true);
+      }
+    };
     
-    // Track time spent on site
+    // Run initial check
+    checkSubscriptionStatus();
+    
+    // Track time spent on site - show notification prompt after delay
     const timer = setTimeout(() => {
       if (!hasInteracted && permissionState !== 'denied') {
+        console.log('Showing notification prompt after delay');
         setIsVisible(true);
         setShowToast(true);
         setToastMessage('Get notified about hot dog events!');
         setTimeout(() => setShowToast(false), 5000);
       }
-    }, 20000); // Show after 20 seconds
+    }, 15000); // Show after 15 seconds (reduced from 20s)
     
     // Track user interactions (clicks, scrolls)
     const trackInteraction = () => {
       setHasInteracted(true);
-      if (permissionState !== 'denied' && permissionState !== 'granted') {
+      // Show notification button if not already subscribed or denied
+      if (permissionState !== 'denied' && !isSubscribed) {
         setIsVisible(true);
       }
     };
@@ -102,8 +124,9 @@ const NotificationButton = () => {
     // Periodic reminders if not subscribed
     const reminderInterval = setInterval(() => {
       if (!isSubscribed && permissionState !== 'denied' && hasInteracted) {
-        // Only show occasionally
+        // Show reminder occasionally
         if (Math.random() > 0.7) {
+          console.log('Showing periodic notification reminder');
           setIsVisible(true);
           setShowToast(true);
           setToastMessage('Stay updated with notifications!');
@@ -112,48 +135,111 @@ const NotificationButton = () => {
       }
     }, 60000); // Check every minute
     
+    // Check for permission changes
+    const permissionChangeCheck = setInterval(() => {
+      if (Notification.permission !== permissionState) {
+        console.log('Permission state changed:', Notification.permission);
+        setPermissionState(Notification.permission);
+        
+        // Update subscription status if permission changed
+        checkSubscriptionStatus();
+      }
+    }, 5000); // Check every 5 seconds
+    
     return () => {
       clearTimeout(timer);
       clearInterval(reminderInterval);
+      clearInterval(permissionChangeCheck);
       window.removeEventListener('click', trackInteraction);
       window.removeEventListener('scroll', trackInteraction);
     };
   }, [hasInteracted, isSubscribed, permissionState]);
   
   const handleNotificationClick = async () => {
-    if (isSubscribed) {
-      // Unsubscribe from notifications
-      const success = await unsubscribeFromNotifications();
-      if (success) {
-        setIsSubscribed(false);
-        setToastMessage('Notifications turned off');
+    try {
+      if (isSubscribed) {
+        // Show feedback while processing
+        setToastMessage('Turning off notifications...');
         setShowToast(true);
-        setTimeout(() => setShowToast(false), 3000);
-      }
-    } else {
-      // Subscribe to notifications
-      const token = await requestNotificationPermission();
-      if (token) {
-        setIsSubscribed(true);
-        setToastMessage('Notifications enabled! 🎉');
+        
+        // Unsubscribe from notifications
+        console.log('Attempting to unsubscribe from notifications');
+        const success = await unsubscribeFromNotifications();
+        
+        if (success) {
+          console.log('Successfully unsubscribed from notifications');
+          setIsSubscribed(false);
+          setToastMessage('Notifications turned off');
+        } else {
+          console.error('Failed to unsubscribe from notifications');
+          setToastMessage('Failed to turn off notifications');
+        }
+        
+        // Show result toast
         setShowToast(true);
         setTimeout(() => setShowToast(false), 3000);
       } else {
-        setToastMessage('Please allow notifications in your browser settings');
+        // Show feedback while processing
+        setToastMessage('Requesting notification permission...');
         setShowToast(true);
-        setTimeout(() => setShowToast(false), 5000);
+        
+        // Subscribe to notifications
+        console.log('Attempting to subscribe to notifications');
+        const token = await requestNotificationPermission();
+        
+        if (token) {
+          console.log('Successfully subscribed to notifications with token');
+          setIsSubscribed(true);
+          setToastMessage('Notifications enabled! 🎉');
+          setShowToast(true);
+          setTimeout(() => setShowToast(false), 3000);
+        } else {
+          console.error('Failed to get notification token');
+          
+          // Check if permission was denied
+          if (Notification.permission === 'denied') {
+            setToastMessage('Notifications blocked. Please update your browser settings.');
+          } else {
+            setToastMessage('Could not enable notifications. Please try again.');
+          }
+          
+          setShowToast(true);
+          setTimeout(() => setShowToast(false), 5000);
+        }
+        
+        // Update permission state
+        setPermissionState(Notification.permission);
       }
-      setPermissionState(Notification.permission);
+    } catch (error) {
+      console.error('Error in notification button handler:', error);
+      setToastMessage('An error occurred. Please try again.');
+      setShowToast(true);
+      setTimeout(() => setShowToast(false), 3000);
     }
   };
   
-  // Don't show button if permission is denied and user is not subscribed
-  if (permissionState === 'denied' && !isSubscribed) {
-    return null;
+  // Logic for when to show the notification button
+  let shouldShowButton = false;
+  
+  // Case 1: Already subscribed - always show to allow unsubscribing
+  if (isSubscribed) {
+    shouldShowButton = true;
+  }
+  // Case 2: Permission granted but not subscribed - show to allow subscribing
+  else if (permissionState === 'granted' && !isSubscribed) {
+    shouldShowButton = true;
+  }
+  // Case 3: Permission not decided yet - show if visibility is set
+  else if (permissionState === 'default' && isVisible) {
+    shouldShowButton = true;
+  }
+  // Case 4: Permission denied - never show
+  else if (permissionState === 'denied') {
+    shouldShowButton = false;
   }
   
-  // Always show if user is subscribed, otherwise follow visibility state
-  if (!isVisible && !isSubscribed) {
+  // Return null if button shouldn't be shown
+  if (!shouldShowButton) {
     return null;
   }
   
