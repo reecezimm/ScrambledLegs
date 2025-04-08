@@ -3,15 +3,8 @@ import styled from 'styled-components';
 import { Link } from 'react-router-dom';
 import Footer from '../components/Footer';
 import NotificationButton from '../components/NotificationButton';
-import { initializeApp } from 'firebase/app';
 import { getDatabase, ref, onValue, set, push, update } from 'firebase/database';
-
-// Initialize Firebase
-const firebaseConfig = {
-  databaseURL: "https://fundraiser-f0831-default-rtdb.firebaseio.com/"
-};
-const app = initializeApp(firebaseConfig);
-const database = getDatabase(app);
+import { app, database } from '../services/firebase';
 
 // Hot dog quotes
 const HOTDOG_QUOTES = [
