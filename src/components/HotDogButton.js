@@ -3,7 +3,7 @@ import { Link } from 'react-router-dom';
 import styled from 'styled-components';
 
 const StyledButton = styled(Link)`
-  position: absolute;
+  position: fixed;
   top: 20px;
   right: 20px;
   background-color: #ff5722;
@@ -19,7 +19,7 @@ const StyledButton = styled(Link)`
   letter-spacing: 0.5px;
   text-transform: uppercase;
   box-shadow: 0 2px 8px rgba(255, 87, 34, 0.3);
-  z-index: 10;
+  z-index: 100;
   transition: all 0.2s ease;
   
   &::before {

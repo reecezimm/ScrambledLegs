@@ -52,7 +52,7 @@ const ContentContainer = styled.div`
 const Logo = styled.img`
   width: 70%;
   max-width: 320px;
-  margin-bottom: 5px; /* Reduced margin by half */
+  margin-bottom: 1.25px; /* Reduced margin to 1/4 */
   filter: drop-shadow(0 8px 16px rgba(0,0,0,0.1));
   
   @media (max-width: 768px) {

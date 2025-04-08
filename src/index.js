@@ -38,12 +38,21 @@ root.render(
 // Register service worker for PWA capabilities
 if ('serviceWorker' in navigator) {
   window.addEventListener('load', () => {
-    navigator.serviceWorker.register('/service-worker.js')
+    navigator.serviceWorker.register('./service-worker.js')
       .then(registration => {
         console.log('ServiceWorker registration successful with scope: ', registration.scope);
       })
       .catch(error => {
         console.log('ServiceWorker registration failed: ', error);
       });
+  });
+  
+  // Add PWA install event listener
+  window.addEventListener('beforeinstallprompt', (e) => {
+    // Prevent Chrome 67 and earlier from automatically showing the prompt
+    e.preventDefault();
+    // Stash the event so it can be triggered later if needed
+    window.deferredPrompt = e;
+    console.log('Install prompt available');
   });
 }

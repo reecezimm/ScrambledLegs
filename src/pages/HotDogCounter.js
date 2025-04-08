@@ -63,10 +63,12 @@ const PageContainer = styled.div`
   min-height: 100vh;
   min-height: -webkit-fill-available; /* For iOS Safari */
   display: flex;
-  align-items: center;
+  align-items: flex-start;
   justify-content: center;
   font-family: 'Inter', sans-serif;
   overflow-x: hidden;
+  overflow-y: auto;
+  padding-bottom: 20px;
 `;
 
 const BackButton = styled(Link)`
@@ -102,12 +104,16 @@ const Container = styled.div`
   text-align: center;
   display: flex;
   flex-direction: column;
-  min-height: 100vh;
-  justify-content: center;
+  justify-content: flex-start;
+  margin-top: 70px; /* Add space for fixed top navigation */
+  margin-bottom: 30px;
   
-  @media (max-height: 700px) {
+  @media (max-width: 768px) {
+    padding: 1.5rem;
+  }
+  
+  @media (max-width: 480px) {
     padding: 1rem;
-    justify-content: flex-start;
     margin-top: 60px;
   }
 `;
