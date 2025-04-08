@@ -8,7 +8,7 @@ importScripts('https://www.gstatic.com/firebasejs/9.15.0/firebase-messaging-comp
 
 // Initialize Firebase
 firebase.initializeApp({
-  apiKey: "AIzaSyANlKWMjOX0Zy6lg1uDcUfZrjp4CfCSBOM",
+  apiKey: "AIzaSyAvoyAViFgozL3-NbKe2PgKJBYKk8W1Htc", // Updated API key (for web SDK)
   authDomain: "fundraiser-f0831.firebaseapp.com",
   databaseURL: "https://fundraiser-f0831-default-rtdb.firebaseio.com/",
   projectId: "fundraiser-f0831",
@@ -22,7 +22,7 @@ firebase.initializeApp({
 const messaging = firebase.messaging();
 
 // Track service worker version for debugging
-self.FIREBASE_SW_VERSION = '1.3.0';
+self.FIREBASE_SW_VERSION = '1.4.0'; // Updated with new API key
 console.log('[firebase-messaging-sw.js] Version:', self.FIREBASE_SW_VERSION);
 
 // Add a message handler for debugging and checking the service worker state

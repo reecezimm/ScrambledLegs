@@ -5,7 +5,7 @@ import { getMessaging, getToken, onMessage, deleteToken } from 'firebase/messagi
 // Firebase configuration
 // IMPORTANT: Use the exact same config as in firebase-messaging-sw.js
 const firebaseConfig = {
-  apiKey: "AIzaSyANlKWMjOX0Zy6lg1uDcUfZrjp4CfCSBOM",
+  apiKey: "AIzaSyAvoyAViFgozL3-NbKe2PgKJBYKk8W1Htc", // Updated API key (for web SDK)
   authDomain: "fundraiser-f0831.firebaseapp.com",
   databaseURL: "https://fundraiser-f0831-default-rtdb.firebaseio.com/",
   projectId: "fundraiser-f0831",
