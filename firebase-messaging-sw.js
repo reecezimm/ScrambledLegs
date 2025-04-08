@@ -22,8 +22,21 @@ firebase.initializeApp({
 const messaging = firebase.messaging();
 
 // Track service worker version for debugging
-self.FIREBASE_SW_VERSION = '1.1.0';
+self.FIREBASE_SW_VERSION = '1.3.0';
 console.log('[firebase-messaging-sw.js] Version:', self.FIREBASE_SW_VERSION);
+
+// Add a message handler for debugging and checking the service worker state
+self.addEventListener('message', (event) => {
+  if (event.data && event.data.type === 'GET_VERSION') {
+    if (event.ports && event.ports[0]) {
+      event.ports[0].postMessage({
+        version: self.FIREBASE_SW_VERSION,
+        isActive: true,
+        timestamp: Date.now()
+      });
+    }
+  }
+});
 
 // Handle background notifications
 messaging.onBackgroundMessage((payload) => {
