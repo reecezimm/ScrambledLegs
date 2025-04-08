@@ -1,7 +1,8 @@
 // Firebase Service Worker for background notifications
-// Version with cache-busting timestamp: ${new Date().toISOString()}
+// Version: 1.2.0 - Fixed for Push Notifications
+// This file must be at the root of the domain to receive push notifications properly
 
-// These scripts will be populated by the build process
+// Import the Firebase SDK scripts
 importScripts('https://www.gstatic.com/firebasejs/9.15.0/firebase-app-compat.js');
 importScripts('https://www.gstatic.com/firebasejs/9.15.0/firebase-messaging-compat.js');
 
