@@ -6,9 +6,27 @@ set -e
 # Display commands as they're executed
 set -x
 
+# Add timestamp to manifest.json for cache busting
+TIMESTAMP=$(date +%s)
+echo "Adding build timestamp: $TIMESTAMP"
+sed -i "s/\${timestamp}/$TIMESTAMP/g" public/manifest.json
+
+# Generate sw-timestamp.js for service worker cache busting
+echo "// This file forces service worker reloading" > public/sw-timestamp.js
+echo "// Version: $TIMESTAMP" >> public/sw-timestamp.js
+echo "const SW_TIMESTAMP = '$TIMESTAMP';" >> public/sw-timestamp.js
+
 # Build the React app
 echo "Building the React app..."
 npm run build
+
+# Update timestamp in the built manifest.json file
+sed -i "s/\${timestamp}/$TIMESTAMP/g" build/manifest.json
+
+# Update the timestamp in the built service worker file
+echo "// This file forces service worker reloading" > build/sw-timestamp.js
+echo "// Version: $TIMESTAMP" >> build/sw-timestamp.js
+echo "const SW_TIMESTAMP = '$TIMESTAMP';" >> build/sw-timestamp.js
 
 # Save the current branch name
 current_branch=$(git rev-parse --abbrev-ref HEAD)

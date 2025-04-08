@@ -10,6 +10,11 @@
   <meta name="mobile-web-app-capable" content="yes">
   <meta name="application-name" content="Scrambled Legs">
   
+  <!-- Cache-busting meta tags -->
+  <meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate">
+  <meta http-equiv="Pragma" content="no-cache">
+  <meta http-equiv="Expires" content="0">
+  
   <link rel="icon" href="%PUBLIC_URL%/favicon.ico">
   <link rel="icon" type="image/png" sizes="32x32" href="%PUBLIC_URL%/favicon-32x32.png">
   <link rel="icon" type="image/png" sizes="16x16" href="%PUBLIC_URL%/favicon-16x16.png">
@@ -20,6 +25,73 @@
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Fredoka:wght@400;700&family=Inter:wght@400;500;600&display=swap&display=swap" rel="stylesheet">
   <meta name="apple-mobile-web-app-title" content="Scrambled Legs">
+  
+  <!-- PWA update script -->
+  <script type="text/javascript">
+    // Force check for PWA updates
+    if ('serviceWorker' in navigator) {
+      // Track if we're already refreshing to avoid refresh loops
+      let isRefreshing = false;
+      
+      window.addEventListener('load', function() {
+        // Check for "force refresh" parameter
+        const urlParams = new URLSearchParams(window.location.search);
+        const forceRefresh = urlParams.get('refresh');
+        
+        if (forceRefresh === 'true' || forceRefresh === '1') {
+          console.log('[PWA] Force refresh requested via URL parameter');
+          
+          // Clear caches first
+          if ('caches' in window) {
+            caches.keys().then(function(names) {
+              return Promise.all(
+                names.map(function(name) {
+                  console.log('[PWA] Deleting cache:', name);
+                  return caches.delete(name);
+                })
+              );
+            }).then(function() {
+              // Then unregister service workers
+              return navigator.serviceWorker.getRegistrations();
+            }).then(function(registrations) {
+              return Promise.all(
+                registrations.map(function(registration) {
+                  console.log('[PWA] Unregistering service worker');
+                  return registration.unregister();
+                })
+              );
+            }).then(function() {
+              // Then reload without the parameter
+              const newUrl = window.location.pathname + window.location.hash;
+              window.location.replace(newUrl);
+            });
+          }
+          return; // Stop here if we're doing a force refresh
+        }
+        
+        // Try to unregister any existing service workers first
+        navigator.serviceWorker.getRegistrations().then(function(registrations) {
+          for (let registration of registrations) {
+            // Immediately check for updates
+            registration.update().then(function() {
+              console.log('[PWA] Service worker update check complete');
+            }).catch(function(err) {
+              console.error('[PWA] Service worker update failed:', err);
+            });
+          }
+        });
+      });
+      
+      // Force refresh when new service worker takes control
+      navigator.serviceWorker.addEventListener('controllerchange', function() {
+        if (!isRefreshing) {
+          isRefreshing = true;
+          console.log('[PWA] Service worker controller changed, refreshing page');
+          window.location.reload();
+        }
+      });
+    }
+  </script>
   
   <!-- Start Single Page Apps for GitHub Pages -->
   <script type="text/javascript">
@@ -48,5 +120,13 @@
 </head>
 <body>
   <div id="root"></div>
+  
+  <!-- Fallback content in case JavaScript fails to load -->
+  <noscript>
+    <div style="padding: 20px; text-align: center; color: white; background-color: #2c3539;">
+      <h1>JavaScript Required</h1>
+      <p>Please enable JavaScript to use the Scrambled Legs application.</p>
+    </div>
+  </noscript>
 </body>
 </html>
