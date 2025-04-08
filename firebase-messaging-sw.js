@@ -1,4 +1,5 @@
 // Firebase Service Worker for background notifications
+// Version with cache-busting timestamp: ${new Date().toISOString()}
 
 // These scripts will be populated by the build process
 importScripts('https://www.gstatic.com/firebasejs/9.15.0/firebase-app-compat.js');
@@ -18,6 +19,10 @@ firebase.initializeApp({
 
 // Initialize messaging
 const messaging = firebase.messaging();
+
+// Track service worker version for debugging
+self.FIREBASE_SW_VERSION = '1.1.0';
+console.log('[firebase-messaging-sw.js] Version:', self.FIREBASE_SW_VERSION);
 
 // Handle background notifications
 messaging.onBackgroundMessage((payload) => {
