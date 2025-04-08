@@ -26,22 +26,23 @@
   <link href="https://fonts.googleapis.com/css2?family=Fredoka:wght@400;700&family=Inter:wght@400;500;600&display=swap&display=swap" rel="stylesheet">
   <meta name="apple-mobile-web-app-title" content="Scrambled Legs">
   
-  <!-- PWA update script -->
+  <!-- PWA manual reset script -->
   <script type="text/javascript">
-    // Force check for PWA updates
+    // This script only handles the manual reset via URL parameter
+    // The main service worker registration is in index.js
     if ('serviceWorker' in navigator) {
-      // Track if we're already refreshing to avoid refresh loops
-      let isRefreshing = false;
-      
       window.addEventListener('load', function() {
         // Check for "force refresh" parameter
         const urlParams = new URLSearchParams(window.location.search);
         const forceRefresh = urlParams.get('refresh');
         
         if (forceRefresh === 'true' || forceRefresh === '1') {
-          console.log('[PWA] Force refresh requested via URL parameter');
+          console.log('[PWA] Manual reset requested via URL parameter');
           
-          // Clear caches first
+          // Clear session storage first
+          sessionStorage.clear();
+          
+          // Clear caches
           if ('caches' in window) {
             caches.keys().then(function(names) {
               return Promise.all(
@@ -62,32 +63,15 @@
               );
             }).then(function() {
               // Then reload without the parameter
+              console.log('[PWA] Reset complete, reloading without parameters');
               const newUrl = window.location.pathname + window.location.hash;
               window.location.replace(newUrl);
-            });
-          }
-          return; // Stop here if we're doing a force refresh
-        }
-        
-        // Try to unregister any existing service workers first
-        navigator.serviceWorker.getRegistrations().then(function(registrations) {
-          for (let registration of registrations) {
-            // Immediately check for updates
-            registration.update().then(function() {
-              console.log('[PWA] Service worker update check complete');
             }).catch(function(err) {
-              console.error('[PWA] Service worker update failed:', err);
+              console.error('[PWA] Reset failed:', err);
+              // Reload anyway as a fallback
+              window.location.reload();
             });
           }
-        });
-      });
-      
-      // Force refresh when new service worker takes control
-      navigator.serviceWorker.addEventListener('controllerchange', function() {
-        if (!isRefreshing) {
-          isRefreshing = true;
-          console.log('[PWA] Service worker controller changed, refreshing page');
-          window.location.reload();
         }
       });
     }
