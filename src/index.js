@@ -45,83 +45,95 @@ root.render(
 
 // Register service worker for PWA capabilities with improved cache management
 if ('serviceWorker' in navigator) {
-  // Flag to track if we've already shown the update prompt
-  // Store in sessionStorage to persist across page refreshes
-  const hasShownUpdatePrompt = sessionStorage.getItem('hasShownUpdatePrompt') === 'true';
-  // Flag to track if we're already refreshing
+  // Flag to track service worker behavior, kept in localStorage to persist
+  // We use localStorage instead of sessionStorage to persist across browser sessions
+  const hasShownUpdatePrompt = localStorage.getItem('hasShownUpdatePrompt') === 'true';
+  const serviceWorkerVersion = localStorage.getItem('serviceWorkerVersion') || '0';
+  // Flag to prevent repeated refreshes
   let isRefreshing = false;
+  
+  // Add cache-busting timestamp to ensure fresh service worker
+  const swUrl = `/service-worker.js?v=${BUILD_ID}&t=${BUILD_TIMESTAMP}`;
   
   window.addEventListener('load', () => {
     console.log('[PWA] Starting with build ID:', BUILD_ID);
-    console.log('[PWA] Update prompt already shown:', hasShownUpdatePrompt);
+    console.log('[PWA] Service worker version from local storage:', serviceWorkerVersion);
     
-    // Check if we came from a refresh prompt - if so, don't show again
-    if (sessionStorage.getItem('justRefreshed') === 'true') {
-      console.log('[PWA] Just refreshed from update prompt, not showing again');
-      sessionStorage.removeItem('justRefreshed');
-      sessionStorage.setItem('hasShownUpdatePrompt', 'true');
+    // Flag to check if we're coming back from a refresh
+    const isPostRefresh = localStorage.getItem('justRefreshed') === 'true';
+    if (isPostRefresh) {
+      console.log('[PWA] Just refreshed from update prompt');
+      localStorage.removeItem('justRefreshed');
+      localStorage.setItem('hasShownUpdatePrompt', 'true');
     }
     
-    // Add a version timestamp as a query parameter for cache busting
-    const swUrl = `/service-worker.js?v=${BUILD_ID}`;
-    
-    // Register the service worker with the cache-busting URL
+    // Register service worker with a slight delay to ensure page loads
     setTimeout(() => {
       navigator.serviceWorker.register(swUrl)
         .then(registration => {
           console.log('[PWA] Service Worker registered with scope:', registration.scope);
           
-          // Only check for updates every 30 minutes (not continuously)
-          const THIRTY_MINUTES = 30 * 60 * 1000;
-          setInterval(() => {
-            console.log('[PWA] Scheduled update check');
-            registration.update().catch(err => {
-              console.error('[PWA] Update check failed:', err);
-            });
-          }, THIRTY_MINUTES);
+          // Check if there's an update available immediately
+          registration.update().catch(err => {
+            console.log('[PWA] Initial update check failed:', err);
+          });
           
-          // Only listen for update events if we haven't shown the prompt yet
-          if (!hasShownUpdatePrompt) {
-            // Add an update listener
-            registration.addEventListener('updatefound', () => {
-              console.log('[PWA] Service worker update found');
-              
-              // Get the installing service worker
-              const newWorker = registration.installing;
-              
-              // Listen for state changes
-              newWorker.addEventListener('statechange', () => {
-                // Only show the prompt if we haven't already and the new worker is installed
-                if (newWorker.state === 'installed' && 
-                    navigator.serviceWorker.controller && 
-                    !hasShownUpdatePrompt) {
+          // Set up periodic update checks (hourly)
+          const ONE_HOUR = 60 * 60 * 1000;
+          setInterval(() => {
+            console.log('[PWA] Running scheduled update check');
+            registration.update().catch(err => {
+              console.log('[PWA] Scheduled update check failed:', err);
+            });
+          }, ONE_HOUR);
+          
+          // Check service worker version
+          if (navigator.serviceWorker.controller) {
+            // Get the service worker version
+            const messageChannel = new MessageChannel();
+            messageChannel.port1.onmessage = (event) => {
+              if (event.data) {
+                const swVersion = event.data.version || 'unknown';
+                console.log('[PWA] Service worker version:', swVersion);
+                
+                // Compare with stored version
+                if (swVersion !== serviceWorkerVersion) {
+                  console.log('[PWA] Service worker version changed:', serviceWorkerVersion, '->', swVersion);
+                  localStorage.setItem('serviceWorkerVersion', swVersion);
                   
-                  console.log('[PWA] New service worker installed and ready');
-                  sessionStorage.setItem('hasShownUpdatePrompt', 'true');
-                  
-                  // Show update notification (only once per session)
-                  if (window.confirm('New content is available! Click OK to refresh.')) {
-                    sessionStorage.setItem('justRefreshed', 'true');
-                    window.location.reload();
+                  // Only show prompt if we haven't shown it recently and it's not a page refresh
+                  if (!hasShownUpdatePrompt && !isPostRefresh) {
+                    localStorage.setItem('hasShownUpdatePrompt', 'true');
+                    
+                    // Show update notification
+                    if (window.confirm('Application updated! Reload to use the latest version?')) {
+                      localStorage.setItem('justRefreshed', 'true');
+                      window.location.reload();
+                    }
                   }
                 }
-              });
-            });
+              }
+            };
+            
+            // Ask the service worker for its version
+            navigator.serviceWorker.controller.postMessage({
+              type: 'GET_VERSION'
+            }, [messageChannel.port2]);
           }
         })
         .catch(error => {
           console.error('[PWA] Service Worker registration failed:', error);
         });
-    }, 1000);
+    }, 1500);
   });
   
-  // Handle controllerchange event (avoid multiple refreshes)
+  // Handle controllerchange event (when a new service worker takes control)
   navigator.serviceWorker.addEventListener('controllerchange', () => {
     if (!isRefreshing) {
       console.log('[PWA] Service worker controller changed');
       isRefreshing = true;
       
-      // Don't automatically refresh - we're using the confirm dialog instead
+      // We don't force reload here - we use the confirmation dialog instead
       // This prevents refresh loops
     }
   });
