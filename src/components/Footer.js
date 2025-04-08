@@ -2,7 +2,7 @@ import React from 'react';
 import styled from 'styled-components';
 
 // Increment this value for each update
-const APP_VERSION = "0.2.0";
+const APP_VERSION = "0.3.0";
 
 const FooterContainer = styled.footer`
   position: relative;
@@ -52,7 +52,7 @@ const Footer = () => {
     <FooterContainer>
       <FooterContent>
         <MainText>
-          ™ Presented by Scrambled Legs Mountain Biking Team {year} • {formattedDate}
+          Presented by Scrambled Legs™ {year} • {formattedDate}
         </MainText>
         <VersionText>
           version {APP_VERSION}

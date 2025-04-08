@@ -2,16 +2,20 @@ import React, { useEffect, useState } from 'react';
 import styled, { keyframes } from 'styled-components';
 import HotDogButton from '../components/HotDogButton';
 import Footer from '../components/Footer';
+import InstallButton from '../components/InstallButton';
 
 const floatAnimation = keyframes`
   0% {
     transform: translate(0, 0) rotate(0deg);
   }
+  33% {
+    transform: translate(15vw, -10vh) rotate(120deg);
+  }
+  66% {
+    transform: translate(-15vw, 10vh) rotate(240deg);
+  }
   100% {
-    transform: translate(
-      ${() => Math.random() * 100 - 50}vw, 
-      ${() => Math.random() * 100 - 50}vh
-    ) rotate(${() => Math.random() * 360}deg);
+    transform: translate(0, 0) rotate(360deg);
   }
 `;
 
@@ -32,9 +36,9 @@ const HomeContainer = styled.div`
     left: 0;
     width: 100%;
     height: 100%;
-    background-image: radial-gradient(rgba(255, 255, 255, 0.1) 1px, transparent 1px);
+    background-image: radial-gradient(rgba(255, 255, 255, 0.2) 1.5px, transparent 1.5px);
     background-size: 24px 24px;
-    opacity: 0.2;
+    opacity: 0.3;
     z-index: 0;
   }
 `;
@@ -77,21 +81,7 @@ const UnderConstruction = styled.img`
   }
 `;
 
-const Disclaimer = styled.p`
-  margin-top: 15px;
-  font-size: 14px;
-  color: rgba(255, 255, 255, 0.7);
-  max-width: 500px;
-  font-style: italic;
-  text-align: center;
-  line-height: 1.4;
-  padding: 0 20px;
-  
-  @media (max-width: 480px) {
-    font-size: 12px;
-    margin-top: 10px;
-  }
-`;
+// Disclaimer removed
 
 const Trademark = styled.p`
   position: fixed;
@@ -119,8 +109,10 @@ const FloatingEgg = styled.div`
   z-index: 0;
   top: ${props => props.top || '50%'};
   left: ${props => props.left || '50%'};
-  animation: ${floatAnimation} ${props => props.duration || '60s'} linear infinite alternate;
+  animation: ${floatAnimation} ${props => props.duration || '20s'} ease-in-out infinite;
   animation-delay: ${props => props.delay || '0s'};
+  transform-origin: center;
+  will-change: transform;
   
   @media (max-width: 768px) {
     font-size: calc(${props => props.size || '36px'} * 0.8);
@@ -152,11 +144,11 @@ function Home() {
         id: i,
         emoji: '🥚',
         size: `${Math.random() * 24 + 24}px`,
-        opacity: Math.random() * 0.2 + 0.1,
+        opacity: Math.random() * 0.2 + 0.15, // Slightly more visible
         top: `${Math.random() * 100}%`,
         left: `${Math.random() * 100}%`,
-        duration: `${Math.random() * 60 + 30}s`,
-        delay: `-${Math.random() * 30}s`
+        duration: `${Math.random() * 10 + 15}s`, // Faster animation, between 15-25s
+        delay: `-${Math.random() * 10}s` // Shorter delay
       });
     }
     
@@ -203,8 +195,6 @@ function Home() {
   
   return (
     <HomeContainer>
-      <HotDogButton />
-      
       {eggs.map(egg => (
         <FloatingEgg 
           key={egg.id}
@@ -220,6 +210,8 @@ function Home() {
       ))}
       
       <ContentContainer>
+        <HotDogButton />
+        
         <Logo 
           src="/assets/cogg white shadow.png" 
           alt="Scrambled Legs Logo" 
@@ -228,12 +220,10 @@ function Home() {
           src="/assets/under construction.png" 
           alt="Under Construction" 
         />
-        <Disclaimer>
-          Not responsible for broken frames, bones, or dreams. Ride at your own risk!
-        </Disclaimer>
       </ContentContainer>
       
       <Footer />
+      <InstallButton />
     </HomeContainer>
   );
 }

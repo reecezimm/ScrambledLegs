@@ -3,13 +3,14 @@ import { Link } from 'react-router-dom';
 import styled from 'styled-components';
 
 const StyledButton = styled(Link)`
-  position: fixed;
-  top: 20px;
-  right: 20px;
+  display: block;
+  width: 100%;
+  max-width: 400px;
+  margin: 0 auto 40px auto;
   background-color: #ff5722;
   color: white;
   border: none;
-  padding: 10px 16px;
+  padding: 12px 16px;
   border-radius: 4px;
   font-weight: 500;
   cursor: pointer;
@@ -19,8 +20,13 @@ const StyledButton = styled(Link)`
   letter-spacing: 0.5px;
   text-transform: uppercase;
   box-shadow: 0 2px 8px rgba(255, 87, 34, 0.3);
-  z-index: 100;
+  z-index: 50;
   transition: all 0.2s ease;
+  text-align: center;
+  
+  @media (max-width: 480px) {
+    margin-bottom: 30px;
+  }
   
   &::before {
     content: "🌭";

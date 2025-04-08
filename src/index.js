@@ -38,21 +38,30 @@ root.render(
 // Register service worker for PWA capabilities
 if ('serviceWorker' in navigator) {
   window.addEventListener('load', () => {
-    navigator.serviceWorker.register('./service-worker.js')
-      .then(registration => {
-        console.log('ServiceWorker registration successful with scope: ', registration.scope);
-      })
-      .catch(error => {
-        console.log('ServiceWorker registration failed: ', error);
-      });
+    // Use a timeout to ensure the page loads fully first
+    setTimeout(() => {
+      navigator.serviceWorker.register('/service-worker.js')
+        .then(registration => {
+          console.log('Service Worker registered with scope:', registration.scope);
+        })
+        .catch(error => {
+          console.error('Service Worker registration failed:', error);
+        });
+    }, 1000);
   });
   
-  // Add PWA install event listener
+  // Log when the beforeinstallprompt event is fired
   window.addEventListener('beforeinstallprompt', (e) => {
-    // Prevent Chrome 67 and earlier from automatically showing the prompt
-    e.preventDefault();
-    // Stash the event so it can be triggered later if needed
+    console.log('Install prompt event fired!');
+    // Store the event for later use
     window.deferredPrompt = e;
-    console.log('Install prompt available');
+    
+    // Optionally show your own install button here
+    // (This is where you could make a custom install UI visible)
+  });
+  
+  // Log successful installations
+  window.addEventListener('appinstalled', (evt) => {
+    console.log('App was installed successfully!');
   });
 }
