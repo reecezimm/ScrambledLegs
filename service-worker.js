@@ -1,8 +1,22 @@
 // Service Worker for Scrambled Legs
 // Cache-busting version with timestamp
-const CACHE_VERSION = '2';
+const CACHE_VERSION = '3'; // Increment this when making changes to the service worker
 const BUILD_TIMESTAMP = new Date().getTime();
 const CACHE_NAME = `scrambled-legs-v${CACHE_VERSION}-${BUILD_TIMESTAMP}`;
+
+// Debug info
+console.log(`Service worker initializing: ${CACHE_NAME}`);
+
+// Use this to determine if requests are going through the service worker correctly
+self.addEventListener('message', event => {
+  if (event.data && event.data.type === 'GET_VERSION') {
+    event.ports[0].postMessage({
+      version: CACHE_VERSION,
+      timestamp: BUILD_TIMESTAMP,
+      cache: CACHE_NAME
+    });
+  }
+});
 
 // List of files to cache
 const urlsToCache = [
@@ -106,16 +120,26 @@ self.addEventListener('fetch', (event) => {
       pathname.includes('/static/js/') || pathname.includes('/static/css/')) {
     
     event.respondWith(
-      fetch(event.request)
+      fetch(event.request.clone())
         .then(response => {
-          // Clone the response
-          const responseToCache = response.clone();
-          
-          // Open cache and store the new response
-          caches.open(CACHE_NAME)
-            .then(cache => {
-              cache.put(event.request, responseToCache);
-            });
+          // Only cache successful responses
+          if (response && response.ok) {
+            // Clone the response before using it
+            const responseToCache = response.clone();
+            
+            // Store in cache asynchronously (don't block the response)
+            caches.open(CACHE_NAME)
+              .then(cache => {
+                try {
+                  cache.put(event.request, responseToCache);
+                } catch (err) {
+                  console.error('Cache put error for script/style:', err);
+                }
+              })
+              .catch(err => {
+                console.error('Cache open error for script/style:', err);
+              });
+          }
             
           return response;
         })
@@ -131,24 +155,42 @@ self.addEventListener('fetch', (event) => {
   event.respondWith(
     caches.match(event.request)
       .then(cachedResponse => {
-        // Return cached response immediately if available
-        const fetchPromise = fetch(event.request)
+        // Start network fetch
+        const fetchPromise = fetch(event.request.clone())
           .then(networkResponse => {
-            // Update the cache with the new response
-            caches.open(CACHE_NAME)
-              .then(cache => {
-                cache.put(event.request, networkResponse.clone());
-              });
+            // Only cache valid responses
+            if (networkResponse && networkResponse.ok) {
+              // We need to clone the response before consuming it
+              const responseToCache = networkResponse.clone();
+              
+              // Store in cache asynchronously (don't block the response)
+              caches.open(CACHE_NAME)
+                .then(cache => {
+                  try {
+                    cache.put(event.request, responseToCache);
+                  } catch (err) {
+                    console.error('Cache put error:', err);
+                  }
+                })
+                .catch(err => {
+                  console.error('Cache open error:', err);
+                });
+            }
+            
+            // Return the original response
             return networkResponse;
           })
           .catch(error => {
             console.log('Fetch failed for', event.request.url, error);
-            // Network failed and no cache - return simple offline message
+            
+            // Only return a new Response if we don't have a cached one
             if (!cachedResponse) {
               return new Response('You are offline and this resource is not cached.');
             }
+            // If there's a cachedResponse, the outer function will return it
           });
-          
+        
+        // Return cached response immediately if available, otherwise wait for fetch
         return cachedResponse || fetchPromise;
       })
   );
