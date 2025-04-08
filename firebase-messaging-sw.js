@@ -8,13 +8,13 @@ importScripts('https://www.gstatic.com/firebasejs/9.15.0/firebase-messaging-comp
 
 // Initialize Firebase
 firebase.initializeApp({
-  apiKey: "AIzaSyAvoyAViFgozL3-NbKe2PgKJBYKk8W1Htc", // Updated API key (for web SDK)
+  apiKey: "AIzaSyAmwwbvmvxNYX-8PesRl8io9CH60sI2v2A", // Correct API key from Firebase console
   authDomain: "fundraiser-f0831.firebaseapp.com",
-  databaseURL: "https://fundraiser-f0831-default-rtdb.firebaseio.com/",
+  databaseURL: "https://fundraiser-f0831-default-rtdb.firebaseio.com",
   projectId: "fundraiser-f0831",
-  storageBucket: "fundraiser-f0831.appspot.com",
-  messagingSenderId: "1043794720343",
-  appId: "1:1043794720343:web:65a6d4f6e7e09c67e8bfd1",
+  storageBucket: "fundraiser-f0831.firebasestorage.app",
+  messagingSenderId: "900827039889",
+  appId: "1:900827039889:web:4bd336cb4f88a0c76e1730",
   vapidKey: "BEsmXUl-hHK0FAmHVdbUeZ3kDbSyhOPId-66fJ5NRJ44XFYy5MujmXiXKBp8MH_7hBmFedktB5y7iF3NOjV86tY"
 });
 
@@ -22,7 +22,7 @@ firebase.initializeApp({
 const messaging = firebase.messaging();
 
 // Track service worker version for debugging
-self.FIREBASE_SW_VERSION = '1.4.0'; // Updated with new API key
+self.FIREBASE_SW_VERSION = '1.5.0'; // Updated with correct Firebase config
 console.log('[firebase-messaging-sw.js] Version:', self.FIREBASE_SW_VERSION);
 
 // Add a message handler for debugging and checking the service worker state
