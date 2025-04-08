@@ -37,20 +37,44 @@ The build folder will contain the static files that can be deployed to any web s
 
 ## Deployment
 
-The site is configured to be deployed to GitHub Pages with the custom domain `thescrambledlegs.com` directly from the main branch.
+The site is configured to be deployed to GitHub Pages with the custom domain `thescrambledlegs.com`.
 
-### GitHub Pages Deployment
+### Automated Deployment with GitHub Actions
 
-This project is set up for GitHub Pages deployment from the main branch:
+This project uses GitHub Actions for automated deployment to GitHub Pages. The workflow:
 
-1. Build the project: `npm run build`
-2. The `build` directory contains all static files needed for deployment
-3. Commit all files including the build directory to the main branch
-4. In your GitHub repository, go to Settings > Pages:
-   - Set the branch to `main`
-   - Set the folder to `/docs` or `/` (root) depending on your GitHub Pages configuration
+1. Automatically runs when you push to the main branch
+2. Builds the React app
+3. Deploys the built files to the gh-pages branch
+4. GitHub Pages serves the site from the gh-pages branch
 
-A GitHub Actions workflow has been set up to automatically build and deploy your site when you push changes to the main branch. This is configured in the `.github/workflows/deploy.yml` file.
+For this to work, you need to:
+
+1. Configure GitHub Pages in your repository settings:
+   - Go to Settings > Pages
+   - Set the "Source" to "Deploy from a branch"
+   - Select "gh-pages" branch and "/" (root) folder
+   - Ensure your custom domain is configured correctly
+
+2. Set proper permissions for GitHub Actions:
+   - Go to Settings > Actions > General
+   - Under "Workflow permissions", select "Read and write permissions"
+
+### Manual Deployment
+
+If you need to deploy manually:
+
+1. Run the included deployment script: `./deploy.sh`
+2. This will build the app and push to the gh-pages branch
+
+### Troubleshooting Deployment
+
+If your changes aren't appearing on the site:
+
+1. Check the Actions tab to ensure the workflow ran successfully
+2. Try clearing your browser cache
+3. Make sure your browser isn't serving a cached version of the site
+4. Ensure GitHub Pages is configured to serve from the gh-pages branch
 
 ### Custom Domain Setup
 
