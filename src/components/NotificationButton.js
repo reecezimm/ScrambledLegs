@@ -72,10 +72,38 @@ const NotificationButton = () => {
   const [toastMessage, setToastMessage] = useState('');
   const [isSubscribed, setIsSubscribed] = useState(false);
   const [hasInteracted, setHasInteracted] = useState(false);
-  const [permissionState, setPermissionState] = useState(Notification.permission);
+  const [permissionState, setPermissionState] = useState(
+    typeof Notification !== 'undefined' ? Notification.permission : 'default'
+  );
+  const [browserSupported, setBrowserSupported] = useState(true);
 
   useEffect(() => {
+    // Check if the browser supports notifications and service workers
+    const checkBrowserSupport = () => {
+      // Check if Notification API is supported
+      const notificationsSupported = typeof Notification !== 'undefined';
+      
+      // Check if Service Worker API is supported
+      const serviceWorkersSupported = 'serviceWorker' in navigator;
+      
+      // Set browser support state
+      const isSupported = notificationsSupported && serviceWorkersSupported;
+      setBrowserSupported(isSupported);
+      
+      if (!isSupported) {
+        console.log('Browser does not support notifications or service workers');
+        return false;
+      }
+      
+      return true;
+    };
+    
     const checkSubscriptionStatus = async () => {
+      // First check if browser supports notifications
+      if (!checkBrowserSupport()) {
+        return;
+      }
+      
       // Get current subscription status
       const isCurrentlySubscribed = isSubscribedToNotifications();
       console.log('Subscription check:', isCurrentlySubscribed ? 'Subscribed' : 'Not subscribed');
@@ -157,6 +185,15 @@ const NotificationButton = () => {
   
   const handleNotificationClick = async () => {
     try {
+      // Check if browser supports notifications
+      if (!browserSupported) {
+        console.error('Browser does not support notifications');
+        setToastMessage('Your browser does not support notifications.');
+        setShowToast(true);
+        setTimeout(() => setShowToast(false), 5000);
+        return;
+      }
+      
       if (isSubscribed) {
         // Show feedback while processing
         setToastMessage('Turning off notifications...');
@@ -252,8 +289,12 @@ const NotificationButton = () => {
   // Logic for when to show the notification button
   let shouldShowButton = false;
   
+  // First check if browser supports notifications
+  if (!browserSupported) {
+    shouldShowButton = false;
+  }
   // Case 1: Already subscribed - always show to allow unsubscribing
-  if (isSubscribed) {
+  else if (isSubscribed) {
     shouldShowButton = true;
   }
   // Case 2: Permission granted but not subscribed - show to allow subscribing

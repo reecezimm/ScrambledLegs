@@ -33,7 +33,7 @@ echo "Ensuring firebase-messaging-sw.js is properly placed..."
 
 # Create an updated version of firebase-messaging-sw.js with the current timestamp
 echo "// Firebase Service Worker for background notifications" > build/firebase-messaging-sw.js
-echo "// Version: 1.5.0 - Updated: $(date)" >> build/firebase-messaging-sw.js
+echo "// Version: 1.5.1 - Updated: $(date)" >> build/firebase-messaging-sw.js
 echo "// This file must be at the root of the domain to receive push notifications properly" >> build/firebase-messaging-sw.js
 echo "" >> build/firebase-messaging-sw.js
 

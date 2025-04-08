@@ -11,7 +11,8 @@ const firebaseConfig = {
   projectId: "fundraiser-f0831",
   storageBucket: "fundraiser-f0831.firebasestorage.app",
   messagingSenderId: "900827039889", 
-  appId: "1:900827039889:web:4bd336cb4f88a0c76e1730"
+  appId: "1:900827039889:web:4bd336cb4f88a0c76e1730",
+  vapidKey: "BEsmXUl-hHK0FAmHVdbUeZ3kDbSyhOPId-66fJ5NRJ44XFYy5MujmXiXKBp8MH_7hBmFedktB5y7iF3NOjV86tY"
 };
 
 // Initialize Firebase
@@ -32,8 +33,7 @@ try {
   console.error('Error initializing Firebase messaging:', error);
 }
 
-// VAPID key for web push notifications
-const VAPID_KEY = "BEsmXUl-hHK0FAmHVdbUeZ3kDbSyhOPId-66fJ5NRJ44XFYy5MujmXiXKBp8MH_7hBmFedktB5y7iF3NOjV86tY";
+// VAPID key is now included in the firebaseConfig object above
 
 /**
  * Request permission and register for push notifications
@@ -98,18 +98,15 @@ export const requestNotificationPermission = async () => {
         if (attempts === 1) {
           // First attempt: with service worker registration
           token = await getToken(messaging, { 
-            vapidKey: VAPID_KEY,
             serviceWorkerRegistration 
           });
         } else if (attempts === 2) {
           // Second attempt: without service worker registration
-          token = await getToken(messaging, { 
-            vapidKey: VAPID_KEY 
-          });
+          token = await getToken(messaging);
         } else {
           // Final attempt: force a new token
           await deleteToken(messaging).catch(() => { /* Ignore errors */ });
-          token = await getToken(messaging, { vapidKey: VAPID_KEY });
+          token = await getToken(messaging);
         }
         
         if (token) {

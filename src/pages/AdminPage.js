@@ -312,14 +312,56 @@ const AdminPage = () => {
       // Add to FCM send queue
       const sendQueueRef = ref(database, 'fcmSendQueue');
       const newSendRef = push(sendQueueRef);
+      
+      // Check if we have any subscribers first
+      const subscribersRef = ref(database, 'subscribers');
+      const subscribersSnapshot = await get(subscribersRef);
+      const hasSubscribers = subscribersSnapshot.exists() && 
+        Object.keys(subscribersSnapshot.val()).length > 0;
+      
+      // Add to FCM send queue for the Cloud Function to process
+      // Also include some diagnostic information to help debug Cloud Function issues
       await set(newSendRef, {
         notification: {
           title,
           body: message
         },
+        data: {
+          url: window.location.origin,
+          clickAction: 'FLUTTER_NOTIFICATION_CLICK'
+        },
         timestamp: Date.now(),
-        sent: false
+        sent: false,
+        clientInfo: {
+          // Store client-side info to help with debugging
+          browserUserAgent: navigator.userAgent,
+          sentTime: new Date().toISOString(),
+          subscriberCount: hasSubscribers ? Object.keys(subscribersSnapshot.val()).length : 0,
+          appOrigin: window.location.origin
+        }
       });
+      
+      // Client-side fallback for sending notifications
+      // This is a backup in case the Cloud Function isn't deployed
+      if (hasSubscribers && window.Notification && Notification.permission === 'granted') {
+        try {
+          console.log("Attempting client-side notification as fallback");
+          const notification = new Notification(title, {
+            body: message,
+            icon: '/android-chrome-192x192.png',
+            badge: '/favicon-32x32.png',
+            timestamp: Date.now()
+          });
+          
+          notification.onclick = function() {
+            window.focus();
+            notification.close();
+          };
+        } catch (notificationError) {
+          console.log("Client-side notification fallback failed:", notificationError);
+          // Don't show error to user, this is just a fallback
+        }
+      }
       
       setStatus({
         message: 'Notification sent successfully!',
