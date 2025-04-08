@@ -3,6 +3,7 @@ import styled, { keyframes } from 'styled-components';
 import HotDogButton from '../components/HotDogButton';
 import Footer from '../components/Footer';
 import InstallButton from '../components/InstallButton';
+import NotificationButton from '../components/NotificationButton';
 
 const floatAnimation = keyframes`
   0% {
@@ -224,6 +225,7 @@ function Home() {
       
       <Footer />
       <InstallButton />
+      <NotificationButton />
     </HomeContainer>
   );
 }
