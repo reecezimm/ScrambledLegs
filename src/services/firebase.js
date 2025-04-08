@@ -3,10 +3,11 @@ import { getDatabase, ref, get, set, push, update, remove } from 'firebase/datab
 import { getMessaging, getToken, onMessage, deleteToken } from 'firebase/messaging';
 
 // Firebase configuration
+// IMPORTANT: Use the exact same config as in firebase-messaging-sw.js
 const firebaseConfig = {
-  databaseURL: "https://fundraiser-f0831-default-rtdb.firebaseio.com/",
   apiKey: "AIzaSyANlKWMjOX0Zy6lg1uDcUfZrjp4CfCSBOM",
   authDomain: "fundraiser-f0831.firebaseapp.com",
+  databaseURL: "https://fundraiser-f0831-default-rtdb.firebaseio.com/",
   projectId: "fundraiser-f0831",
   storageBucket: "fundraiser-f0831.appspot.com",
   messagingSenderId: "1043794720343",
@@ -77,21 +78,49 @@ export const requestNotificationPermission = async () => {
       console.error('Service worker error:', swError);
     }
 
-    // Get FCM token with explicit options
-    console.log('Getting FCM token with VAPID key:', VAPID_KEY);
-    const tokenOptions = { 
-      vapidKey: VAPID_KEY,
-      serviceWorkerRegistration
-    };
+    // Wait a moment for service worker to stabilize
+    await new Promise(resolve => setTimeout(resolve, 1000));
     
-    // Try to get the token
+    // Get FCM token with explicit options
+    console.log('Getting FCM token with VAPID key...');
+    
+    // Try multiple approaches for maximum compatibility
     let token = null;
-    try {
-      token = await getToken(messaging, tokenOptions);
-    } catch (tokenError) {
-      console.error('Error getting token, trying again without service worker option:', tokenError);
-      // Try without the service worker option as fallback
-      token = await getToken(messaging, { vapidKey: VAPID_KEY });
+    let attempts = 0;
+    const maxAttempts = 3;
+    
+    while (!token && attempts < maxAttempts) {
+      attempts++;
+      console.log(`Token request attempt ${attempts}/${maxAttempts}...`);
+      
+      try {
+        // Different strategies based on attempt number
+        if (attempts === 1) {
+          // First attempt: with service worker registration
+          token = await getToken(messaging, { 
+            vapidKey: VAPID_KEY,
+            serviceWorkerRegistration 
+          });
+        } else if (attempts === 2) {
+          // Second attempt: without service worker registration
+          token = await getToken(messaging, { 
+            vapidKey: VAPID_KEY 
+          });
+        } else {
+          // Final attempt: force a new token
+          await deleteToken(messaging).catch(() => { /* Ignore errors */ });
+          token = await getToken(messaging, { vapidKey: VAPID_KEY });
+        }
+        
+        if (token) {
+          console.log(`Successfully got token on attempt ${attempts}`);
+          break;
+        }
+      } catch (tokenError) {
+        console.error(`Error on attempt ${attempts}:`, tokenError);
+        // Wait before next attempt
+        await new Promise(resolve => setTimeout(resolve, 500));
+      }
     }
     
     if (token) {

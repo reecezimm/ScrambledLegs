@@ -179,36 +179,67 @@ const NotificationButton = () => {
         setShowToast(true);
         setTimeout(() => setShowToast(false), 3000);
       } else {
-        // Show feedback while processing
-        setToastMessage('Requesting notification permission...');
-        setShowToast(true);
-        
-        // Subscribe to notifications
-        console.log('Attempting to subscribe to notifications');
-        const token = await requestNotificationPermission();
-        
-        if (token) {
-          console.log('Successfully subscribed to notifications with token');
-          setIsSubscribed(true);
-          setToastMessage('Notifications enabled! 🎉');
-          setShowToast(true);
-          setTimeout(() => setShowToast(false), 3000);
-        } else {
-          console.error('Failed to get notification token');
-          
-          // Check if permission was denied
-          if (Notification.permission === 'denied') {
-            setToastMessage('Notifications blocked. Please update your browser settings.');
-          } else {
-            setToastMessage('Could not enable notifications. Please try again.');
+        try {
+          // First verify the service worker is properly registered
+          const registration = await navigator.serviceWorker.getRegistration();
+          if (!registration) {
+            console.error('No service worker registration found');
+            setToastMessage('Browser setup required. Please refresh the page first.');
+            setShowToast(true);
+            setTimeout(() => setShowToast(false), 5000);
+            return;
           }
           
+          // Show feedback while processing
+          setToastMessage('Requesting notification permission...');
+          setShowToast(true);
+          
+          // Request permission for notifications from the browser
+          if (Notification.permission !== 'granted') {
+            const permission = await Notification.requestPermission();
+            if (permission !== 'granted') {
+              setToastMessage('Notification permission denied. Please update browser settings.');
+              setShowToast(true);
+              setTimeout(() => setShowToast(false), 5000);
+              return;
+            }
+          }
+          
+          // Subscribe to notifications
+          console.log('Attempting to subscribe to notifications');
+          
+          // Add a timeout to prevent hanging if there's an error
+          const tokenPromise = Promise.race([
+            requestNotificationPermission(),
+            new Promise((_, reject) => 
+              setTimeout(() => reject(new Error('Token request timeout')), 10000)
+            )
+          ]);
+          
+          const token = await tokenPromise;
+          
+          if (token) {
+            console.log('Successfully subscribed to notifications with token');
+            setIsSubscribed(true);
+            setToastMessage('Notifications enabled! 🎉');
+            setShowToast(true);
+            setTimeout(() => setShowToast(false), 3000);
+          } else {
+            // This case happens when permission is granted but token acquisition fails
+            console.error('Failed to get notification token');
+            setToastMessage('Could not enable notifications. Please try refreshing the page.');
+            setShowToast(true);
+            setTimeout(() => setShowToast(false), 5000);
+          }
+          
+          // Update permission state
+          setPermissionState(Notification.permission);
+        } catch (subscribeError) {
+          console.error('Error during subscription process:', subscribeError);
+          setToastMessage('Could not enable notifications: ' + (subscribeError.message || 'Unknown error'));
           setShowToast(true);
           setTimeout(() => setShowToast(false), 5000);
         }
-        
-        // Update permission state
-        setPermissionState(Notification.permission);
       }
     } catch (error) {
       console.error('Error in notification button handler:', error);
