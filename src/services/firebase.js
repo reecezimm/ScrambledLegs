@@ -5,13 +5,13 @@ import { getMessaging, getToken, onMessage, deleteToken } from 'firebase/messagi
 // Firebase configuration
 // IMPORTANT: Use the exact same config as in firebase-messaging-sw.js
 const firebaseConfig = {
-  apiKey: "AIzaSyAvoyAViFgozL3-NbKe2PgKJBYKk8W1Htc", // Updated API key (for web SDK)
+  apiKey: "AIzaSyAmwwbvmvxNYX-8PesRl8io9CH60sI2v2A", // Correct API key from Firebase console
   authDomain: "fundraiser-f0831.firebaseapp.com",
-  databaseURL: "https://fundraiser-f0831-default-rtdb.firebaseio.com/",
+  databaseURL: "https://fundraiser-f0831-default-rtdb.firebaseio.com",
   projectId: "fundraiser-f0831",
-  storageBucket: "fundraiser-f0831.appspot.com",
-  messagingSenderId: "1043794720343",
-  appId: "1:1043794720343:web:65a6d4f6e7e09c67e8bfd1"
+  storageBucket: "fundraiser-f0831.firebasestorage.app",
+  messagingSenderId: "900827039889", 
+  appId: "1:900827039889:web:4bd336cb4f88a0c76e1730"
 };
 
 // Initialize Firebase
