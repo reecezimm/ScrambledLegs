@@ -38,7 +38,7 @@ const StyledButton = styled(Link)`
 
 const HotDogButton = () => {
   return (
-    <StyledButton to="/hot-dog-counter">
+    <StyledButton to="/hotdog-counter">
       Hot Dog Counter
     </StyledButton>
   );
