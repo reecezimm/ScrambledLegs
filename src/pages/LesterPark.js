@@ -55,20 +55,20 @@ const ContentContainer = styled.div`
 `;
 
 const Logo = styled.img`
-  width: 84%; /* Increased by 20% from 70% */
-  max-width: 384px; /* Increased by 20% from 320px */
+  width: 92%; /* Increased by additional 10% */
+  max-width: 422px; /* Increased by additional 10% */
   margin-bottom: 5px; /* Reduced spacing */
   filter: drop-shadow(0 8px 16px rgba(0,0,0,0.1));
   
   @media (max-width: 768px) {
     width: 100%;
-    max-width: 360px; /* Increased by 20% from 300px */
+    max-width: 395px; /* Increased by additional 10% */
     margin-bottom: 4px;
   }
   
   @media (max-width: 480px) {
     width: 100%;
-    max-width: 300px; /* Increased by 20% from 250px */
+    max-width: 330px; /* Increased by additional 10% */
     margin-bottom: 3px;
   }
 `;
@@ -196,7 +196,7 @@ const TrailBotContainer = styled.div`
   background: rgba(255, 255, 255, 0.1);
   backdrop-filter: blur(10px);
   border-radius: 16px;
-  padding: 20px; /* Equal padding all around */
+  padding: 16px; /* Slightly reduced padding */
   margin: 10px 0 20px; /* Added top margin */
   box-shadow: 0 8px 32px rgba(0, 0, 0, 0.1);
   border: 1px solid rgba(255, 255, 255, 0.2);
@@ -204,12 +204,12 @@ const TrailBotContainer = styled.div`
   position: relative;
   
   @media (max-width: 768px) {
-    padding: 15px;
+    padding: 12px;
     width: 95%;
   }
   
   @media (max-width: 480px) {
-    padding: 10px;
+    padding: 8px;
     width: 90%;
   }
   
@@ -267,7 +267,7 @@ const NavButton = styled.a`
   display: inline-flex;
   align-items: center;
   justify-content: center;
-  padding: 16px 20px;
+  padding: 16px 24px; /* Increased horizontal padding */
   background: rgba(255, 255, 255, 0.1);
   color: white;
   text-decoration: none;
@@ -275,12 +275,13 @@ const NavButton = styled.a`
   border: 1px solid rgba(255, 255, 255, 0.2);
   font-family: 'Montserrat', sans-serif;
   font-weight: 500;
-  font-size: 0.9rem;
+  font-size: 0.95rem; /* Slightly larger font */
   transition: all 0.2s ease;
   backdrop-filter: blur(5px);
   box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
   flex: 1;
   text-align: center;
+  white-space: nowrap; /* Prevent wrapping */
   
   &:hover {
     background: rgba(255, 255, 255, 0.2);
@@ -396,15 +397,6 @@ const InputLabel = styled.label`
   margin-left: 5px;
   letter-spacing: 0.05em;
   text-transform: uppercase;
-  display: flex;
-  align-items: center;
-  
-  &:before {
-    content: '●';
-    font-size: 0.5em;
-    margin-right: 8px;
-    color: #FFC72C;
-  }
   
   @media (max-width: 480px) {
     font-size: 0.85rem;
