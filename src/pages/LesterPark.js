@@ -102,8 +102,9 @@ const PresentationContainer = styled.div`
 `;
 
 const TeamName = styled.span`
-  font-family: 'Pacifico', cursive;
+  font-family: 'Montserrat', sans-serif;
   font-size: 1.3rem;
+  font-weight: 700;
   color: #FFC72C; /* Egg yolk yellow color */
   margin: 0 3px;
   display: inline-block;
@@ -133,7 +134,7 @@ const Presents = styled.div`
 
 const TrailName = styled.div`
   font-family: 'Montserrat', sans-serif;
-  font-size: 1.6rem;
+  font-size: 1.68rem; /* Increased by 5% from 1.6rem */
   font-weight: 700;
   color: white;
   letter-spacing: 0.05em;
@@ -158,18 +159,18 @@ const TrailName = styled.div`
   }
   
   @media (max-width: 768px) {
-    font-size: 1.4rem;
+    font-size: 1.47rem; /* Increased by 5% from 1.4rem */
   }
   
   @media (max-width: 480px) {
-    font-size: 1.2rem;
+    font-size: 1.26rem; /* Increased by 5% from 1.2rem */
   }
 `;
 
 const TitleImage = styled.img`
   width: 70%;
   max-width: 400px;
-  margin-bottom: -30px; /* Negative margin to overlap with container */
+  margin-bottom: -60px; /* Increased overlap with container */
   filter: drop-shadow(0 4px 8px rgba(0,0,0,0.2));
   position: relative;
   z-index: 2; /* Place above the container */
@@ -177,13 +178,13 @@ const TitleImage = styled.img`
   @media (max-width: 768px) {
     width: 80%;
     max-width: 350px;
-    margin-bottom: -25px;
+    margin-bottom: -50px;
   }
   
   @media (max-width: 480px) {
     width: 85%;
     max-width: 300px;
-    margin-bottom: -20px;
+    margin-bottom: -40px;
   }
 `;
 
@@ -193,7 +194,7 @@ const TrailBotContainer = styled.div`
   background: rgba(255, 255, 255, 0.1);
   backdrop-filter: blur(10px);
   border-radius: 16px;
-  padding: 30px 20px 20px;
+  padding: 45px 20px 0; /* Increased top padding for title overlap, removed bottom padding */
   margin: 0 0 20px;
   box-shadow: 0 8px 32px rgba(0, 0, 0, 0.1);
   border: 1px solid rgba(255, 255, 255, 0.2);
@@ -201,20 +202,21 @@ const TrailBotContainer = styled.div`
   position: relative;
   
   @media (max-width: 768px) {
-    padding: 25px 15px 15px;
+    padding: 40px 15px 0;
     width: 95%;
   }
   
   @media (max-width: 480px) {
-    padding: 20px 10px 10px;
+    padding: 35px 10px 0;
     width: 90%;
   }
   
   & iframe {
     border: none;
     border-radius: 8px;
-    min-height: 500px;
+    height: 350px; /* Fixed height instead of min-height */
     background: transparent;
+    margin-bottom: 0; /* Remove bottom margin */
   }
 `;
 
@@ -255,15 +257,6 @@ function LesterPark() {
         montserratLink.rel = 'stylesheet';
         montserratLink.href = 'https://fonts.googleapis.com/css2?family=Montserrat:wght@300;400;500;700&display=swap';
         document.head.appendChild(montserratLink);
-      }
-      
-      // Load Pacifico font for team name
-      if (!document.getElementById('pacifico-font')) {
-        const pacificoLink = document.createElement('link');
-        pacificoLink.id = 'pacifico-font';
-        pacificoLink.rel = 'stylesheet';
-        pacificoLink.href = 'https://fonts.googleapis.com/css2?family=Pacifico&display=swap';
-        document.head.appendChild(pacificoLink);
       }
     };
     
@@ -373,7 +366,7 @@ function LesterPark() {
         
         <PresentationContainer>
           <Presents>
-            <TeamName>Scrambled Legs™</TeamName> proudly presents
+            <TeamName>SCRAMBLED LEGS</TeamName> proudly presents
           </Presents>
           <TrailName>LESTER RIVER TRAIL</TrailName>
         </PresentationContainer>
