@@ -2,7 +2,6 @@ import React, { useState, useEffect } from 'react';
 import styled from 'styled-components';
 import { Link } from 'react-router-dom';
 import Footer from '../components/Footer';
-import NotificationButton from '../components/NotificationButton';
 import { getDatabase, ref, onValue, set, push, update } from 'firebase/database';
 import { app, database } from '../services/firebase';
 
@@ -940,7 +939,6 @@ function HotDogCounter() {
           ))}
         </div>
       </LogOverlay>
-      <NotificationButton />
     </PageContainer>
   );
 }
