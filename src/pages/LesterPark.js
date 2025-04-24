@@ -55,17 +55,19 @@ const ContentContainer = styled.div`
 const Logo = styled.img`
   width: 84%; /* Increased by 20% from 70% */
   max-width: 384px; /* Increased by 20% from 320px */
-  margin-bottom: 10px;
+  margin-bottom: 5px; /* Reduced spacing */
   filter: drop-shadow(0 8px 16px rgba(0,0,0,0.1));
   
   @media (max-width: 768px) {
     width: 100%;
     max-width: 360px; /* Increased by 20% from 300px */
+    margin-bottom: 4px;
   }
   
   @media (max-width: 480px) {
     width: 100%;
     max-width: 300px; /* Increased by 20% from 250px */
+    margin-bottom: 3px;
   }
 `;
 
@@ -76,18 +78,18 @@ const Subtitle = styled.h2`
   font-weight: 400;
   letter-spacing: 0.15em;
   text-transform: uppercase;
-  margin: 0 0 10px;
+  margin: 0 0 5px; /* Reduced spacing */
   opacity: 0.9;
   filter: drop-shadow(0 2px 4px rgba(0,0,0,0.1));
   
   @media (max-width: 768px) {
     font-size: 1.1rem;
-    margin-bottom: 8px;
+    margin-bottom: 4px;
   }
   
   @media (max-width: 480px) {
     font-size: 0.9rem;
-    margin-bottom: 6px;
+    margin-bottom: 3px;
     letter-spacing: 0.12em;
   }
 `;
@@ -96,7 +98,7 @@ const PresentationContainer = styled.div`
   display: flex;
   flex-direction: column;
   align-items: center;
-  margin-bottom: 25px;
+  margin-bottom: 12px; /* Reduced spacing */
   text-align: center;
   max-width: 90%;
 `;
@@ -170,7 +172,7 @@ const TrailName = styled.div`
 const TitleImage = styled.img`
   width: 70%;
   max-width: 400px;
-  margin-bottom: -60px; /* Increased overlap with container */
+  margin-bottom: -80px; /* Even more overlap with container due to cropped image */
   filter: drop-shadow(0 4px 8px rgba(0,0,0,0.2));
   position: relative;
   z-index: 2; /* Place above the container */
@@ -178,13 +180,13 @@ const TitleImage = styled.img`
   @media (max-width: 768px) {
     width: 80%;
     max-width: 350px;
-    margin-bottom: -50px;
+    margin-bottom: -70px;
   }
   
   @media (max-width: 480px) {
     width: 85%;
     max-width: 300px;
-    margin-bottom: -40px;
+    margin-bottom: -60px;
   }
 `;
 
@@ -194,7 +196,7 @@ const TrailBotContainer = styled.div`
   background: rgba(255, 255, 255, 0.1);
   backdrop-filter: blur(10px);
   border-radius: 16px;
-  padding: 45px 20px 0; /* Increased top padding for title overlap, removed bottom padding */
+  padding: 65px 20px 0; /* Further increased top padding for cropped image overlap */
   margin: 0 0 20px;
   box-shadow: 0 8px 32px rgba(0, 0, 0, 0.1);
   border: 1px solid rgba(255, 255, 255, 0.2);
@@ -202,19 +204,19 @@ const TrailBotContainer = styled.div`
   position: relative;
   
   @media (max-width: 768px) {
-    padding: 40px 15px 0;
+    padding: 60px 15px 0;
     width: 95%;
   }
   
   @media (max-width: 480px) {
-    padding: 35px 10px 0;
+    padding: 50px 10px 0;
     width: 90%;
   }
   
   & iframe {
     border: none;
     border-radius: 8px;
-    height: 350px; /* Fixed height instead of min-height */
+    height: 300px; /* Reduced height */
     background: transparent;
     margin-bottom: 0; /* Remove bottom margin */
   }
