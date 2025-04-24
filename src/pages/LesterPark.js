@@ -705,7 +705,7 @@ function LesterPark() {
         
         <PresentationContainer>
           <Presents>
-            <TeamName>SCRAMBLED LEGS</TeamName> proudly presents
+            <TeamName>SCRAMBLED LEGS™</TeamName> proudly presents
           </Presents>
           <TrailName>LESTER RIVER TRAIL</TrailName>
         </PresentationContainer>
