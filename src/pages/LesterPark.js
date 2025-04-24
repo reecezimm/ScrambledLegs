@@ -1,6 +1,8 @@
 import React, { useEffect, useState, useRef } from 'react';
 import styled, { keyframes } from 'styled-components';
 import Footer from '../components/Footer';
+import { ref, push, set } from 'firebase/database';
+import { database } from '../services/firebase';
 
 const floatAnimation = keyframes`
   0% {
@@ -98,7 +100,7 @@ const PresentationContainer = styled.div`
   display: flex;
   flex-direction: column;
   align-items: center;
-  margin-bottom: 12px; /* Reduced spacing */
+  margin-bottom: 27px; /* Increased spacing before trail conditions */
   text-align: center;
   max-width: 90%;
 `;
@@ -172,7 +174,7 @@ const TrailName = styled.div`
 const TitleImage = styled.img`
   width: 70%;
   max-width: 400px;
-  margin-bottom: -80px; /* Even more overlap with container due to cropped image */
+  margin-bottom: -35px; /* Reduced overlap - just enough to sit on top of container */
   filter: drop-shadow(0 4px 8px rgba(0,0,0,0.2));
   position: relative;
   z-index: 2; /* Place above the container */
@@ -180,13 +182,13 @@ const TitleImage = styled.img`
   @media (max-width: 768px) {
     width: 80%;
     max-width: 350px;
-    margin-bottom: -70px;
+    margin-bottom: -30px;
   }
   
   @media (max-width: 480px) {
     width: 85%;
     max-width: 300px;
-    margin-bottom: -60px;
+    margin-bottom: -25px;
   }
 `;
 
@@ -196,7 +198,7 @@ const TrailBotContainer = styled.div`
   background: rgba(255, 255, 255, 0.1);
   backdrop-filter: blur(10px);
   border-radius: 16px;
-  padding: 65px 20px 0; /* Further increased top padding for cropped image overlap */
+  padding: 35px 20px 10px; /* Reduced top padding to match reduced overlap */
   margin: 0 0 20px;
   box-shadow: 0 8px 32px rgba(0, 0, 0, 0.1);
   border: 1px solid rgba(255, 255, 255, 0.2);
@@ -204,19 +206,19 @@ const TrailBotContainer = styled.div`
   position: relative;
   
   @media (max-width: 768px) {
-    padding: 60px 15px 0;
+    padding: 30px 15px 10px;
     width: 95%;
   }
   
   @media (max-width: 480px) {
-    padding: 50px 10px 0;
+    padding: 25px 10px 10px;
     width: 90%;
   }
   
   & iframe {
     border: none;
     border-radius: 8px;
-    height: 300px; /* Reduced height */
+    height: 300px; /* Maintained reduced height */
     background: transparent;
     margin-bottom: 0; /* Remove bottom margin */
   }
@@ -245,9 +247,213 @@ const FloatingEgg = styled.div`
   }
 `;
 
+// Navigation buttons
+const NavButtonsContainer = styled.div`
+  display: flex;
+  justify-content: center;
+  gap: 16px;
+  margin: 20px 0;
+  width: 100%;
+  
+  @media (max-width: 480px) {
+    gap: 10px;
+    flex-direction: column;
+    align-items: center;
+  }
+`;
+
+const NavButton = styled.a`
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  padding: 12px 20px;
+  background: rgba(255, 255, 255, 0.1);
+  color: white;
+  text-decoration: none;
+  border-radius: 30px;
+  border: 1px solid rgba(255, 255, 255, 0.2);
+  font-family: 'Montserrat', sans-serif;
+  font-weight: 500;
+  font-size: 0.9rem;
+  transition: all 0.2s ease;
+  backdrop-filter: blur(5px);
+  
+  &:hover {
+    background: rgba(255, 255, 255, 0.2);
+    transform: translateY(-2px);
+  }
+  
+  &:before {
+    content: ${props => props.icon || '"🏔️"'};
+    margin-right: 8px;
+    font-size: 1.2em;
+  }
+  
+  @media (max-width: 768px) {
+    padding: 10px 16px;
+    font-size: 0.85rem;
+  }
+`;
+
+// Form container and elements
+const FormSection = styled.div`
+  width: 100%;
+  max-width: 800px;
+  background: rgba(255, 107, 107, 0.05);
+  border-radius: 16px;
+  padding: 30px 20px;
+  margin: 30px 0;
+  box-shadow: 0 8px 32px rgba(0, 0, 0, 0.1);
+  border: 1px solid rgba(255, 107, 107, 0.1);
+  position: relative;
+  
+  @media (max-width: 768px) {
+    padding: 25px 15px;
+    width: 95%;
+  }
+  
+  @media (max-width: 480px) {
+    padding: 20px 10px;
+    width: 90%;
+  }
+`;
+
+const FormTitle = styled.h2`
+  color: white;
+  font-family: 'Montserrat', sans-serif;
+  font-size: 1.8rem;
+  font-weight: 700;
+  margin-bottom: 20px;
+  text-align: center;
+  background: linear-gradient(45deg, #FFE66D, #FFC72C);
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+`;
+
+const Form = styled.form`
+  display: flex;
+  flex-direction: column;
+  gap: 15px;
+  width: 100%;
+  max-width: 500px;
+  margin: 0 auto;
+`;
+
+const InputGroup = styled.div`
+  display: flex;
+  flex-direction: column;
+  gap: 5px;
+`;
+
+const InputLabel = styled.label`
+  color: rgba(255, 255, 255, 0.8);
+  font-size: 0.9rem;
+  font-weight: 500;
+  margin-left: 5px;
+`;
+
+const Input = styled.input`
+  padding: 12px 16px;
+  border-radius: 8px;
+  border: 1px solid rgba(255, 255, 255, 0.2);
+  background: rgba(255, 255, 255, 0.1);
+  color: white;
+  font-size: 1rem;
+  transition: all 0.2s ease;
+  
+  &:focus {
+    outline: none;
+    border-color: #FFC72C;
+    box-shadow: 0 0 0 2px rgba(255, 199, 44, 0.3);
+  }
+  
+  &::placeholder {
+    color: rgba(255, 255, 255, 0.4);
+  }
+`;
+
+const eggShakeAnimation = keyframes`
+  0%, 100% { transform: rotate(0deg); }
+  25% { transform: rotate(-5deg); }
+  75% { transform: rotate(5deg); }
+`;
+
+const SubmitButton = styled.button`
+  position: relative;
+  padding: 14px 28px;
+  border-radius: 30px;
+  border: none;
+  background: linear-gradient(45deg, #FFC72C, #FF8800);
+  color: white;
+  font-size: 1.1rem;
+  font-weight: 600;
+  cursor: pointer;
+  margin-top: 10px;
+  transition: all 0.3s ease;
+  box-shadow: 0 4px 15px rgba(255, 199, 44, 0.3);
+  overflow: hidden;
+  
+  &:hover {
+    transform: translateY(-3px);
+    box-shadow: 0 6px 20px rgba(255, 199, 44, 0.4);
+    
+    &:before {
+      animation: ${eggShakeAnimation} 0.6s ease-in-out;
+    }
+  }
+  
+  &:active {
+    transform: translateY(0);
+  }
+  
+  &:before {
+    content: "🥚";
+    margin-right: 10px;
+  }
+  
+  &:disabled {
+    background: #888;
+    cursor: not-allowed;
+    transform: none;
+    box-shadow: none;
+  }
+`;
+
+const ThankYouMessage = styled.div`
+  text-align: center;
+  padding: 20px;
+  background: rgba(70, 200, 120, 0.1);
+  border-radius: 10px;
+  border: 1px solid rgba(70, 200, 120, 0.2);
+  
+  h3 {
+    font-size: 1.4rem;
+    color: #FFC72C;
+    margin-bottom: 10px;
+  }
+  
+  p {
+    color: rgba(255, 255, 255, 0.8);
+    font-size: 1rem;
+  }
+  
+  &:before {
+    content: "🍳";
+    font-size: 2rem;
+    display: block;
+    margin-bottom: 10px;
+  }
+`;
+
 function LesterPark() {
   const [eggs, setEggs] = useState([]);
   const scriptRef = useRef(null);
+  
+  // Form state
+  const [name, setName] = useState('');
+  const [email, setEmail] = useState('');
+  const [isSubmitting, setIsSubmitting] = useState(false);
+  const [submitted, setSubmitted] = useState(false);
   
   useEffect(() => {
     // Load fonts
@@ -340,6 +546,51 @@ function LesterPark() {
     };
   }, []);
   
+  // Handle form submission
+  const handleSubmit = async (e) => {
+    e.preventDefault();
+    
+    // Basic validation
+    if (!name.trim() || !email.trim()) {
+      alert('Please fill in all fields');
+      return;
+    }
+    
+    // Email format validation
+    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+    if (!emailRegex.test(email)) {
+      alert('Please enter a valid email address');
+      return;
+    }
+    
+    setIsSubmitting(true);
+    
+    try {
+      // Create a new entry in the 'newsletter registrants' database
+      const registrantsRef = ref(database, 'newsletterRegistrants');
+      const newRegistrantRef = push(registrantsRef);
+      
+      // Add timestamp
+      await set(newRegistrantRef, {
+        name,
+        email,
+        timestamp: Date.now()
+      });
+      
+      // Show success message
+      setSubmitted(true);
+      
+      // Reset form
+      setName('');
+      setEmail('');
+    } catch (error) {
+      console.error('Error submitting form:', error);
+      alert('Something went wrong. Please try again later.');
+    } finally {
+      setIsSubmitting(false);
+    }
+  };
+  
   return (
     <PageContainer>
       {eggs.map(egg => (
@@ -386,6 +637,72 @@ function LesterPark() {
             title="Lester Park Trail Conditions"
           />
         </TrailBotContainer>
+        
+        {/* Navigation buttons */}
+        <NavButtonsContainer>
+          <NavButton 
+            href="https://www.coggs.com/trail-conditions" 
+            target="_blank"
+            rel="noopener noreferrer"
+            icon='"🌄"'
+          >
+            COGGS CONDITIONS
+          </NavButton>
+          
+          <NavButton 
+            href="https://www.coggs.com/support" 
+            target="_blank"
+            rel="noopener noreferrer"
+            icon='"🛠️"'
+          >
+            SUPPORT OUR TRAILS
+          </NavButton>
+        </NavButtonsContainer>
+        
+        {/* Join Us Form */}
+        <FormSection>
+          <FormTitle>JOIN US</FormTitle>
+          
+          {!submitted ? (
+            <Form onSubmit={handleSubmit}>
+              <InputGroup>
+                <InputLabel htmlFor="name">Name</InputLabel>
+                <Input 
+                  id="name"
+                  type="text" 
+                  value={name}
+                  onChange={(e) => setName(e.target.value)}
+                  placeholder="Your name"
+                  required
+                />
+              </InputGroup>
+              
+              <InputGroup>
+                <InputLabel htmlFor="email">Email</InputLabel>
+                <Input 
+                  id="email"
+                  type="email" 
+                  value={email}
+                  onChange={(e) => setEmail(e.target.value)}
+                  placeholder="Your email address"
+                  required
+                />
+              </InputGroup>
+              
+              <SubmitButton 
+                type="submit" 
+                disabled={isSubmitting}
+              >
+                {isSubmitting ? 'Submitting...' : 'Get Crackin\''}
+              </SubmitButton>
+            </Form>
+          ) : (
+            <ThankYouMessage>
+              <h3>Egg-cellent!</h3>
+              <p>You're officially part of the scramble! We'll keep you updated on all our egg-citing adventures.</p>
+            </ThankYouMessage>
+          )}
+        </FormSection>
       </ContentContainer>
       
       <Footer />
