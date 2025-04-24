@@ -3,6 +3,7 @@ import { BrowserRouter as Router, Routes, Route, Navigate } from 'react-router-d
 import Home from './pages/Home';
 import HotDogCounter from './pages/HotDogCounter';
 import AdminPage from './pages/AdminPage';
+import LesterPark from './pages/LesterPark';
 import { setupMessageHandler, requestNotificationPermission } from './services/firebase';
 
 // Get the basename from the environment or use an empty string
@@ -98,6 +99,8 @@ function App() {
         <Route path="/hot-dog-counter" element={<Navigate to="/hotdog-counter" replace />} />
         {/* Admin route */}
         <Route path="/admin1" element={<AdminPage />} />
+        {/* Lester Park route */}
+        <Route path="/lester-park" element={<LesterPark />} />
       </Routes>
     </Router>
   );
