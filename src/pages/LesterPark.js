@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useState, useRef } from 'react';
 import styled, { keyframes } from 'styled-components';
 import Footer from '../components/Footer';
 
@@ -53,19 +53,168 @@ const ContentContainer = styled.div`
 `;
 
 const Logo = styled.img`
-  width: 70%;
-  max-width: 320px;
-  margin-bottom: 1.25px;
+  width: 84%; /* Increased by 20% from 70% */
+  max-width: 384px; /* Increased by 20% from 320px */
+  margin-bottom: 10px;
   filter: drop-shadow(0 8px 16px rgba(0,0,0,0.1));
   
   @media (max-width: 768px) {
-    width: 90%;
-    max-width: 300px;
+    width: 100%;
+    max-width: 360px; /* Increased by 20% from 300px */
   }
   
   @media (max-width: 480px) {
+    width: 100%;
+    max-width: 300px; /* Increased by 20% from 250px */
+  }
+`;
+
+const Subtitle = styled.h2`
+  color: white;
+  font-family: 'Montserrat', sans-serif;
+  font-size: 1.2rem;
+  font-weight: 400;
+  letter-spacing: 0.15em;
+  text-transform: uppercase;
+  margin: 0 0 10px;
+  opacity: 0.9;
+  filter: drop-shadow(0 2px 4px rgba(0,0,0,0.1));
+  
+  @media (max-width: 768px) {
+    font-size: 1.1rem;
+    margin-bottom: 8px;
+  }
+  
+  @media (max-width: 480px) {
+    font-size: 0.9rem;
+    margin-bottom: 6px;
+    letter-spacing: 0.12em;
+  }
+`;
+
+const PresentationContainer = styled.div`
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  margin-bottom: 25px;
+  text-align: center;
+  max-width: 90%;
+`;
+
+const TeamName = styled.span`
+  font-family: 'Pacifico', cursive;
+  font-size: 1.3rem;
+  color: #FFC72C; /* Egg yolk yellow color */
+  margin: 0 3px;
+  display: inline-block;
+  filter: drop-shadow(0 2px 3px rgba(0,0,0,0.2));
+  
+  @media (max-width: 768px) {
+    font-size: 1.2rem;
+  }
+  
+  @media (max-width: 480px) {
+    font-size: 1.1rem;
+  }
+`;
+
+const Presents = styled.div`
+  color: white;
+  font-family: 'Montserrat', sans-serif;
+  font-size: 1rem;
+  font-weight: 300;
+  margin: 5px 0;
+  opacity: 0.8;
+  
+  @media (max-width: 480px) {
+    font-size: 0.9rem;
+  }
+`;
+
+const TrailName = styled.div`
+  font-family: 'Montserrat', sans-serif;
+  font-size: 1.6rem;
+  font-weight: 700;
+  color: white;
+  letter-spacing: 0.05em;
+  margin-top: 5px;
+  background: linear-gradient(45deg, #ffffff, #f0f0f0);
+  background-clip: text;
+  -webkit-background-clip: text;
+  color: transparent;
+  text-shadow: 0 2px 4px rgba(0,0,0,0.3);
+  position: relative;
+  
+  &::after {
+    content: "LESTER RIVER TRAIL";
+    position: absolute;
+    left: 0;
+    top: 0;
+    width: 100%;
+    height: 100%;
+    z-index: -1;
+    color: rgba(255,255,255,0.1);
+    filter: blur(4px);
+  }
+  
+  @media (max-width: 768px) {
+    font-size: 1.4rem;
+  }
+  
+  @media (max-width: 480px) {
+    font-size: 1.2rem;
+  }
+`;
+
+const TitleImage = styled.img`
+  width: 70%;
+  max-width: 400px;
+  margin-bottom: -30px; /* Negative margin to overlap with container */
+  filter: drop-shadow(0 4px 8px rgba(0,0,0,0.2));
+  position: relative;
+  z-index: 2; /* Place above the container */
+  
+  @media (max-width: 768px) {
+    width: 80%;
+    max-width: 350px;
+    margin-bottom: -25px;
+  }
+  
+  @media (max-width: 480px) {
+    width: 85%;
+    max-width: 300px;
+    margin-bottom: -20px;
+  }
+`;
+
+const TrailBotContainer = styled.div`
+  width: 100%;
+  max-width: 800px;
+  background: rgba(255, 255, 255, 0.1);
+  backdrop-filter: blur(10px);
+  border-radius: 16px;
+  padding: 30px 20px 20px;
+  margin: 0 0 20px;
+  box-shadow: 0 8px 32px rgba(0, 0, 0, 0.1);
+  border: 1px solid rgba(255, 255, 255, 0.2);
+  z-index: 1;
+  position: relative;
+  
+  @media (max-width: 768px) {
+    padding: 25px 15px 15px;
+    width: 95%;
+  }
+  
+  @media (max-width: 480px) {
+    padding: 20px 10px 10px;
     width: 90%;
-    max-width: 250px;
+  }
+  
+  & iframe {
+    border: none;
+    border-radius: 8px;
+    min-height: 500px;
+    background: transparent;
   }
 `;
 
@@ -94,8 +243,33 @@ const FloatingEgg = styled.div`
 
 function LesterPark() {
   const [eggs, setEggs] = useState([]);
+  const scriptRef = useRef(null);
   
   useEffect(() => {
+    // Load fonts
+    const loadFonts = () => {
+      // Load Montserrat font
+      if (!document.getElementById('montserrat-font')) {
+        const montserratLink = document.createElement('link');
+        montserratLink.id = 'montserrat-font';
+        montserratLink.rel = 'stylesheet';
+        montserratLink.href = 'https://fonts.googleapis.com/css2?family=Montserrat:wght@300;400;500;700&display=swap';
+        document.head.appendChild(montserratLink);
+      }
+      
+      // Load Pacifico font for team name
+      if (!document.getElementById('pacifico-font')) {
+        const pacificoLink = document.createElement('link');
+        pacificoLink.id = 'pacifico-font';
+        pacificoLink.rel = 'stylesheet';
+        pacificoLink.href = 'https://fonts.googleapis.com/css2?family=Pacifico&display=swap';
+        document.head.appendChild(pacificoLink);
+      }
+    };
+    
+    // Load the fonts
+    loadFonts();
+    
     // Function to determine how many eggs to show based on screen width
     const getEggCount = () => {
       const width = window.innerWidth;
@@ -152,7 +326,23 @@ function LesterPark() {
     };
     
     window.addEventListener('resize', handleResize);
-    return () => window.removeEventListener('resize', handleResize);
+    
+    // Load TrailBot script
+    if (!scriptRef.current) {
+      const script = document.createElement('script');
+      script.src = 'https://trailbot.com/scripts/embed.js';
+      script.defer = true;
+      document.body.appendChild(script);
+      scriptRef.current = script;
+    }
+    
+    return () => {
+      window.removeEventListener('resize', handleResize);
+      // Remove script on unmount if it exists
+      if (scriptRef.current && document.body.contains(scriptRef.current)) {
+        document.body.removeChild(scriptRef.current);
+      }
+    };
   }, []);
   
   return (
@@ -176,6 +366,31 @@ function LesterPark() {
           src="/assets/cogg white shadow.png" 
           alt="Scrambled Legs Logo" 
         />
+        
+        <Subtitle>
+          DULUTH'S PREMIER RACE TEAM
+        </Subtitle>
+        
+        <PresentationContainer>
+          <Presents>
+            <TeamName>Scrambled Legs™</TeamName> proudly presents
+          </Presents>
+          <TrailName>LESTER RIVER TRAIL</TrailName>
+        </PresentationContainer>
+        
+        <TitleImage 
+          src="/assets/trail conditions.png" 
+          alt="Trail Conditions" 
+        />
+        
+        <TrailBotContainer>
+          <iframe 
+            src="https://trailbot.com/widgets/feed?keys=5af70f8f-9995-4451-8877-a42fbb299a6a" 
+            width="100%" 
+            className="trail-status-embed"
+            title="Lester Park Trail Conditions"
+          />
+        </TrailBotContainer>
       </ContentContainer>
       
       <Footer />
