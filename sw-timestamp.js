@@ -1,2 +1,1 @@
-// This file forces service worker reloading
-// Version: Tue Apr  8 13:15:35 CDT 2025
+// This file is no longer used - PWA functionality has been removed
