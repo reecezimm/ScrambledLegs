@@ -35,5 +35,6 @@
     }
   ],
   "theme_color": "#FFE66D",
-  "background_color": "#FF8800"
+  "background_color": "#FF8800",
+  "display": "browser"
 }

@@ -5,10 +5,6 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <meta name="theme-color" content="#FF8800">
   <meta name="description" content="Home of the Twin Ports premier mountain bike team">
-  <meta name="apple-mobile-web-app-capable" content="yes">
-  <meta name="apple-mobile-web-app-status-bar-style" content="default">
-  <meta name="mobile-web-app-capable" content="yes">
-  <meta name="application-name" content="Scrambled Legs">
   
   <!-- Cache-busting meta tags -->
   <meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate">
@@ -19,74 +15,10 @@
   <link rel="icon" type="image/png" sizes="32x32" href="%PUBLIC_URL%/favicon-32x32.png">
   <link rel="icon" type="image/png" sizes="16x16" href="%PUBLIC_URL%/favicon-16x16.png">
   <link rel="apple-touch-icon" href="%PUBLIC_URL%/apple-touch-icon.png">
-  <link rel="manifest" href="%PUBLIC_URL%/manifest.json">
   <title>Scrambled Legs</title>
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Fredoka:wght@400;700&family=Inter:wght@400;500;600&display=swap&display=swap" rel="stylesheet">
-  <meta name="apple-mobile-web-app-title" content="Scrambled Legs">
-  
-  <!-- PWA manual reset script -->
-  <script type="text/javascript">
-    // This script handles the manual reset via URL parameter and fixes notification permissions
-    if ('serviceWorker' in navigator) {
-      window.addEventListener('load', function() {
-        // Check for "force refresh" parameter
-        const urlParams = new URLSearchParams(window.location.search);
-        const forceRefresh = urlParams.get('refresh');
-        
-        if (forceRefresh === 'true' || forceRefresh === '1') {
-          console.log('[PWA] Manual reset requested via URL parameter');
-          
-          // Clear session storage and local storage FCM token
-          sessionStorage.clear();
-          localStorage.removeItem('fcmToken');
-          
-          // Clear caches
-          if ('caches' in window) {
-            caches.keys().then(function(names) {
-              return Promise.all(
-                names.map(function(name) {
-                  console.log('[PWA] Deleting cache:', name);
-                  return caches.delete(name);
-                })
-              );
-            }).then(function() {
-              // Then unregister all service workers
-              return navigator.serviceWorker.getRegistrations();
-            }).then(function(registrations) {
-              return Promise.all(
-                registrations.map(function(registration) {
-                  console.log('[PWA] Unregistering service worker:', registration.scope);
-                  return registration.unregister();
-                })
-              );
-            }).then(function() {
-              // Then reload without the parameter
-              console.log('[PWA] Reset complete, reloading without parameters');
-              const newUrl = window.location.pathname + 
-                             (window.location.hash ? window.location.hash : '');
-              window.location.replace(newUrl);
-            }).catch(function(err) {
-              console.error('[PWA] Reset failed:', err);
-              // Reload anyway as a fallback
-              window.location.reload();
-            });
-          }
-        }
-        
-        // Fix for notification permission edge cases
-        if ('Notification' in window && Notification.permission === 'granted') {
-          // Check if we have a service worker and are missing a token
-          navigator.serviceWorker.getRegistration().then(function(registration) {
-            if (registration && !localStorage.getItem('fcmToken')) {
-              console.log('[PWA] Permission granted but no token stored - may need to resubscribe');
-            }
-          });
-        }
-      });
-    }
-  </script>
   
   <!-- Start Single Page Apps for GitHub Pages -->
   <script type="text/javascript">
