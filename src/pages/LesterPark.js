@@ -174,7 +174,7 @@ const TrailName = styled.div`
 const TitleImage = styled.img`
   width: 70%;
   max-width: 400px;
-  margin-bottom: -35px; /* Reduced overlap - just enough to sit on top of container */
+  margin: 0; /* No margins at all */
   filter: drop-shadow(0 4px 8px rgba(0,0,0,0.2));
   position: relative;
   z-index: 2; /* Place above the container */
@@ -182,13 +182,11 @@ const TitleImage = styled.img`
   @media (max-width: 768px) {
     width: 80%;
     max-width: 350px;
-    margin-bottom: -30px;
   }
   
   @media (max-width: 480px) {
     width: 85%;
     max-width: 300px;
-    margin-bottom: -25px;
   }
 `;
 
@@ -198,20 +196,20 @@ const TrailBotContainer = styled.div`
   background: rgba(255, 255, 255, 0.1);
   backdrop-filter: blur(10px);
   border-radius: 16px;
-  padding: 35px 20px 10px; /* Reduced top padding to match reduced overlap */
-  margin: 0 0 20px;
+  padding: 20px; /* Equal padding all around */
+  margin: 10px 0 20px; /* Added top margin */
   box-shadow: 0 8px 32px rgba(0, 0, 0, 0.1);
   border: 1px solid rgba(255, 255, 255, 0.2);
   z-index: 1;
   position: relative;
   
   @media (max-width: 768px) {
-    padding: 30px 15px 10px;
+    padding: 15px;
     width: 95%;
   }
   
   @media (max-width: 480px) {
-    padding: 25px 10px 10px;
+    padding: 10px;
     width: 90%;
   }
   
@@ -220,7 +218,8 @@ const TrailBotContainer = styled.div`
     border-radius: 8px;
     height: 300px; /* Maintained reduced height */
     background: transparent;
-    margin-bottom: 0; /* Remove bottom margin */
+    margin: 0; /* No margins */
+    width: 100%;
   }
 `;
 
@@ -252,13 +251,15 @@ const NavButtonsContainer = styled.div`
   display: flex;
   justify-content: center;
   gap: 16px;
-  margin: 20px 0;
+  margin: 30px 0;
   width: 100%;
+  max-width: 600px;
   
   @media (max-width: 480px) {
-    gap: 10px;
-    flex-direction: column;
+    gap: 15px;
+    flex-direction: row; /* Keep buttons side by side on mobile */
     align-items: center;
+    margin: 25px 0;
   }
 `;
 
@@ -266,7 +267,7 @@ const NavButton = styled.a`
   display: inline-flex;
   align-items: center;
   justify-content: center;
-  padding: 12px 20px;
+  padding: 16px 20px;
   background: rgba(255, 255, 255, 0.1);
   color: white;
   text-decoration: none;
@@ -277,21 +278,39 @@ const NavButton = styled.a`
   font-size: 0.9rem;
   transition: all 0.2s ease;
   backdrop-filter: blur(5px);
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
+  flex: 1;
+  text-align: center;
   
   &:hover {
     background: rgba(255, 255, 255, 0.2);
     transform: translateY(-2px);
+    box-shadow: 0 6px 16px rgba(0, 0, 0, 0.15);
+  }
+  
+  &:active {
+    transform: translateY(0);
   }
   
   &:before {
     content: ${props => props.icon || '"🏔️"'};
-    margin-right: 8px;
-    font-size: 1.2em;
+    margin-right: 10px;
+    font-size: 1.3em;
   }
   
   @media (max-width: 768px) {
-    padding: 10px 16px;
+    padding: 14px 16px;
     font-size: 0.85rem;
+  }
+  
+  @media (max-width: 480px) {
+    padding: 12px 14px;
+    font-size: 0.8rem;
+    
+    &:before {
+      margin-right: 8px;
+      font-size: 1.2em;
+    }
   }
 `;
 
@@ -299,22 +318,24 @@ const NavButton = styled.a`
 const FormSection = styled.div`
   width: 100%;
   max-width: 800px;
-  background: rgba(255, 107, 107, 0.05);
+  background: rgba(255, 199, 44, 0.05);
   border-radius: 16px;
-  padding: 30px 20px;
+  padding: 35px 25px;
   margin: 30px 0;
-  box-shadow: 0 8px 32px rgba(0, 0, 0, 0.1);
-  border: 1px solid rgba(255, 107, 107, 0.1);
+  box-shadow: 0 8px 32px rgba(0, 0, 0, 0.15);
+  border: 1px solid rgba(255, 199, 44, 0.15);
   position: relative;
   
   @media (max-width: 768px) {
-    padding: 25px 15px;
+    padding: 30px 20px;
     width: 95%;
+    margin: 25px 0;
   }
   
   @media (max-width: 480px) {
-    padding: 20px 10px;
+    padding: 25px 15px;
     width: 90%;
+    margin: 20px 0;
   }
 `;
 
@@ -323,52 +344,97 @@ const FormTitle = styled.h2`
   font-family: 'Montserrat', sans-serif;
   font-size: 1.8rem;
   font-weight: 700;
-  margin-bottom: 20px;
+  margin-bottom: 5px;
   text-align: center;
   background: linear-gradient(45deg, #FFE66D, #FFC72C);
   -webkit-background-clip: text;
   -webkit-text-fill-color: transparent;
+  
+  @media (max-width: 480px) {
+    font-size: 1.6rem;
+  }
+`;
+
+const FormSubtitle = styled.p`
+  color: rgba(255, 255, 255, 0.8);
+  font-family: 'Montserrat', sans-serif;
+  font-size: 1rem;
+  font-weight: 300;
+  font-style: italic;
+  margin-bottom: 25px;
+  text-align: center;
+  
+  @media (max-width: 480px) {
+    font-size: 0.9rem;
+    margin-bottom: 20px;
+  }
 `;
 
 const Form = styled.form`
   display: flex;
   flex-direction: column;
-  gap: 15px;
+  gap: 20px;
   width: 100%;
-  max-width: 500px;
+  max-width: 450px;
   margin: 0 auto;
+  
+  @media (max-width: 480px) {
+    gap: 15px;
+  }
 `;
 
 const InputGroup = styled.div`
   display: flex;
   flex-direction: column;
-  gap: 5px;
+  gap: 8px;
 `;
 
 const InputLabel = styled.label`
-  color: rgba(255, 255, 255, 0.8);
-  font-size: 0.9rem;
-  font-weight: 500;
+  color: #FFC72C;
+  font-size: 0.95rem;
+  font-weight: 600;
   margin-left: 5px;
+  letter-spacing: 0.05em;
+  text-transform: uppercase;
+  display: flex;
+  align-items: center;
+  
+  &:before {
+    content: '●';
+    font-size: 0.5em;
+    margin-right: 8px;
+    color: #FFC72C;
+  }
+  
+  @media (max-width: 480px) {
+    font-size: 0.85rem;
+  }
 `;
 
 const Input = styled.input`
-  padding: 12px 16px;
-  border-radius: 8px;
-  border: 1px solid rgba(255, 255, 255, 0.2);
-  background: rgba(255, 255, 255, 0.1);
+  padding: 16px 18px;
+  border-radius: 12px;
+  border: 2px solid rgba(255, 199, 44, 0.2);
+  background: rgba(255, 255, 255, 0.07);
   color: white;
   font-size: 1rem;
   transition: all 0.2s ease;
+  box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
   
   &:focus {
     outline: none;
     border-color: #FFC72C;
-    box-shadow: 0 0 0 2px rgba(255, 199, 44, 0.3);
+    box-shadow: 0 0 0 3px rgba(255, 199, 44, 0.25), 0 4px 12px rgba(0, 0, 0, 0.1);
+    background: rgba(255, 255, 255, 0.1);
   }
   
   &::placeholder {
     color: rgba(255, 255, 255, 0.4);
+  }
+  
+  @media (max-width: 480px) {
+    padding: 14px 16px;
+    font-size: 0.95rem;
   }
 `;
 
@@ -380,7 +446,7 @@ const eggShakeAnimation = keyframes`
 
 const SubmitButton = styled.button`
   position: relative;
-  padding: 14px 28px;
+  padding: 16px 32px;
   border-radius: 30px;
   border: none;
   background: linear-gradient(45deg, #FFC72C, #FF8800);
@@ -388,27 +454,21 @@ const SubmitButton = styled.button`
   font-size: 1.1rem;
   font-weight: 600;
   cursor: pointer;
-  margin-top: 10px;
+  margin-top: 15px;
   transition: all 0.3s ease;
   box-shadow: 0 4px 15px rgba(255, 199, 44, 0.3);
   overflow: hidden;
+  width: 100%;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
   
   &:hover {
     transform: translateY(-3px);
     box-shadow: 0 6px 20px rgba(255, 199, 44, 0.4);
-    
-    &:before {
-      animation: ${eggShakeAnimation} 0.6s ease-in-out;
-    }
   }
   
   &:active {
     transform: translateY(0);
-  }
-  
-  &:before {
-    content: "🥚";
-    margin-right: 10px;
   }
   
   &:disabled {
@@ -417,31 +477,57 @@ const SubmitButton = styled.button`
     transform: none;
     box-shadow: none;
   }
+  
+  @media (max-width: 480px) {
+    padding: 14px 24px;
+    font-size: 1rem;
+    margin-top: 10px;
+  }
 `;
 
 const ThankYouMessage = styled.div`
   text-align: center;
-  padding: 20px;
-  background: rgba(70, 200, 120, 0.1);
-  border-radius: 10px;
-  border: 1px solid rgba(70, 200, 120, 0.2);
+  padding: 30px;
+  background: rgba(70, 200, 120, 0.05);
+  border-radius: 12px;
+  border: 1px solid rgba(70, 200, 120, 0.15);
+  box-shadow: 0 8px 20px rgba(0, 0, 0, 0.1);
   
   h3 {
-    font-size: 1.4rem;
+    font-size: 1.6rem;
     color: #FFC72C;
-    margin-bottom: 10px;
+    margin-bottom: 12px;
+    font-weight: 700;
   }
   
   p {
-    color: rgba(255, 255, 255, 0.8);
-    font-size: 1rem;
+    color: rgba(255, 255, 255, 0.9);
+    font-size: 1.1rem;
+    line-height: 1.5;
   }
   
   &:before {
     content: "🍳";
-    font-size: 2rem;
+    font-size: 3rem;
     display: block;
-    margin-bottom: 10px;
+    margin-bottom: 15px;
+  }
+  
+  @media (max-width: 480px) {
+    padding: 25px 15px;
+    
+    h3 {
+      font-size: 1.4rem;
+    }
+    
+    p {
+      font-size: 1rem;
+    }
+    
+    &:before {
+      font-size: 2.5rem;
+      margin-bottom: 10px;
+    }
   }
 `;
 
@@ -644,13 +730,13 @@ function LesterPark() {
             href="https://www.coggs.com/trail-conditions" 
             target="_blank"
             rel="noopener noreferrer"
-            icon='"🌄"'
+            icon='"🚵‍♂️"'
           >
-            COGGS CONDITIONS
+            <strong>COGGS</strong> CONDITIONS
           </NavButton>
           
           <NavButton 
-            href="https://www.coggs.com/support" 
+            href="https://www.coggs.com/donate" 
             target="_blank"
             rel="noopener noreferrer"
             icon='"🛠️"'
@@ -661,7 +747,8 @@ function LesterPark() {
         
         {/* Join Us Form */}
         <FormSection>
-          <FormTitle>JOIN US</FormTitle>
+          <FormTitle>JOIN THE SCRAMBLED LEGS</FormTitle>
+          <FormSubtitle>An elite team of average athletes</FormSubtitle>
           
           {!submitted ? (
             <Form onSubmit={handleSubmit}>
