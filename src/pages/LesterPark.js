@@ -256,8 +256,8 @@ const NavButtonsContainer = styled.div`
   max-width: 600px;
   
   @media (max-width: 480px) {
-    gap: 15px;
-    flex-direction: row; /* Keep buttons side by side on mobile */
+    gap: 12px;
+    flex-direction: column; /* Stack buttons on mobile */
     align-items: center;
     margin: 25px 0;
   }
@@ -306,7 +306,9 @@ const NavButton = styled.a`
   
   @media (max-width: 480px) {
     padding: 12px 14px;
-    font-size: 0.8rem;
+    font-size: 0.9rem;
+    width: 100%;
+    max-width: 280px;
     
     &:before {
       margin-right: 8px;
@@ -724,7 +726,7 @@ function LesterPark() {
             rel="noopener noreferrer"
             icon='"🚵‍♂️"'
           >
-            <strong>COGGS</strong> CONDITIONS
+            TRAIL CONDITIONS
           </NavButton>
           
           <NavButton 
@@ -733,7 +735,7 @@ function LesterPark() {
             rel="noopener noreferrer"
             icon='"🛠️"'
           >
-            SUPPORT OUR TRAILS
+            SUPPORT THE TRAILS
           </NavButton>
         </NavButtonsContainer>
         
