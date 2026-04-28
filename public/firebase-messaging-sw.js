@@ -21,7 +21,7 @@ firebase.initializeApp({
 
 const NOTIFICATION_ICON = 'https://thescrambledlegs.com/android-chrome-192x192.png';
 const LOG_OPEN_URL =
-  'https://us-central1-fundraiser-f0831.cloudfunctions.net/logOpen';
+  'https://logopen-57u2xumnxa-uc.a.run.app';
 
 const messaging = firebase.messaging();
 

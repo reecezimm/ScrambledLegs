@@ -9,7 +9,7 @@
 // If both fire we'll over-count by 1 — accepted tradeoff per NOTIFICATIONS.md.
 
 const LOG_OPEN_URL =
-  'https://us-central1-fundraiser-f0831.cloudfunctions.net/logOpen';
+  'https://logopen-57u2xumnxa-uc.a.run.app';
 const LS_TOKEN_HASH = 'sl_notif_token_hash';
 
 (function trackOpenOnLoad() {
