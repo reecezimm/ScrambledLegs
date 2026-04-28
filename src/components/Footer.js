@@ -1,8 +1,6 @@
 import React from 'react';
 import styled from 'styled-components';
-
-// Increment this value for each update
-const APP_VERSION = "3.1";
+import { APP_VERSION, BUILD_NUM, BUILD_SHA } from '../services/buildInfo';
 
 const FooterContainer = styled.footer`
   position: relative;
@@ -55,7 +53,7 @@ const Footer = () => {
           Presented by Scrambled Legs™ {year} • {formattedDate}
         </MainText>
         <VersionText>
-          version {APP_VERSION}
+          v {APP_VERSION} · build {BUILD_NUM} · {BUILD_SHA}
         </VersionText>
       </FooterContent>
     </FooterContainer>

@@ -145,21 +145,6 @@ export default function EventLeaderboard({ event }) {
     return () => { u1(); u2(); };
   }, [event, user]);
 
-  if (!user) {
-    const handleNudge = () => {
-      window.dispatchEvent(new Event('auth:open'));
-      window.dispatchEvent(new Event('auth:nudge'));
-    };
-    return (
-      <Wrap>
-        <SectionLabel>The Crew</SectionLabel>
-        <SignInPrompt type="button" onClick={handleNudge}>
-          🥚 Sign in to see who's coming.
-        </SignInPrompt>
-      </Wrap>
-    );
-  }
-
   const { crew, badEggs, attributedTotal } = useMemo(() => {
     const allUids = new Set([...Object.keys(rsvps), ...Object.keys(totals)]);
     const rows = [];
@@ -185,6 +170,22 @@ export default function EventLeaderboard({ event }) {
 
   const totalHotdogs = (event && event.hotdogs) || 0;
   const anonMashes = Math.max(0, totalHotdogs - attributedTotal);
+
+  // Conditional render must come AFTER all hooks have run (React hook ordering).
+  if (!user) {
+    const handleNudge = () => {
+      window.dispatchEvent(new Event('auth:open'));
+      window.dispatchEvent(new Event('auth:nudge'));
+    };
+    return (
+      <Wrap>
+        <SectionLabel>The Crew</SectionLabel>
+        <SignInPrompt type="button" onClick={handleNudge}>
+          🥚 Sign in to see who's coming.
+        </SignInPrompt>
+      </Wrap>
+    );
+  }
 
   return (
     <Wrap>

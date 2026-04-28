@@ -22,12 +22,22 @@ jobs:
       - name: Install dependencies 📦
         run: npm install
 
+      - name: Compute build stamp 🔢
+        id: stamp
+        run: |
+          echo "num=$(git rev-list --count HEAD)" >> $GITHUB_OUTPUT
+          echo "sha=$(git rev-parse --short HEAD)" >> $GITHUB_OUTPUT
+          echo "time=$(date -u +%Y-%m-%dT%H:%M:%SZ)" >> $GITHUB_OUTPUT
+
       - name: Build 🏗️
         run: npm run build
         env:
           CI: false # Don't treat warnings as errors
           DISABLE_ESLINT_PLUGIN: true # Disable ESLint during build
           REACT_APP_FIREBASE_VAPID_KEY: ${{ secrets.REACT_APP_FIREBASE_VAPID_KEY }}
+          REACT_APP_BUILD_NUM: ${{ steps.stamp.outputs.num }}
+          REACT_APP_BUILD_SHA: ${{ steps.stamp.outputs.sha }}
+          REACT_APP_BUILD_TIME: ${{ steps.stamp.outputs.time }}
 
       - name: Copy CNAME to build folder
         run: cp CNAME build/ || echo "No CNAME file found"

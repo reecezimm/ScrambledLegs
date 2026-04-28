@@ -212,6 +212,13 @@ export function AdminLayout({ tab, onTabChange, onSignOut, children }) {
         >
           Analytics
         </Tab>
+        <Tab
+          type="button"
+          $active={tab === 'errors'}
+          onClick={() => onTabChange && onTabChange('errors')}
+        >
+          Errors
+        </Tab>
       </TabsRow>
       <Body>{children}</Body>
     </Page>

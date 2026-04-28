@@ -112,6 +112,13 @@
       "$key": {
         ".validate": "(newData.hasChildren(['value', 'generatedAt']) && newData.child('value').isString()) || (newData.hasChild('lock') && newData.child('lock').isBoolean())"
       }
+    },
+    "errorLogs": {
+      ".read": "auth != null && (root.child('userProfiles').child(auth.uid).child('isAdmin').val() == true || auth.token.email == 'gm@thescrambledlegs.com' || auth.token.email == 'coach@thescrambledlegs.com')",
+      "$pushId": {
+        ".write": "!data.exists()",
+        ".validate": "newData.hasChildren(['msg', 'ts'])"
+      }
     }
   }
 }

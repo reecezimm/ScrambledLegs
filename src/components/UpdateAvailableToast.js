@@ -66,7 +66,15 @@ export default function UpdateAvailableToast() {
   return (
     <Toast role="status">
       <Msg>🥚 New version available</Msg>
-      <Btn type="button" onClick={() => window.location.reload()}>Refresh</Btn>
+      <Btn type="button" onClick={() => {
+        try {
+          const u = new URL(window.location.href);
+          u.searchParams.set('_v', String(Date.now()));
+          window.location.replace(u.toString());
+        } catch (_) {
+          window.location.reload();
+        }
+      }}>Refresh</Btn>
       <DismissBtn type="button" aria-label="Dismiss" onClick={() => setVisible(false)}>×</DismissBtn>
     </Toast>
   );

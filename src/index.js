@@ -7,6 +7,8 @@ import './services/openTracking';
 import './services/ai';
 // Cache-mismatch self-heal + new-version detection.
 import './services/freshness';
+// Capture and log uncaught errors / promise rejections to RTDB.
+import './services/errorLogger';
 
 // Create unique IDs for the application
 const BUILD_ID = `${process.env.NODE_ENV}-${new Date().toISOString().replace(/[:.]/g, '')}`;

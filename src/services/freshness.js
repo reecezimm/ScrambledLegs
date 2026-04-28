@@ -19,6 +19,15 @@ function safeReload() {
     if (Date.now() - last < RELOAD_COOLDOWN_MS) return;
     sessionStorage.setItem(RELOAD_FLAG, String(Date.now()));
   } catch (_) { /* ignore */ }
+  // Cache-bust the URL so Android PWA / aggressive HTTP caches actually re-fetch
+  // the HTML and chunk references. Plain reload() can be served from cache on
+  // installed PWAs and reproduce the original stale-shell issue.
+  try {
+    const u = new URL(window.location.href);
+    u.searchParams.set('_v', String(Date.now()));
+    window.location.replace(u.toString());
+    return;
+  } catch (_) { /* fall through */ }
   window.location.reload();
 }
 

@@ -9,6 +9,7 @@ import SignupsTab from '../components/admin/SignupsTab';
 import UsersTab from '../components/admin/UsersTab';
 import EngagementTab from '../components/admin/EngagementTab';
 import AnalyticsTab from '../components/admin/AnalyticsTab';
+import ErrorsTab from '../components/admin/ErrorsTab';
 import { useCurrentUser, signOutUser } from '../services/auth';
 import { subscribeEvents, partitionEvents } from '../services/events';
 
@@ -84,7 +85,7 @@ const Spinner = styled.div`
   font-size: 14px;
 `;
 
-const VALID_TABS = ['events', 'notifications', 'signups', 'users', 'engagement', 'analytics'];
+const VALID_TABS = ['events', 'notifications', 'signups', 'users', 'engagement', 'analytics', 'errors'];
 
 function AdminPage() {
   const { user, isAdmin, loading } = useCurrentUser();
@@ -196,6 +197,7 @@ function AdminPage() {
       {tab === 'users' && <UsersTab />}
       {tab === 'engagement' && <EngagementTab />}
       {tab === 'analytics' && <AnalyticsTab />}
+      {tab === 'errors' && <ErrorsTab />}
     </AdminLayout>
   );
 }
