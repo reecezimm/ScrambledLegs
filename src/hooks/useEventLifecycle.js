@@ -135,7 +135,7 @@ export function downloadIcs(ev) {
 export async function shareEvent(ev) {
   const url = `https://thescrambledlegs.com/events/${ev.id}`;
   const title = `${ev.name} · Scrambled Legs`;
-  const text = `${ev.name}\n🗓  ${fmtDateLong(ev.start)} · ${fmtTime(ev.start)}\n📍 ${ev.startLoc ? ev.startLoc.label : ''}${ev.rideLeader ? `\n🌭 Led by ${ev.rideLeader.name}` : ''}\n\nJoin us at thescrambledlegs.com`;
+  const text = `${ev.name}\n🗓  ${fmtDateLong(ev.start)} · ${fmtTime(ev.start)}\n📍 ${ev.startLoc ? ev.startLoc.label : ''}${ev.rideLeader ? `\n🥚 Led by ${ev.rideLeader.name}` : ''}`;
   if (navigator.share) {
     try { await navigator.share({ title, text, url }); return; } catch (e) { return; }
   }

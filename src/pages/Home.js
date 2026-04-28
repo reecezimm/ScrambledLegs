@@ -59,20 +59,20 @@ const ContentContainer = styled.div`
 `;
 
 const Logo = styled.img`
-  width: 92%;
-  max-width: 422px;
+  width: 59%;
+  max-width: 270px;
   margin-bottom: 5px;
   filter: drop-shadow(0 8px 16px rgba(0,0,0,0.1));
-  
+
   @media (max-width: 768px) {
-    width: 100%;
-    max-width: 395px;
+    width: 64%;
+    max-width: 253px;
     margin-bottom: 4px;
   }
-  
+
   @media (max-width: 480px) {
-    width: 100%;
-    max-width: 330px;
+    width: 64%;
+    max-width: 211px;
     margin-bottom: 3px;
   }
 `;

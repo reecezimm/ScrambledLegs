@@ -39,18 +39,23 @@ function buildClickUrl(base, notifId) {
 // sendPush — callable admin endpoint.
 // ---------------------------------------------------------------------------
 
-exports.sendPush = onCall(async (request) => {
-  const data = request.data || {};
+// Switched from onCall to onRequest so we can use the confirmed-working
+// cors:true pattern (same as logOpen) and call via fetch directly, bypassing
+// the Firebase SDK's httpsCallable routing which doesn't work reliably for
+// v2 (2nd gen / Cloud Run) functions.
+exports.sendPush = onRequest({ cors: true }, async (req, res) => {
+  if (req.method !== 'POST') { res.status(405).json({ error: 'Method not allowed' }); return; }
+  const data = req.body || {};
 
   // 1. Plaintext password check.
   if (data.password !== ADMIN_PASSWORD) {
-    throw new HttpsError('permission-denied', 'Bad password.');
+    res.status(403).json({ error: 'Bad password.' }); return;
   }
 
   const title = (data.title || '').trim();
   const body = (data.body || '').trim();
   if (!title || !body) {
-    throw new HttpsError('invalid-argument', 'Title and body are required.');
+    res.status(400).json({ error: 'Title and body are required.' }); return;
   }
   const clickUrl = (data.clickUrl || DEFAULT_CLICK_URL).trim();
 
@@ -60,12 +65,12 @@ exports.sendPush = onCall(async (request) => {
   if (data.testTokenHash) {
     entries = entries.filter(([hash]) => hash === data.testTokenHash);
     if (entries.length === 0) {
-      throw new HttpsError('not-found', 'Test token not found.');
+      res.status(404).json({ error: 'Test token not found.' }); return;
     }
   }
 
   if (entries.length === 0) {
-    throw new HttpsError('failed-precondition', 'No subscribers to send to.');
+    res.status(400).json({ error: 'No subscribers to send to.' }); return;
   }
 
   // 3. Create notification record (status: sending) so admin UI can subscribe live.
@@ -154,7 +159,7 @@ exports.sendPush = onCall(async (request) => {
   updates[`notifications/${notifId}/status`] = 'sent';
   await admin.database().ref().update(updates);
 
-  return { ok: true, notifId, recipients: entries.length, accepted, failed };
+  res.json({ ok: true, notifId, recipients: entries.length, accepted, failed });
 });
 
 // ---------------------------------------------------------------------------

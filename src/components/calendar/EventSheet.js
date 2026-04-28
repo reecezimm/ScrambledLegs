@@ -48,11 +48,11 @@ const SheetBody = styled.div`
 
 const CloseBtn = styled.button`
   position: absolute;
-  top: 10px;
-  right: 10px;
+  top: 12px;
+  right: 12px;
   z-index: 40;
-  width: 34px;
-  height: 34px;
+  width: 42px;
+  height: 42px;
   border-radius: 50%;
   background: rgba(0,0,0,0.55);
   border: 1px solid rgba(255,255,255,0.10);
@@ -61,18 +61,37 @@ const CloseBtn = styled.button`
   display: flex;
   align-items: center;
   justify-content: center;
-  font-size: 18px;
+  font-size: 22px;
   line-height: 1;
   backdrop-filter: blur(6px);
   &:hover { background: rgba(0,0,0,0.75); border-color: rgba(255,199,44,0.25); }
 `;
 
-const Handle = styled.div`
-  width: 40px;
-  height: 4px;
-  margin: 8px auto 0;
-  background: rgba(255,255,255,0.10);
-  border-radius: 2px;
+/* Tappable drag handle — tap closes the sheet on mobile. The wider
+   hit area (40px tall) makes it easy to hit on a small touchscreen. */
+const Handle = styled.button`
+  display: block;
+  width: 100%;
+  padding: 14px 0 6px;
+  margin: 0;
+  background: none;
+  border: none;
+  cursor: pointer;
+  -webkit-tap-highlight-color: transparent;
+
+  &::after {
+    content: '';
+    display: block;
+    width: 40px;
+    height: 4px;
+    margin: 0 auto;
+    background: rgba(255,255,255,0.18);
+    border-radius: 2px;
+    transition: background 0.15s;
+  }
+  &:hover::after, &:active::after {
+    background: rgba(255,199,44,0.55);
+  }
 `;
 
 const BannerImg = styled.div`
@@ -195,7 +214,7 @@ function SheetContent({ event, onClose }) {
       <Backdrop onClick={onClose} />
       <SheetBody onClick={e => e.stopPropagation()}>
         <CloseBtn type="button" aria-label="Close" onClick={onClose}>×</CloseBtn>
-        <Handle />
+        <Handle type="button" onClick={onClose} aria-label="Close panel" />
 
         {event.bannerUrl
           ? <BannerImg style={{ backgroundImage: `url('${event.bannerUrl}')` }} />
