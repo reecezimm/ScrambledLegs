@@ -54,36 +54,45 @@ self.addEventListener('notificationclick', (event) => {
   const clickUrl = data.clickUrl || 'https://thescrambledlegs.com/';
   const notifId = data.notifId || '';
 
-  event.waitUntil(
-    (async () => {
-      // Fire-and-forget log to /logOpen. We pass tokenHash if we cached one.
-      if (notifId) {
-        try {
-          const url = new URL(LOG_OPEN_URL);
-          url.searchParams.set('notifId', notifId);
-          // SW has no access to localStorage; we send what we know.
-          await fetch(url.toString(), { method: 'GET', mode: 'no-cors', keepalive: true });
-        } catch (e) {
-          // ignore — page-load fallback handles it
-        }
+  // Fire the open-log immediately, before any awaits. sendBeacon survives
+  // SW termination on cross-origin window navigation; fetch is a fallback.
+  // Keeping this OUTSIDE the async IIFE so it dispatches synchronously.
+  let logPromise = Promise.resolve();
+  if (notifId) {
+    const url = new URL(LOG_OPEN_URL);
+    url.searchParams.set('notifId', notifId);
+    const logUrl = url.toString();
+    let beaconSent = false;
+    try {
+      if (self.navigator && typeof self.navigator.sendBeacon === 'function') {
+        beaconSent = self.navigator.sendBeacon(logUrl);
       }
+    } catch (e) { /* fallthrough to fetch */ }
+    if (!beaconSent) {
+      logPromise = fetch(logUrl, { method: 'GET', keepalive: true }).catch(() => {});
+    }
+  }
 
-      // Try to focus an existing window first.
-      const allClients = await clients.matchAll({ type: 'window', includeUncontrolled: true });
-      for (const c of allClients) {
-        try {
-          if (c.url && c.url.indexOf('thescrambledlegs.com') !== -1) {
-            await c.focus();
-            if ('navigate' in c) {
-              try { await c.navigate(clickUrl); } catch (e) { /* cross-origin nav blocked */ }
+  event.waitUntil(
+    Promise.all([
+      logPromise,
+      (async () => {
+        const allClients = await clients.matchAll({ type: 'window', includeUncontrolled: true });
+        for (const c of allClients) {
+          try {
+            if (c.url && c.url.indexOf('thescrambledlegs.com') !== -1) {
+              await c.focus();
+              if ('navigate' in c) {
+                try { await c.navigate(clickUrl); } catch (e) { /* cross-origin nav blocked */ }
+              }
+              return;
             }
-            return;
+          } catch (e) {
+            // continue
           }
-        } catch (e) {
-          // continue
         }
-      }
-      await clients.openWindow(clickUrl);
-    })()
+        await clients.openWindow(clickUrl);
+      })(),
+    ])
   );
 });
