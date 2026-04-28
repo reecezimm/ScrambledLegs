@@ -6,6 +6,8 @@ import WeatherPanel from './WeatherPanel';
 import EventCountdown from './EventCountdown';
 import EventActions from './EventActions';
 import KudosCta from './KudosCta';
+import RsvpToggle from './RsvpToggle';
+import EventLeaderboard from './EventLeaderboard';
 import { getStatus, STATUS_LABEL, weatherInRange, fmtDateLong, fmtTime } from '../../hooks/useEventLifecycle';
 
 const pulse = keyframes`
@@ -259,6 +261,10 @@ export default function EventFeatured({ event }) {
         <EventActions event={event} />
 
         <KudosCta event={event} isSheetContext={false} />
+
+        <RsvpToggle event={event} />
+
+        <EventLeaderboard event={event} />
       </Body>
     </Card>
   );
