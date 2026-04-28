@@ -1,1 +1,0 @@
-// This file is no longer used - PWA functionality has been removed
