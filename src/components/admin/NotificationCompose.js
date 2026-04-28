@@ -1,10 +1,10 @@
 import React, { useEffect, useMemo, useState } from 'react';
 import styled from 'styled-components';
-import { httpsCallable } from 'firebase/functions';
-import { functions } from '../../services/firebase';
 import { subscribeTokens } from '../../services/notifications';
 import { subscribeEvents, partitionEvents } from '../../services/events';
 import { ADMIN_PASSWORD } from '../../services/adminAuth';
+
+const SEND_PUSH_URL = 'https://us-central1-fundraiser-f0831.cloudfunctions.net/sendPush';
 
 const TITLE_MAX = 50;
 const BODY_MAX = 150;
@@ -303,7 +303,6 @@ export function NotificationCompose({ onSent }) {
     setSending(true);
     setError('');
     try {
-      const sendPush = httpsCallable(functions, 'sendPush');
       const payload = {
         password: ADMIN_PASSWORD,
         title: title.trim(),
@@ -312,8 +311,16 @@ export function NotificationCompose({ onSent }) {
         tag: tag.trim() || undefined,
         testTokenHash: mode === 'test' ? testTokenHash : undefined,
       };
-      const result = await sendPush(payload);
-      const notifId = result && result.data && result.data.notifId;
+      const res = await fetch(SEND_PUSH_URL, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(payload),
+      });
+      const result = await res.json().catch(() => ({}));
+      if (!res.ok) {
+        throw new Error(result.error || `Send failed (${res.status}).`);
+      }
+      const notifId = result.notifId;
       // Reset form, leave sub-mode where it was.
       setTitle('');
       setBody('');

@@ -184,6 +184,13 @@ export function AdminLayout({ tab, onTabChange, onSignOut, children }) {
         >
           Notifications
         </Tab>
+        <Tab
+          type="button"
+          $active={tab === 'signups'}
+          onClick={() => onTabChange && onTabChange('signups')}
+        >
+          Signups
+        </Tab>
       </TabsRow>
       <Body>{children}</Body>
     </Page>

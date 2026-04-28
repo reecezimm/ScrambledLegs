@@ -4,6 +4,7 @@ import PasswordGate from '../components/admin/PasswordGate';
 import EventList from '../components/admin/EventList';
 import EventEditor from '../components/admin/EventEditor';
 import NotificationsTab from '../components/admin/NotificationsTab';
+import SignupsTab from '../components/admin/SignupsTab';
 import { isAuthed, signOut } from '../services/adminAuth';
 import { subscribeEvents, partitionEvents } from '../services/events';
 
@@ -76,6 +77,7 @@ function AdminPage() {
         )
       )}
       {tab === 'notifications' && <NotificationsTab />}
+      {tab === 'signups' && <SignupsTab />}
     </AdminLayout>
   );
 }
