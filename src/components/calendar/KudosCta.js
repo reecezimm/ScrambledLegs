@@ -596,6 +596,12 @@ export default function KudosCta({ event, isSheetContext }) {
       sessionStartRef.current = Date.now();
       sessionUidRef.current = user ? user.uid : null;
     }
+    try {
+      logEvent('mash_button_clicked', {
+        eventId: event && event.id,
+        pressCount,
+      });
+    } catch (_) {}
     const row = btn.parentElement;
     const numEl = row && row.querySelector('.mash-num');
     const subEl = row && row.querySelector('.mash-sub');

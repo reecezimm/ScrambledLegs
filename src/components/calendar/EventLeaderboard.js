@@ -3,6 +3,7 @@ import styled from 'styled-components';
 import { ref, onValue } from 'firebase/database';
 import { database } from '../../services/firebase';
 import { useCurrentUser } from '../../services/auth';
+import { teaserCountFor } from './RsvpToggle';
 
 const BAD_EGG_THRESHOLD = 10;
 
@@ -40,7 +41,9 @@ const Avatar = styled.div`
   width: 30px;
   height: 30px;
   border-radius: 50%;
-  background: linear-gradient(45deg, #FFC72C, #FFE66D);
+  background: ${(p) => p.$photo
+    ? `center/cover no-repeat url('${p.$photo}')`
+    : 'linear-gradient(45deg, #FFC72C, #FFE66D)'};
   color: #1a1a1a;
   font-family: 'Fredoka', sans-serif;
   font-weight: 700;
@@ -50,6 +53,43 @@ const Avatar = styled.div`
   justify-content: center;
   text-transform: uppercase;
   flex-shrink: 0;
+`;
+
+const HeaderBtn = styled.button`
+  display: flex;
+  width: 100%;
+  align-items: center;
+  justify-content: space-between;
+  padding: 4px 0 10px;
+  background: none;
+  border: none;
+  cursor: pointer;
+  color: #FFC72C;
+  font-family: 'Montserrat', sans-serif;
+  font-size: 10px;
+  font-weight: 700;
+  letter-spacing: 0.16em;
+  text-transform: uppercase;
+  &:hover { color: #FFE66D; }
+`;
+
+const HeaderRight = styled.span`
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  text-transform: none;
+  letter-spacing: 0;
+  font-family: 'Inter', sans-serif;
+  font-size: 12px;
+  font-weight: 600;
+  color: #FFE66D;
+`;
+
+const Chevron = styled.span`
+  font-size: 11px;
+  color: rgba(255,255,255,0.55);
+  transition: transform 0.15s;
+  ${(p) => p.$open && 'transform: rotate(90deg);'}
 `;
 
 const Name = styled.div`
@@ -135,6 +175,7 @@ export default function EventLeaderboard({ event }) {
   const [rsvps, setRsvps] = useState({});
   const [totals, setTotals] = useState({});
   const [showBadEggs, setShowBadEggs] = useState(false);
+  const [open, setOpen] = useState(false);
 
   useEffect(() => {
     if (!event || !event.id || !user) return undefined;
@@ -157,7 +198,8 @@ export default function EventLeaderboard({ event }) {
         uid,
         rsvped: !!r,
         rsvpedAt: r ? (r.rsvpedAt || 0) : 0,
-        displayName: (r && r.displayName) || `rider-${uid.slice(0, 4)}`,
+        displayName: (r && r.displayName) || 'Anonymous masher',
+        photoURL: (r && r.photoURL) || null,
         mashes,
       });
     });
@@ -171,7 +213,10 @@ export default function EventLeaderboard({ event }) {
   const totalHotdogs = (event && event.hotdogs) || 0;
   const anonMashes = Math.max(0, totalHotdogs - attributedTotal);
 
-  // Conditional render must come AFTER all hooks have run (React hook ordering).
+  // Display count: real RSVPs if present, otherwise the deterministic teaser.
+  const displayCount = crew.length > 0 ? crew.length : teaserCountFor(event && event.id);
+
+  // Signed-out: collapsed crew header doubles as the sign-in nudge.
   if (!user) {
     const handleNudge = () => {
       window.dispatchEvent(new Event('auth:open'));
@@ -179,7 +224,13 @@ export default function EventLeaderboard({ event }) {
     };
     return (
       <Wrap>
-        <SectionLabel>The Crew</SectionLabel>
+        <HeaderBtn type="button" onClick={handleNudge}>
+          <span>The Crew</span>
+          <HeaderRight>
+            🥚 {displayCount} coming
+            <Chevron>›</Chevron>
+          </HeaderRight>
+        </HeaderBtn>
         <SignInPrompt type="button" onClick={handleNudge}>
           🥚 Sign in to see who's coming.
         </SignInPrompt>
@@ -189,42 +240,50 @@ export default function EventLeaderboard({ event }) {
 
   return (
     <Wrap>
-      <SectionLabel>The Crew · {crew.length}</SectionLabel>
-      {crew.length === 0 ? (
-        <Empty>No RSVPs yet — be the first to lock it in.</Empty>
-      ) : (
-        crew.map((row, i) => (
-          <Row key={row.uid}>
-            <Avatar>{initialFor(row.displayName)}</Avatar>
-            <Name>
-              {row.displayName} {i === 0 && row.mashes > 0 && <Crown>👑</Crown>}
-            </Name>
-            <Stat>🌭 {row.mashes}</Stat>
-            <Stat style={{ color: '#6FCF97' }}>✓ RSVP'd</Stat>
-          </Row>
-        ))
-      )}
+      <HeaderBtn type="button" onClick={() => setOpen((o) => !o)}>
+        <span>The Crew</span>
+        <HeaderRight>
+          🥚 {displayCount} coming
+          <Chevron $open={open}>›</Chevron>
+        </HeaderRight>
+      </HeaderBtn>
 
-      {badEggs.length > 0 && (
+      {open && (
         <>
-          <Toggle type="button" onClick={() => setShowBadEggs((s) => !s)}>
-            {showBadEggs ? '▾' : '▸'} Bad Eggs · {badEggs.length}
-          </Toggle>
-          {showBadEggs && badEggs.map((row) => (
-            <Row key={row.uid}>
-              <Avatar style={{ background: 'linear-gradient(45deg, #888, #aaa)' }}>
-                {initialFor(row.displayName)}
-              </Avatar>
-              <Name>{row.displayName}</Name>
-              <Stat>🌭 {row.mashes}</Stat>
-              <Stat style={{ color: '#FF8E8E' }}>🥚 didn't RSVP</Stat>
-            </Row>
-          ))}
-        </>
-      )}
+          {crew.length === 0 ? (
+            <Empty>No RSVPs yet — be the first to lock it in.</Empty>
+          ) : (
+            crew.map((row, i) => (
+              <Row key={row.uid}>
+                <Avatar $photo={row.photoURL}>
+                  {!row.photoURL && initialFor(row.displayName)}
+                </Avatar>
+                <Name>
+                  {row.displayName} {i === 0 && row.mashes > 0 && <Crown>👑</Crown>}
+                </Name>
+                <Stat>🌭 {row.mashes}</Stat>
+                <Stat style={{ color: '#6FCF97' }}>✓ RSVP'd</Stat>
+              </Row>
+            ))
+          )}
 
-      {anonMashes > 0 && (
-        <AnonLine>(Anonymous mashes: {anonMashes})</AnonLine>
+          {badEggs.length > 0 && (
+            <>
+              <Toggle type="button" onClick={() => setShowBadEggs((s) => !s)}>
+                {showBadEggs ? '▾' : '▸'} Bad Eggs · {badEggs.length}
+              </Toggle>
+              {showBadEggs && (
+                <AnonLine>
+                  {badEggs.length} signed-in {badEggs.length === 1 ? 'rider' : 'riders'} mashed but didn't RSVP.
+                </AnonLine>
+              )}
+            </>
+          )}
+
+          {anonMashes > 0 && (
+            <AnonLine>(Anonymous mashes: {anonMashes})</AnonLine>
+          )}
+        </>
       )}
     </Wrap>
   );

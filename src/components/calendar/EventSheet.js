@@ -203,6 +203,7 @@ function SheetContent({ event, onClose }) {
 
   useEffect(() => {
     document.body.dataset.sheetOpen = '1';
+    const openedAt = Date.now();
     if (event && event.id) logEvent('event_sheet_opened', { eventId: event.id });
     // Prevent body scroll while sheet is open
     const prev = document.body.style.overflow;
@@ -210,6 +211,14 @@ function SheetContent({ event, onClose }) {
     return () => {
       delete document.body.dataset.sheetOpen;
       document.body.style.overflow = prev;
+      try {
+        if (event && event.id) {
+          logEvent('event_sheet_closed', {
+            eventId: event.id,
+            dwellMs: Date.now() - openedAt,
+          });
+        }
+      } catch (_) {}
     };
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);

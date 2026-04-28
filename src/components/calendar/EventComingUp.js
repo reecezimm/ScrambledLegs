@@ -2,6 +2,7 @@ import React, { useState } from 'react';
 import styled from 'styled-components';
 import { fmtMonth, fmtDayNum, fmtWeekday, fmtTime } from '../../hooks/useEventLifecycle';
 import { showLockToast } from './LockToast';
+import { logEvent } from '../../services/analytics';
 
 const INITIAL_COUNT = 4;
 
@@ -166,6 +167,7 @@ export default function EventComingUp({ events, onOpen }) {
         {visible.map(ev => {
           const isUnlocked = !!ev.unlocked;
           const handleClick = () => {
+            try { logEvent('event_card_clicked', { eventId: ev.id, locked: !isUnlocked }); } catch (_) {}
             if (isUnlocked) onOpen(ev.id);
             else showLockToast("Unlocks when it's the next ride.");
           };

@@ -3,6 +3,7 @@ import styled, { keyframes, css } from 'styled-components';
 import { ref as dbRef, onValue } from 'firebase/database';
 import { database } from '../services/firebase';
 import { useCurrentUser } from '../services/auth';
+import { logEvent } from '../services/analytics';
 import AccountSheet from './AccountSheet';
 
 const jiggle = keyframes`
@@ -127,7 +128,10 @@ export default function AuthButton() {
             type="button"
             $jiggling={jiggling}
             $photo={photoURL}
-            onClick={() => setOpen(true)}
+            onClick={() => {
+              try { logEvent('auth_button_clicked', { signedIn: true }); } catch (_) {}
+              setOpen(true);
+            }}
             aria-label="Account"
           >
             {!photoURL && initial}
@@ -136,7 +140,10 @@ export default function AuthButton() {
           <SignInPill
             type="button"
             $jiggling={jiggling}
-            onClick={() => setOpen(true)}
+            onClick={() => {
+              try { logEvent('auth_button_clicked', { signedIn: false }); } catch (_) {}
+              setOpen(true);
+            }}
             aria-label="Sign in"
           >
             Sign In

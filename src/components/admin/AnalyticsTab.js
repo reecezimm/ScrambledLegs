@@ -201,6 +201,16 @@ function fmtTime(ts) {
   }).format(new Date(ts));
 }
 
+function fmtDuration(ms) {
+  if (!ms || ms < 0) return '—';
+  const s = Math.floor(ms / 1000);
+  if (s < 60) return `${s}s`;
+  const m = Math.floor(s / 60);
+  if (m < 60) return `${m}m ${s % 60}s`;
+  const h = Math.floor(m / 60);
+  return `${h}h ${m % 60}m`;
+}
+
 export default function AnalyticsTab() {
   const [analytics, setAnalytics] = useState([]);
   const [profiles, setProfiles] = useState({});
@@ -209,6 +219,8 @@ export default function AnalyticsTab() {
   const [allRsvps, setAllRsvps] = useState({});
   const [events, setEvents] = useState([]);
   const [eventId, setEventId] = useState('');
+  const [sessions, setSessions] = useState([]);
+  const [timelineUid, setTimelineUid] = useState('');
 
   useEffect(() => {
     const q = query(ref(database, 'analyticsEvents'), orderByChild('ts'), limitToLast(1000));
@@ -222,6 +234,17 @@ export default function AnalyticsTab() {
   }, []);
 
   useEffect(() => {
+    const sq = query(ref(database, 'sessions'), orderByChild('startedAt'), limitToLast(1000));
+    const u = onValue(sq, (snap) => {
+      const out = [];
+      snap.forEach((c) => out.push({ key: c.key, ...(c.val() || {}) }));
+      out.sort((a, b) => (b.startedAt || 0) - (a.startedAt || 0));
+      setSessions(out);
+    }, () => setSessions([]));
+    return () => u();
+  }, []);
+
+  useEffect(() => {
     const u1 = onValue(ref(database, 'userProfiles'), (s) => setProfiles(s.val() || {}));
     const u2 = onValue(ref(database, 'fcmTokens'), (s) => setTokens(s.val() || {}));
     const u3 = onValue(ref(database, 'eventMashTotals'), (s) => setAllTotals(s.val() || {}));
@@ -229,6 +252,109 @@ export default function AnalyticsTab() {
     const u5 = subscribeEvents((list) => setEvents(list));
     return () => { u1(); u2(); u3(); u4 && u4(); u5 && u5(); };
   }, []);
+
+  // ── Sessions-derived stats ────────────────────────────────────────────
+  const sessionStats = useMemo(() => {
+    const now = Date.now();
+    const dayAgo = now - 86400000;
+    const weekAgo = now - 7 * 86400000;
+    const monthAgo = now - 30 * 86400000;
+    const fiveMinAgo = now - 5 * 60000;
+    let today = 0, week = 0, month = 0, active = 0;
+    let durSum = 0, durCount = 0, evtSum = 0;
+    sessions.forEach((s) => {
+      const st = s.startedAt || 0;
+      if (st >= dayAgo) today += 1;
+      if (st >= weekAgo) week += 1;
+      if (st >= monthAgo) month += 1;
+      if ((s.lastActiveAt || 0) >= fiveMinAgo) active += 1;
+      const end = s.endedAt || s.lastActiveAt || 0;
+      if (st && end && end > st) {
+        durSum += (end - st);
+        durCount += 1;
+      }
+      evtSum += (s.eventCount || 0);
+    });
+    const avgDurMs = durCount > 0 ? Math.round(durSum / durCount) : 0;
+    const avgEvents = sessions.length > 0 ? (evtSum / sessions.length) : 0;
+    return { today, week, month, active, avgDurMs, avgEvents, total: sessions.length };
+  }, [sessions]);
+
+  const visitFrequency = useMemo(() => {
+    const weekAgo = Date.now() - 7 * 86400000;
+    const perUser = {}; // uid → count
+    sessions.forEach((s) => {
+      if ((s.startedAt || 0) < weekAgo) return;
+      const uid = s.uid || `anon:${s.deviceId || s.key}`;
+      perUser[uid] = (perUser[uid] || 0) + 1;
+    });
+    let one = 0, twoFive = 0, sixPlus = 0;
+    Object.values(perUser).forEach((c) => {
+      if (c === 1) one += 1;
+      else if (c >= 2 && c <= 5) twoFive += 1;
+      else if (c >= 6) sixPlus += 1;
+    });
+    const total = one + twoFive + sixPlus;
+    const pct = (n) => total > 0 ? Math.round((n / total) * 100) : 0;
+    return { one, twoFive, sixPlus, total, pctOne: pct(one), pctTwoFive: pct(twoFive), pctSixPlus: pct(sixPlus) };
+  }, [sessions]);
+
+  const topPages = useMemo(() => {
+    const weekAgo = Date.now() - 7 * 86400000;
+    const counts = {};
+    analytics.forEach((a) => {
+      if (a.name !== 'page_view') return;
+      if ((a.ts || 0) < weekAgo) return;
+      const path = (a.props && a.props.path) || a.path || '/';
+      counts[path] = (counts[path] || 0) + 1;
+    });
+    return Object.entries(counts)
+      .map(([path, count]) => ({ path, count }))
+      .sort((a, b) => b.count - a.count)
+      .slice(0, 10);
+  }, [analytics]);
+
+  const deviceMap = useMemo(() => {
+    const map = {}; // deviceId → { uids:Set, lastSeen }
+    sessions.forEach((s) => {
+      const did = s.deviceId;
+      if (!did) return;
+      if (!map[did]) map[did] = { uids: new Set(), lastSeen: 0, sessions: 0 };
+      if (s.uid) map[did].uids.add(s.uid);
+      map[did].sessions += 1;
+      const last = s.lastActiveAt || s.startedAt || 0;
+      if (last > map[did].lastSeen) map[did].lastSeen = last;
+    });
+    return Object.entries(map)
+      .map(([did, v]) => ({ deviceId: did, uidCount: v.uids.size, sessions: v.sessions, lastSeen: v.lastSeen }))
+      .sort((a, b) => b.lastSeen - a.lastSeen)
+      .slice(0, 20);
+  }, [sessions]);
+
+  const userTimeline = useMemo(() => {
+    if (!timelineUid) return [];
+    const userSessions = sessions
+      .filter((s) => s.uid === timelineUid)
+      .sort((a, b) => (b.startedAt || 0) - (a.startedAt || 0))
+      .slice(0, 25);
+    return userSessions.map((s) => {
+      const sid = s.id || s.key;
+      const pages = analytics
+        .filter((a) => a.name === 'page_view' && a.sessionId === sid)
+        .map((a) => (a.props && a.props.path) || a.path || '/')
+        .reverse(); // chronological
+      const start = s.startedAt || 0;
+      const end = s.endedAt || s.lastActiveAt || 0;
+      const dur = (start && end > start) ? (end - start) : 0;
+      return {
+        sid,
+        startedAt: start,
+        durationMs: dur,
+        eventCount: s.eventCount || 0,
+        pages,
+      };
+    });
+  }, [sessions, analytics, timelineUid]);
 
   const stats = useMemo(() => {
     const weekAgo = Date.now() - 7 * 86400000;
@@ -333,6 +459,18 @@ export default function AnalyticsTab() {
 
   const recentFeed = analytics.slice(0, 50);
 
+  // Build a name lookup for the timeline dropdown — only show users with sessions.
+  const usersWithSessions = useMemo(() => {
+    const ids = new Set();
+    sessions.forEach((s) => { if (s.uid) ids.add(s.uid); });
+    return Array.from(ids)
+      .map((uid) => ({
+        uid,
+        name: (profiles[uid] && profiles[uid].displayName) || (profiles[uid] && profiles[uid].email) || uid.slice(0, 6),
+      }))
+      .sort((a, b) => a.name.localeCompare(b.name));
+  }, [sessions, profiles]);
+
   return (
     <Wrap>
       <Cards>
@@ -359,6 +497,90 @@ export default function AnalyticsTab() {
           <StatValue>{stats.pwaInstalls}</StatValue>
         </StatCard>
       </Cards>
+
+      <Cards>
+        <StatCard>
+          <StatLabel>Sessions today</StatLabel>
+          <StatValue>{sessionStats.today}</StatValue>
+          <StatSub>7d: {sessionStats.week} · 30d: {sessionStats.month}</StatSub>
+        </StatCard>
+        <StatCard>
+          <StatLabel>Active right now</StatLabel>
+          <StatValue>{sessionStats.active}</StatValue>
+          <StatSub>last 5 min</StatSub>
+        </StatCard>
+        <StatCard>
+          <StatLabel>Avg session</StatLabel>
+          <StatValue>{fmtDuration(sessionStats.avgDurMs)}</StatValue>
+          <StatSub>{sessionStats.avgEvents.toFixed(1)} events/session</StatSub>
+        </StatCard>
+      </Cards>
+
+      <Card>
+        <SectionTitle>Visit frequency · last 7 days</SectionTitle>
+        {visitFrequency.total === 0 ? <Empty>No sessions yet.</Empty> : (
+          <>
+            <FunnelRow>
+              <FunnelLabel>1 visit</FunnelLabel>
+              <FunnelBarWrap><FunnelBar $pct={visitFrequency.pctOne} /></FunnelBarWrap>
+              <FunnelStat>{visitFrequency.one} ({visitFrequency.pctOne}%)</FunnelStat>
+            </FunnelRow>
+            <FunnelRow>
+              <FunnelLabel>2–5 visits</FunnelLabel>
+              <FunnelBarWrap><FunnelBar $pct={visitFrequency.pctTwoFive} /></FunnelBarWrap>
+              <FunnelStat>{visitFrequency.twoFive} ({visitFrequency.pctTwoFive}%)</FunnelStat>
+            </FunnelRow>
+            <FunnelRow>
+              <FunnelLabel>6+ visits</FunnelLabel>
+              <FunnelBarWrap><FunnelBar $pct={visitFrequency.pctSixPlus} /></FunnelBarWrap>
+              <FunnelStat>{visitFrequency.sixPlus} ({visitFrequency.pctSixPlus}%)</FunnelStat>
+            </FunnelRow>
+          </>
+        )}
+      </Card>
+
+      <Card>
+        <SectionTitle>Top pages · last 7 days</SectionTitle>
+        {topPages.length === 0 ? <Empty>No page views yet.</Empty> : topPages.map((p) => (
+          <FeedRow key={p.path}>
+            <FeedName>{p.path}</FeedName>
+            <FeedProps>{p.count} views</FeedProps>
+          </FeedRow>
+        ))}
+      </Card>
+
+      <Card>
+        <SectionTitle>User activity timeline</SectionTitle>
+        <Select value={timelineUid} onChange={(e) => setTimelineUid(e.target.value)}>
+          <option value="">— Choose user —</option>
+          {usersWithSessions.map((u) => (
+            <option key={u.uid} value={u.uid}>{u.name}</option>
+          ))}
+        </Select>
+        {!timelineUid ? <Empty>Pick a user to see their session history.</Empty>
+          : userTimeline.length === 0 ? <Empty>No sessions for this user.</Empty>
+          : userTimeline.map((s) => (
+            <FeedRow key={s.sid}>
+              <FeedTime>{fmtTime(s.startedAt)}</FeedTime>
+              <FeedName>{fmtDuration(s.durationMs)}</FeedName>
+              <FeedProps>
+                {s.eventCount} events
+                {s.pages.length > 0 && <> · {s.pages.slice(0, 6).join(' → ')}{s.pages.length > 6 ? ' …' : ''}</>}
+              </FeedProps>
+            </FeedRow>
+          ))}
+      </Card>
+
+      <Card>
+        <SectionTitle>Devices · top 20 by recency</SectionTitle>
+        {deviceMap.length === 0 ? <Empty>No devices yet.</Empty> : deviceMap.map((d) => (
+          <FeedRow key={d.deviceId}>
+            <FeedTime>{fmtTime(d.lastSeen)}</FeedTime>
+            <FeedName>{d.deviceId.slice(0, 8)}…</FeedName>
+            <FeedProps>{d.sessions} sessions · {d.uidCount} signed-in user{d.uidCount === 1 ? '' : 's'}</FeedProps>
+          </FeedRow>
+        ))}
+      </Card>
 
       <Card>
         <SectionTitle>Per-event mash bar (24h × 7 days)</SectionTitle>

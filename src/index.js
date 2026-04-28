@@ -9,6 +9,8 @@ import './services/ai';
 import './services/freshness';
 // Capture and log uncaught errors / promise rejections to RTDB.
 import './services/errorLogger';
+// Per-tab session tracking — writes to sessions/{sid}, attributes events.
+import './services/sessionTracker';
 
 // Create unique IDs for the application
 const BUILD_ID = `${process.env.NODE_ENV}-${new Date().toISOString().replace(/[:.]/g, '')}`;

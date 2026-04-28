@@ -6,6 +6,7 @@ import AdminPage from './pages/AdminPage';
 import LesterPark from './pages/LesterPark';
 import AuthButton from './components/AuthButton';
 import UpdateAvailableToast from './components/UpdateAvailableToast';
+import PageTracker from './services/pageTracker';
 import { logEvent } from './services/analytics';
 import { setInstallPrompt } from './services/pwaInstall';
 
@@ -32,6 +33,7 @@ function App() {
   }, []);
   return (
     <Router basename={basename}>
+      <PageTracker />
       <AuthButton />
       <UpdateAvailableToast />
       <Routes>

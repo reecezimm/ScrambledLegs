@@ -119,6 +119,14 @@
         ".write": "!data.exists()",
         ".validate": "newData.hasChildren(['msg', 'ts'])"
       }
+    },
+    "sessions": {
+      ".read": "auth != null && (root.child('userProfiles').child(auth.uid).child('isAdmin').val() == true || auth.token.email == 'gm@thescrambledlegs.com' || auth.token.email == 'coach@thescrambledlegs.com')",
+      ".indexOn": ["startedAt", "lastActiveAt", "deviceId", "uid"],
+      "$sessionId": {
+        ".write": true,
+        ".validate": "newData.hasChildren(['id', 'deviceId']) || data.exists()"
+      }
     }
   }
 }

@@ -67,6 +67,8 @@ export async function signIn(email, password) {
 }
 
 export function signOutUser() {
+  const uid = (auth.currentUser && auth.currentUser.uid) || null;
+  try { logEvent('signout_completed', { uid }); } catch (_) {}
   return signOut(auth);
 }
 

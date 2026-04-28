@@ -1,7 +1,7 @@
 import React, { useEffect, useMemo, useState } from 'react';
 import ReactDOM from 'react-dom';
 import styled, { keyframes } from 'styled-components';
-import { ref as dbRef, onValue, update as dbUpdate, remove as dbRemove } from 'firebase/database';
+import { ref as dbRef, onValue, update as dbUpdate, remove as dbRemove, query as dbQuery, orderByChild, limitToLast } from 'firebase/database';
 import { database, auth } from '../../services/firebase';
 import { sendResetEmail, ADMIN_EMAILS } from '../../services/auth';
 
@@ -386,7 +386,17 @@ function isDesignatedAdmin(email) {
   return ADMIN_EMAILS.includes(email.toLowerCase());
 }
 
-function UserDetailSheet({ user, mashByEvent, rsvpsByEvent, eventsById, onClose, onDeleted }) {
+function fmtDurationShort(ms) {
+  if (!ms || ms < 0) return '—';
+  const s = Math.floor(ms / 1000);
+  if (s < 60) return `${s}s`;
+  const m = Math.floor(s / 60);
+  if (m < 60) return `${m}m`;
+  const h = Math.floor(m / 60);
+  return `${h}h ${m % 60}m`;
+}
+
+function UserDetailSheet({ user, mashByEvent, rsvpsByEvent, eventsById, sessions, analytics, onClose, onDeleted }) {
   const [editingName, setEditingName] = useState(false);
   const [nameDraft, setNameDraft] = useState(user.displayName || '');
   const [nameSaving, setNameSaving] = useState(false);
@@ -432,6 +442,30 @@ function UserDetailSheet({ user, mashByEvent, rsvpsByEvent, eventsById, onClose,
   }, [rsvpsByEvent, user.uid]);
 
   const totalMash = userMashEvents.reduce((s, e) => s + e.mashes, 0);
+
+  const userSessionStats = useMemo(() => {
+    const mine = (sessions || []).filter((s) => s.uid === user.uid);
+    const deviceIds = new Set();
+    let durSum = 0, durCount = 0, lastSession = 0;
+    mine.forEach((s) => {
+      if (s.deviceId) deviceIds.add(s.deviceId);
+      const start = s.startedAt || 0;
+      const end = s.endedAt || s.lastActiveAt || 0;
+      if (start && end > start) { durSum += end - start; durCount += 1; }
+      if (start > lastSession) lastSession = start;
+    });
+    const avgDur = durCount > 0 ? Math.round(durSum / durCount) : 0;
+    return {
+      count: mine.length,
+      avgDur,
+      lastSession,
+      deviceCount: deviceIds.size,
+    };
+  }, [sessions, user.uid]);
+
+  const userPageViews = useMemo(() => {
+    return (analytics || []).filter((a) => a.name === 'page_view' && a.uid === user.uid).length;
+  }, [analytics, user.uid]);
 
   const eventsRsvpedDetail = useMemo(() => {
     return userRsvpEvents.map((r) => {
@@ -616,6 +650,19 @@ function UserDetailSheet({ user, mashByEvent, rsvpsByEvent, eventsById, onClose,
           </Card>
 
           <Card>
+            <CardLabel>Sessions</CardLabel>
+            <StatRow>
+              <Stat><div className="v">{userSessionStats.count}</div><div className="l">Total sessions</div></Stat>
+              <Stat><div className="v">{fmtDurationShort(userSessionStats.avgDur)}</div><div className="l">Avg duration</div></Stat>
+              <Stat><div className="v">{userSessionStats.deviceCount}</div><div className="l">Active devices</div></Stat>
+            </StatRow>
+            <StatRow>
+              <Stat><div className="v">{userPageViews}</div><div className="l">Page views (lifetime)</div></Stat>
+              <Stat><div className="v" style={{ fontSize: 14 }}>{userSessionStats.lastSession ? fmtDate(userSessionStats.lastSession) : '—'}</div><div className="l">Last session</div></Stat>
+            </StatRow>
+          </Card>
+
+          <Card>
             <CardLabel>Devices</CardLabel>
             {devices.length === 0 ? (
               <div style={{ color: 'rgba(255,255,255,0.45)', fontSize: 13 }}>No devices registered.</div>
@@ -706,6 +753,8 @@ function UsersTab() {
   const [mashByEvent, setMashByEvent] = useState({});
   const [rsvpsByEvent, setRsvpsByEvent] = useState({});
   const [eventsById, setEventsById] = useState({});
+  const [sessions, setSessions] = useState([]);
+  const [analytics, setAnalytics] = useState([]);
   const [loading, setLoading] = useState(true);
   const [query, setQuery] = useState('');
   const [sortKey, setSortKey] = useState('lastSeenAt');
@@ -729,6 +778,22 @@ function UsersTab() {
       });
     });
     return () => unsubs.forEach((u) => u && u());
+  }, []);
+
+  useEffect(() => {
+    const sq = dbQuery(dbRef(database, 'sessions'), orderByChild('startedAt'), limitToLast(1000));
+    const u1 = onValue(sq, (snap) => {
+      const out = [];
+      snap.forEach((c) => out.push({ key: c.key, ...(c.val() || {}) }));
+      setSessions(out);
+    }, () => setSessions([]));
+    const aq = dbQuery(dbRef(database, 'analyticsEvents'), orderByChild('ts'), limitToLast(1000));
+    const u2 = onValue(aq, (snap) => {
+      const out = [];
+      snap.forEach((c) => out.push({ id: c.key, ...(c.val() || {}) }));
+      setAnalytics(out);
+    }, () => setAnalytics([]));
+    return () => { u1(); u2(); };
   }, []);
 
   const rows = useMemo(() => {
@@ -866,6 +931,8 @@ function UsersTab() {
           mashByEvent={mashByEvent}
           rsvpsByEvent={rsvpsByEvent}
           eventsById={eventsById}
+          sessions={sessions}
+          analytics={analytics}
           onClose={() => setSelectedUid(null)}
           onDeleted={() => setSelectedUid(null)}
         />,

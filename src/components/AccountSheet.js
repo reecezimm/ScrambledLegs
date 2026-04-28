@@ -334,6 +334,7 @@ function Sheet({ user, onClose }) {
     window.addEventListener('keydown', onKey);
     const prev = document.body.style.overflow;
     document.body.style.overflow = 'hidden';
+    try { logEvent('account_sheet_opened', { signedIn: true }); } catch (_) {}
     return () => {
       window.removeEventListener('keydown', onKey);
       document.body.style.overflow = prev;
@@ -580,6 +581,7 @@ function AuthSheet({ onClose }) {
     window.addEventListener('keydown', onKey);
     const prev = document.body.style.overflow;
     document.body.style.overflow = 'hidden';
+    try { logEvent('account_sheet_opened', { signedIn: false }); } catch (_) {}
     return () => {
       window.removeEventListener('keydown', onKey);
       document.body.style.overflow = prev;

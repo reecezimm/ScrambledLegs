@@ -141,10 +141,23 @@ export default function RsvpToggle({ event }) {
     if (!user || !event || !event.id) return;
     setBusy(true);
     try {
+      // Pull canonical displayName + photoURL from userProfiles (we set
+      // user.displayName on auth.currentUser is always null since we don't
+      // call updateProfile). Fall back to email local-part, then 'rider'.
+      let profileName = '';
+      let profilePhoto = null;
+      try {
+        const { get, ref: r2 } = await import('firebase/database');
+        const snap = await get(r2(database, `userProfiles/${user.uid}`));
+        const v = snap.val() || {};
+        profileName = v.displayName || '';
+        profilePhoto = v.photoURL || null;
+      } catch (_) { /* ignore */ }
+      const fallbackName = user.email ? user.email.split('@')[0] : 'rider';
       await set(ref(database, `rsvps/${event.id}/${user.uid}`), {
         rsvpedAt: serverTimestamp(),
-        displayName: user.displayName || (user.email ? user.email.split('@')[0] : 'rider'),
-        photoURL: null,
+        displayName: profileName || fallbackName,
+        photoURL: profilePhoto,
         email: user.email || null,
       });
       logEvent('rsvp_added', { eventId: event.id });
@@ -182,16 +195,12 @@ export default function RsvpToggle({ event }) {
     else doRsvp();
   };
 
-  const displayCount = count > 0 ? count : teaserCountFor(event && event.id);
-
+  // Count pill removed — the Crew section header now shows the count.
   return (
     <>
       <Btn type="button" $rsvped={rsvped} disabled={busy} onClick={handleClick}>
         {rsvped ? "✓ You're in — tap to remove" : "I'm coming"}
       </Btn>
-      <Row>
-        <CountPill>🥚 {displayCount} coming</CountPill>
-      </Row>
       {!user && !loading && (
         <Hint>Sign in to lock in your RSVP and join the leaderboard.</Hint>
       )}

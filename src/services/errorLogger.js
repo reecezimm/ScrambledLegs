@@ -9,6 +9,8 @@
 import { ref, push, set, serverTimestamp } from 'firebase/database';
 import { database, auth } from './firebase';
 import { BUILD_NUM, BUILD_SHA, APP_VERSION } from './buildInfo';
+import { getDeviceId } from './deviceId';
+import { getSessionId } from './sessionTracker';
 
 const RECENT_KEY = 'sl_recent_errors';
 const RECENT_TTL_MS = 60 * 1000;
@@ -47,6 +49,10 @@ export async function logError(err, context = {}) {
   try {
     const r = push(ref(database, 'errorLogs'));
     const user = auth && auth.currentUser;
+    let deviceId = null;
+    let sessionId = null;
+    try { deviceId = getDeviceId(); } catch (_) {}
+    try { sessionId = getSessionId(); } catch (_) {}
     await set(r, {
       msg: safeStr(err && (err.message || err)),
       stack: safeStr(err && err.stack, 6000),
@@ -54,6 +60,8 @@ export async function logError(err, context = {}) {
       ua: typeof navigator !== 'undefined' ? navigator.userAgent.slice(0, 300) : '',
       uid: (user && user.uid) || null,
       email: (user && user.email) || null,
+      deviceId,
+      sessionId,
       version: APP_VERSION,
       buildNum: BUILD_NUM,
       buildSha: BUILD_SHA,

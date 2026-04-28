@@ -135,6 +135,14 @@ export async function requestAndSubscribe() {
   // async operation before this call can break that requirement, causing the
   // browser to silently return 'default' without showing the dialog at all.
   const permission = await Notification.requestPermission();
+  try {
+    const { logEvent } = await import('./analytics');
+    if (permission === 'granted') {
+      logEvent('notification_permission_granted', { platform: detectPlatform() });
+    } else {
+      logEvent('notification_permission_denied', { platform: detectPlatform(), permission });
+    }
+  } catch (_) {}
   if (permission !== 'granted') {
     throw new Error(
       permission === 'denied'
