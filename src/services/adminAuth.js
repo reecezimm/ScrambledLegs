@@ -1,3 +1,4 @@
+// Deprecated — replaced by Firebase Auth in Phase 2
 // Admin auth — deliberately low-security, password-gated only.
 // User has accepted this tradeoff. No bcrypt, no Firebase Auth — just a
 // plaintext compare against the constant below.

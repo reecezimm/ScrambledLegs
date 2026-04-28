@@ -33,6 +33,25 @@ service firebase.storage {
       allow delete: if true;
     }
 
+    match /profilePics/{file} {
+      allow read: if true;
+      allow write: if request.auth != null
+                    && request.resource != null
+                    && request.resource.size < 2 * 1024 * 1024
+                    && request.resource.contentType.matches('image/.*')
+                    && (
+                      file.matches(request.auth.uid + '[.].*')
+                      || request.auth.token.email == 'gm@thescrambledlegs.com'
+                      || request.auth.token.email == 'coach@thescrambledlegs.com'
+                    );
+      allow delete: if request.auth != null
+                    && (
+                      file.matches(request.auth.uid + '[.].*')
+                      || request.auth.token.email == 'gm@thescrambledlegs.com'
+                      || request.auth.token.email == 'coach@thescrambledlegs.com'
+                    );
+    }
+
     match /{path=**} {
       allow read, write: if false;
     }

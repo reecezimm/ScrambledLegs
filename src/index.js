@@ -4,6 +4,7 @@ import App from './App';
 import { createGlobalStyle } from 'styled-components';
 // Side-effect import: parses ?n= notif-open param and pings the logOpen function.
 import './services/openTracking';
+import './services/ai';
 
 // Create unique IDs for the application
 const BUILD_ID = `${process.env.NODE_ENV}-${new Date().toISOString().replace(/[:.]/g, '')}`;
@@ -70,7 +71,10 @@ const GlobalStyle = createGlobalStyle`
   body[data-sheet-open="1"] .flying-hot-dog,
   body[data-sheet-open="1"] .flying-egg,
   body[data-sheet-open="1"] .phrase-char { z-index: 9000; }
-  body[data-sheet-open="1"] .mash-vignette { z-index: 2200; }
+  /* Vignette sits BELOW the sheet (sheet z-index 2100) so it darkens the
+     world behind without covering the mash button — mirrors the home-page
+     feel where the button stays lit while the screen dims. */
+  body[data-sheet-open="1"] .mash-vignette { z-index: 2050; }
   body[data-sheet-open="1"] .mash-flash   { z-index: 2150; }
   body[data-sheet-open="1"] .mash-vignette {
     background: radial-gradient(

@@ -6,6 +6,9 @@ import RideLeaderBadge from './RideLeaderBadge';
 import WeatherPanel from './WeatherPanel';
 import EventActions from './EventActions';
 import KudosCta from './KudosCta';
+import RsvpToggle from './RsvpToggle';
+import EventLeaderboard from './EventLeaderboard';
+import { logEvent } from '../../services/analytics';
 import { fmtDateLong, fmtTime, weatherInRange } from '../../hooks/useEventLifecycle';
 
 const fadeIn = keyframes`from { opacity: 0; } to { opacity: 1; }`;
@@ -200,6 +203,7 @@ function SheetContent({ event, onClose }) {
 
   useEffect(() => {
     document.body.dataset.sheetOpen = '1';
+    if (event && event.id) logEvent('event_sheet_opened', { eventId: event.id });
     // Prevent body scroll while sheet is open
     const prev = document.body.style.overflow;
     document.body.style.overflow = 'hidden';
@@ -207,6 +211,7 @@ function SheetContent({ event, onClose }) {
       delete document.body.dataset.sheetOpen;
       document.body.style.overflow = prev;
     };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
   return (
@@ -246,11 +251,15 @@ function SheetContent({ event, onClose }) {
 
           {event.description && <EventDesc className="event-desc">{event.description}</EventDesc>}
 
+          <RsvpToggle event={event} />
+
           <WeatherPanel event={event} />
 
           <EventActions event={event} />
 
           <KudosCta event={event} isSheetContext={true} />
+
+          <EventLeaderboard event={event} />
         </Body>
       </SheetBody>
     </SheetWrap>

@@ -1,5 +1,12 @@
-import React, { useEffect, useMemo, useState } from 'react';
+import React, { useEffect, useMemo, useRef, useState } from 'react';
 import styled from 'styled-components';
+import { ref as dbRef, onValue, update as dbUpdate } from 'firebase/database';
+import {
+  ref as storageRef,
+  uploadBytesResumable,
+  getDownloadURL,
+} from 'firebase/storage';
+import { database, storage } from '../../services/firebase';
 import MapPicker from './MapPicker';
 import TagInput from './TagInput';
 import ImageUpload from './ImageUpload';
@@ -379,6 +386,61 @@ export function EventEditor({ existing, onClose, onSaved, onDeleted }) {
   const [error, setError] = useState('');
   const [confirmDelete, setConfirmDelete] = useState(false);
   const [deleting, setDeleting] = useState(false);
+  const [userOptions, setUserOptions] = useState([]);
+  const [leaderManual, setLeaderManual] = useState(true);
+  const [leaderUid, setLeaderUid] = useState(null);
+  const [leaderPhotoUploading, setLeaderPhotoUploading] = useState(false);
+  const [leaderPhotoErr, setLeaderPhotoErr] = useState('');
+  const [leaderPhotoPct, setLeaderPhotoPct] = useState(0);
+  const leaderFileRef = useRef(null);
+
+  useEffect(() => {
+    const r = dbRef(database, 'userProfiles');
+    const unsub = onValue(r, (snap) => {
+      const v = snap.val() || {};
+      const list = Object.entries(v)
+        .map(([uid, p]) => ({
+          uid,
+          displayName: (p && p.displayName) || '',
+          email: (p && p.email) || '',
+          photoURL: (p && p.photoURL) || '',
+        }))
+        .filter((o) => !!o.displayName)
+        .sort((a, b) => a.displayName.localeCompare(b.displayName));
+      setUserOptions(list);
+    });
+    return () => unsub();
+  }, []);
+
+  const leaderSelectValue = useMemo(() => {
+    if (leaderManual) return '__manual__';
+    if (leaderUid) return leaderUid;
+    const match = userOptions.find(
+      (o) => o.displayName === state.rideLeader.name
+    );
+    return match ? match.uid : '__manual__';
+  }, [leaderManual, leaderUid, userOptions, state.rideLeader.name]);
+
+  const leaderUserProfile = useMemo(() => {
+    if (leaderManual || !leaderUid) return null;
+    return userOptions.find((o) => o.uid === leaderUid) || null;
+  }, [leaderManual, leaderUid, userOptions]);
+
+  // When existing event loads, decide whether to start in manual mode.
+  useEffect(() => {
+    if (!existing) { setLeaderManual(true); setLeaderUid(null); return; }
+    const lname = (existing.rideLeader && existing.rideLeader.name) || '';
+    const lphoto = (existing.rideLeader && existing.rideLeader.photoUrl) || '';
+    if (!lname && !lphoto) { setLeaderManual(true); setLeaderUid(null); return; }
+    const match = userOptions.find((o) => o.displayName === lname);
+    if (match) {
+      setLeaderManual(false);
+      setLeaderUid(match.uid);
+    } else {
+      setLeaderManual(true);
+      setLeaderUid(null);
+    }
+  }, [existing, userOptions]);
 
   // Re-init if user navigates between events without unmounting
   useEffect(() => {
@@ -606,25 +668,173 @@ export function EventEditor({ existing, onClose, onSaved, onDeleted }) {
 
       <Card>
         <Field>
-          <LabelText htmlFor="ev-leader-name">Ride leader name</LabelText>
-          <Input
-            id="ev-leader-name"
-            type="text"
-            value={state.rideLeader.name}
-            onChange={(e) => updateLeader({ name: e.target.value })}
-            placeholder="Optional"
-          />
+          <LabelText htmlFor="ev-leader-select">Ride leader</LabelText>
+          <Select
+            id="ev-leader-select"
+            value={leaderSelectValue}
+            onChange={(e) => {
+              const v = e.target.value;
+              if (v === '__manual__') {
+                setLeaderManual(true);
+                setLeaderUid(null);
+              } else {
+                const u = userOptions.find((o) => o.uid === v);
+                if (u) {
+                  setLeaderManual(false);
+                  setLeaderUid(u.uid);
+                  updateLeader({
+                    name: u.displayName || '',
+                    photoUrl: u.photoURL || '',
+                  });
+                }
+              }
+            }}
+          >
+            <option value="__manual__">— Manual entry —</option>
+            {userOptions.map((u) => (
+              <option key={u.uid} value={u.uid}>
+                {u.displayName}{u.email ? ` · ${u.email}` : ''}
+              </option>
+            ))}
+          </Select>
+          <Hint>Pick a user with a profile, or enter a guest leader manually.</Hint>
         </Field>
-        <Field>
-          <LabelText>Ride leader photo</LabelText>
-          <ImageUpload
-            kind="rideLeader"
-            eventId={eventId}
-            value={state.rideLeader.photoUrl}
-            onChange={(url) => updateLeader({ photoUrl: url })}
-            label="Ride leader"
-          />
-        </Field>
+        {leaderManual && (
+          <>
+            <Field>
+              <LabelText htmlFor="ev-leader-name">Ride leader name</LabelText>
+              <Input
+                id="ev-leader-name"
+                type="text"
+                value={state.rideLeader.name}
+                onChange={(e) => updateLeader({ name: e.target.value })}
+                placeholder="Optional"
+              />
+            </Field>
+            <Field>
+              <LabelText>Ride leader photo</LabelText>
+              <ImageUpload
+                kind="rideLeader"
+                eventId={eventId}
+                value={state.rideLeader.photoUrl}
+                onChange={(url) => updateLeader({ photoUrl: url })}
+                label="Ride leader"
+              />
+            </Field>
+          </>
+        )}
+        {!leaderManual && leaderUserProfile && (
+          <div style={{ display: 'flex', gap: 14, alignItems: 'center', marginTop: 4, flexWrap: 'wrap' }}>
+            <div
+              style={{
+                width: 48,
+                height: 48,
+                borderRadius: '50%',
+                flexShrink: 0,
+                background: leaderUserProfile.photoURL
+                  ? `center/cover no-repeat url('${leaderUserProfile.photoURL}')`
+                  : 'linear-gradient(45deg, #FFC72C, #FFE66D)',
+                color: '#1a1a1a',
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'center',
+                fontFamily: 'Fredoka, sans-serif',
+                fontWeight: 700,
+                fontSize: 22,
+                textTransform: 'uppercase',
+                border: '2px solid rgba(255,199,44,0.40)',
+              }}
+            >
+              {!leaderUserProfile.photoURL && (leaderUserProfile.displayName || '?').charAt(0)}
+            </div>
+            <div style={{ flex: 1, minWidth: 200 }}>
+              <div style={{ color: '#FFE66D', fontWeight: 700, fontSize: 13 }}>
+                {leaderUserProfile.displayName}
+              </div>
+              <div style={{ fontSize: 11, color: 'rgba(255,255,255,0.5)', marginBottom: 6 }}>
+                {leaderUserProfile.photoURL
+                  ? 'Upload to replace their profile picture'
+                  : 'Upload photo to set their profile picture'}
+              </div>
+              <button
+                type="button"
+                disabled={leaderPhotoUploading}
+                onClick={() => leaderFileRef.current && leaderFileRef.current.click()}
+                style={{
+                  padding: '8px 14px',
+                  borderRadius: 10,
+                  border: '1px solid rgba(255,199,44,0.30)',
+                  background: 'rgba(255,199,44,0.10)',
+                  color: '#FFE66D',
+                  fontFamily: 'Inter, sans-serif',
+                  fontSize: 12,
+                  fontWeight: 600,
+                  cursor: leaderPhotoUploading ? 'not-allowed' : 'pointer',
+                  opacity: leaderPhotoUploading ? 0.6 : 1,
+                }}
+              >
+                {leaderPhotoUploading
+                  ? `Uploading… ${Math.round(leaderPhotoPct)}%`
+                  : (leaderUserProfile.photoURL ? 'Upload new photo' : 'Upload photo')}
+              </button>
+              {leaderPhotoErr && (
+                <div style={{ fontSize: 12, color: '#FF8E8E', marginTop: 6 }}>{leaderPhotoErr}</div>
+              )}
+            </div>
+            <input
+              ref={leaderFileRef}
+              type="file"
+              accept="image/*"
+              style={{ display: 'none' }}
+              onChange={async (e) => {
+                const file = e.target.files && e.target.files[0];
+                e.target.value = '';
+                if (!file || !leaderUid) return;
+                setLeaderPhotoErr('');
+                if (!file.type || !file.type.startsWith('image/')) {
+                  setLeaderPhotoErr('File must be an image');
+                  return;
+                }
+                if (file.size > 2 * 1024 * 1024) {
+                  setLeaderPhotoErr('Image is too large (max 2MB)');
+                  return;
+                }
+                const ext = (() => {
+                  if (file.type === 'image/png') return 'png';
+                  if (file.type === 'image/webp') return 'webp';
+                  if (file.type === 'image/gif') return 'gif';
+                  return 'jpg';
+                })();
+                try {
+                  setLeaderPhotoUploading(true);
+                  setLeaderPhotoPct(0);
+                  const path = `profilePics/${leaderUid}.${ext}`;
+                  const r = storageRef(storage, path);
+                  const task = uploadBytesResumable(r, file, { contentType: file.type });
+                  await new Promise((resolve, reject) => {
+                    task.on(
+                      'state_changed',
+                      (snap) => {
+                        if (snap.totalBytes) {
+                          setLeaderPhotoPct((snap.bytesTransferred / snap.totalBytes) * 100);
+                        }
+                      },
+                      (err) => reject(err),
+                      () => resolve()
+                    );
+                  });
+                  const url = await getDownloadURL(task.snapshot.ref);
+                  await dbUpdate(dbRef(database, `userProfiles/${leaderUid}`), { photoURL: url });
+                  updateLeader({ photoUrl: url });
+                } catch (err) {
+                  setLeaderPhotoErr((err && err.message) || 'Upload failed');
+                } finally {
+                  setLeaderPhotoUploading(false);
+                }
+              }}
+            />
+          </div>
+        )}
       </Card>
 
       <Card>

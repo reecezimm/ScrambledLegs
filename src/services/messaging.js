@@ -11,8 +11,8 @@
 // console and the FAB will surface a generic "subscribe failed" toast.
 
 import { getToken, onMessage } from 'firebase/messaging';
-import { ref, set, serverTimestamp } from 'firebase/database';
-import { database, getMessagingIfSupported } from './firebase';
+import { ref, set, update, serverTimestamp } from 'firebase/database';
+import { auth, database, getMessagingIfSupported } from './firebase';
 
 const VAPID_KEY = 'BEsmXUl-hHK0FAmHVdbUeZ3kDbSyhOPId-66fJ5NRJ44XFYy5MujmXiXKBp8MH_7hBmFedktB5y7iF3NOjV86tY';
 
@@ -160,15 +160,35 @@ export async function requestAndSubscribe() {
   const hash = await sha256Hex(token);
 
   try {
-    await set(ref(database, `fcmTokens/${hash}`), {
+    const u = auth.currentUser;
+    const platform = detectPlatform();
+    const record = {
       token,
       createdAt: serverTimestamp(),
       lastSeenAt: serverTimestamp(),
       userAgent:
         typeof navigator !== 'undefined' ? navigator.userAgent.slice(0, 400) : '',
-      platform: detectPlatform(),
+      platform,
       isStandalone: isStandalone(),
-    });
+    };
+    if (u) {
+      record.uid = u.uid;
+      if (u.email) record.email = u.email;
+      if (u.displayName) record.displayName = u.displayName;
+      else if (u.email) record.displayName = u.email.split('@')[0];
+    }
+    await set(ref(database, `fcmTokens/${hash}`), record);
+    if (u) {
+      update(ref(database, `userProfiles/${u.uid}/devices/${hash}`), {
+        platform,
+        lastSeenAt: serverTimestamp(),
+        notificationsEnabled: true,
+      }).catch(() => {});
+    }
+    try {
+      const { logEvent } = await import('./analytics');
+      logEvent('notification_subscribed', { platform });
+    } catch (_) {}
     console.log('[messaging] Token written to Firebase /fcmTokens/', hash.slice(0, 8));
   } catch (writeErr) {
     // Surface clearly — usually means database rules haven't been deployed yet.
@@ -189,6 +209,32 @@ export async function requestAndSubscribe() {
   }
 
   return { token, hash };
+}
+
+// ---------- post sign-in back-fill ----------
+
+// Called when a user signs in: back-fill uid/email/displayName onto their
+// device's existing fcmTokens row, and write the reverse index under
+// userProfiles/{uid}/devices/{hash}.
+export async function backfillTokenOwnership(user) {
+  if (!user) return;
+  const hash = getCachedTokenHash();
+  if (!hash) return;
+  try {
+    const patch = { uid: user.uid };
+    if (user.email) patch.email = user.email;
+    if (user.displayName) patch.displayName = user.displayName;
+    else if (user.email) patch.displayName = user.email.split('@')[0];
+    patch.lastSeenAt = serverTimestamp();
+    await update(ref(database, `fcmTokens/${hash}`), patch);
+    await update(ref(database, `userProfiles/${user.uid}/devices/${hash}`), {
+      platform: detectPlatform(),
+      lastSeenAt: serverTimestamp(),
+      notificationsEnabled: true,
+    });
+  } catch (_) {
+    // Silent — non-critical denormalization.
+  }
 }
 
 // ---------- dismissal cooldown ----------

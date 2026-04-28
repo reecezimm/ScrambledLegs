@@ -1,6 +1,10 @@
-import React, { useCallback, useEffect, useRef } from 'react';
+import React, { useCallback, useEffect, useRef, useState } from 'react';
 import styled, { keyframes } from 'styled-components';
 import { useEventKudos } from '../../hooks/useEventKudos';
+import { useCurrentUser } from '../../services/auth';
+import { ref as dbRef, push as dbPush, set as dbSet, runTransaction } from 'firebase/database';
+import { database } from '../../services/firebase';
+import { logEvent } from '../../services/analytics';
 import {
   setMashEnergy, clearMashEnergy, applyShockwave, clearShockwave,
   spawnHotDog, spawnRainbowEgg, flashBackground, spawnPhrase, rainbowChance,
@@ -457,6 +461,34 @@ const MashNum = styled.span`
   }
 `;
 
+const toastSlideUp = keyframes`
+  from { opacity: 0; transform: translate(-50%, 20px); }
+  to   { opacity: 1; transform: translate(-50%, 0); }
+`;
+
+const Toast = styled.button`
+  position: fixed;
+  left: 50%;
+  bottom: 24px;
+  transform: translateX(-50%);
+  z-index: 1200;
+  max-width: min(420px, calc(100vw - 24px));
+  padding: 12px 16px;
+  border-radius: 12px;
+  border: 1px solid rgba(255,199,44,0.35);
+  background: linear-gradient(160deg, #1a1a1a 0%, #232325 100%);
+  color: #f4f4f4;
+  font-family: 'Inter', sans-serif;
+  font-size: 13px;
+  line-height: 1.35;
+  text-align: left;
+  cursor: pointer;
+  box-shadow: 0 12px 36px rgba(0,0,0,0.5);
+  animation: ${toastSlideUp} 0.28s ease-out;
+
+  strong { color: #FFC72C; font-weight: 700; }
+`;
+
 const MashSub = styled.span`
   font-family: 'Fredoka', sans-serif;
   font-weight: 700;
@@ -482,6 +514,10 @@ const MashSub = styled.span`
 // ─── Component ────────────────────────────────────────────────────────────────
 export default function KudosCta({ event, isSheetContext }) {
   const { displayCount, mash } = useEventKudos(event.id, event.hotdogs);
+  const { user } = useCurrentUser();
+  const [showNudge, setShowNudge] = useState(false);
+  const nudgeTimerRef = useRef(null);
+  const anonMashCountRef = useRef(0);
   const btnRef = useRef(null);
   const hdPressCountRef = useRef(0);
   const hdLastChallengeRef = useRef('');
@@ -490,6 +526,8 @@ export default function KudosCta({ event, isSheetContext }) {
   const hdResetTimerRef = useRef(null);
   const phraseCooldownRef = useRef(0);
   const lastPhraseIndexRef = useRef(-1);
+  const sessionStartRef = useRef(0);
+  const sessionUidRef = useRef(null);
 
   useEffect(() => {
     if (isSheetContext) {
@@ -504,6 +542,7 @@ export default function KudosCta({ event, isSheetContext }) {
       // Cleanup on unmount
       if (hdPressCountRef.current > 0) enterIdleState();
       if (hdResetTimerRef.current) clearTimeout(hdResetTimerRef.current);
+      if (nudgeTimerRef.current) clearTimeout(nudgeTimerRef.current);
     };
   }, [isSheetContext]); // eslint-disable-line react-hooks/exhaustive-deps
 
@@ -536,8 +575,27 @@ export default function KudosCta({ event, isSheetContext }) {
     btn.classList.remove('is-idle');
     mash();
 
+    if (!user) {
+      anonMashCountRef.current += 1;
+      if (anonMashCountRef.current === 5) {
+        try {
+          if (!sessionStorage.getItem('sl_anon_mash_nudged')) {
+            sessionStorage.setItem('sl_anon_mash_nudged', '1');
+            setShowNudge(true);
+            if (nudgeTimerRef.current) clearTimeout(nudgeTimerRef.current);
+            nudgeTimerRef.current = setTimeout(() => setShowNudge(false), 6000);
+            window.dispatchEvent(new Event('auth:nudge'));
+          }
+        } catch (_) {}
+      }
+    }
+
     hdPressCountRef.current += 1;
     const pressCount = hdPressCountRef.current;
+    if (pressCount === 1) {
+      sessionStartRef.current = Date.now();
+      sessionUidRef.current = user ? user.uid : null;
+    }
     const row = btn.parentElement;
     const numEl = row && row.querySelector('.mash-num');
     const subEl = row && row.querySelector('.mash-sub');
@@ -659,15 +717,45 @@ export default function KudosCta({ event, isSheetContext }) {
 
         setTimeout(() => {
           // Phase C — reset
+          const finalCount = hdPressCountRef.current;
+          const sessionStart = sessionStartRef.current;
+          const sessionUid = sessionUidRef.current;
+          if (sessionUid && finalCount > 0 && event && event.id) {
+            try {
+              const sessionRef = dbPush(dbRef(database, `mashSessions/${event.id}/${sessionUid}`));
+              dbSet(sessionRef, {
+                startedAt: sessionStart || Date.now(),
+                endedAt: Date.now(),
+                count: finalCount,
+              }).catch(() => {});
+              runTransaction(
+                dbRef(database, `eventMashTotals/${event.id}/${sessionUid}`),
+                (cur) => (cur || 0) + finalCount,
+              ).catch(() => {});
+              logEvent('mash_session_complete', {
+                eventId: event.id,
+                count: finalCount,
+                durationMs: Date.now() - (sessionStart || Date.now()),
+              });
+            } catch (_) {}
+          } else if (finalCount > 0 && event && event.id) {
+            logEvent('mash_session_complete', {
+              eventId: event.id,
+              count: finalCount,
+              anonymous: true,
+            });
+          }
           hdPressCountRef.current = 0;
           hdLastChallengeRef.current = '';
           hdLastChallengeAtRef.current = 0;
+          sessionStartRef.current = 0;
+          sessionUidRef.current = null;
           btn.style.setProperty('--hd-rest-y', '1');
           enterIdleState();
         }, KUDOS_BURN_MS);
       }, KUDOS_SAVE_ANIM_MS);
     }, KUDOS_SAVE_DELAY_MS);
-  }, [mash, enterIdleState]);
+  }, [mash, enterIdleState, user]);
 
   return (
     <KudosRow className="kudos-row">
@@ -689,6 +777,18 @@ export default function KudosCta({ event, isSheetContext }) {
         <MashNum className="mash-num">MASH ME</MashNum>
         <MashSub className="mash-sub" />
       </MashOverlay>
+      {showNudge && (
+        <Toast
+          type="button"
+          onClick={() => {
+            setShowNudge(false);
+            if (nudgeTimerRef.current) clearTimeout(nudgeTimerRef.current);
+            window.dispatchEvent(new Event('auth:open'));
+          }}
+        >
+          Mashing in the dark? 🌭 <strong>Sign in</strong> to track your streak and climb the leaderboard.
+        </Toast>
+      )}
     </KudosRow>
   );
 }

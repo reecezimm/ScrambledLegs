@@ -3,6 +3,7 @@ import { getDatabase } from 'firebase/database';
 import { getStorage } from 'firebase/storage';
 import { getMessaging, isSupported } from 'firebase/messaging';
 import { getFunctions } from 'firebase/functions';
+import { getAuth, setPersistence, browserLocalPersistence } from 'firebase/auth';
 
 const firebaseConfig = {
   apiKey: "AIzaSyAmwwbvmvxNYX-8PesRl8io9CH60sI2v2A",
@@ -18,6 +19,8 @@ const app = initializeApp(firebaseConfig);
 const database = getDatabase(app);
 const storage = getStorage(app);
 const functions = getFunctions(app);
+const auth = getAuth(app);
+setPersistence(auth, browserLocalPersistence).catch(() => {});
 
 // FCM messaging — gated by isSupported() so Safari pre-16, FF private, etc.
 // don't blow up the bundle. We expose an async getter so callers can await
@@ -38,4 +41,4 @@ function getMessagingIfSupported() {
   return _messagingPromise;
 }
 
-export { app, database, storage, functions, getMessagingIfSupported };
+export { app, database, storage, functions, auth, getMessagingIfSupported };

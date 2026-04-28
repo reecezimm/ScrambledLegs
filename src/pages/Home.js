@@ -7,6 +7,9 @@ import CalendarWidget from '../components/calendar';
 import { ref, push, set } from 'firebase/database';
 import { database } from '../services/firebase';
 import { setupForegroundHandler } from '../services/messaging';
+import { logEvent } from '../services/analytics';
+
+const HOME_VIEW_KEY = 'sl_home_view_logged';
 
 const floatAnimation = keyframes`
   0% {
@@ -429,6 +432,13 @@ function Home() {
     // multiple times — internal idempotence guard.
     setupForegroundHandler();
 
+    try {
+      if (!sessionStorage.getItem(HOME_VIEW_KEY)) {
+        sessionStorage.setItem(HOME_VIEW_KEY, '1');
+        logEvent('home_view', {});
+      }
+    } catch (_) { logEvent('home_view', {}); }
+
     return () => window.removeEventListener('resize', handleResize);
   }, []);
   
@@ -463,6 +473,7 @@ function Home() {
         timestamp: Date.now()
       });
       
+      logEvent('newsletter_signup', { email });
       // Show success message
       setSubmitted(true);
       

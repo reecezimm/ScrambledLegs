@@ -1,3 +1,4 @@
+// Deprecated — replaced by Firebase Auth in Phase 2
 import React, { useState } from 'react';
 import styled from 'styled-components';
 import { signIn } from '../../services/adminAuth';

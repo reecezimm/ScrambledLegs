@@ -2,7 +2,7 @@ import React, { useEffect, useMemo, useState } from 'react';
 import styled from 'styled-components';
 import { subscribeTokens } from '../../services/notifications';
 import { subscribeEvents, partitionEvents } from '../../services/events';
-import { ADMIN_PASSWORD } from '../../services/adminAuth';
+import { auth } from '../../services/firebase';
 
 const SEND_PUSH_URL = 'https://us-central1-fundraiser-f0831.cloudfunctions.net/sendPush';
 
@@ -218,6 +218,17 @@ function uaSnippet(ua) {
   return ua.slice(0, 40);
 }
 
+function tokenLabel(t) {
+  const platform = platformIcon(t.platform);
+  const last = t.lastSeenAt ? fmtTime(t.lastSeenAt) : '—';
+  if (t.email || t.displayName) {
+    const name = t.displayName || (t.email ? t.email.split('@')[0] : 'user');
+    const emailBit = t.email ? ` · ${t.email}` : '';
+    return `${platform} ${name}${emailBit} · ${last}`;
+  }
+  return `${platform} (anonymous device · ${shortHash(t.hash)}) · ${uaSnippet(t.userAgent)} · ${last}`;
+}
+
 function fmtTime(ts) {
   if (!ts) return '';
   return new Intl.DateTimeFormat(undefined, {
@@ -303,8 +314,11 @@ export function NotificationCompose({ onSent }) {
     setSending(true);
     setError('');
     try {
+      if (!auth.currentUser) {
+        throw new Error('Not signed in.');
+      }
+      const idToken = await auth.currentUser.getIdToken();
       const payload = {
-        password: ADMIN_PASSWORD,
         title: title.trim(),
         body: body.trim(),
         clickUrl: (clickUrl || DEFAULT_URL).trim(),
@@ -313,7 +327,10 @@ export function NotificationCompose({ onSent }) {
       };
       const res = await fetch(SEND_PUSH_URL, {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${idToken}`,
+        },
         body: JSON.stringify(payload),
       });
       const result = await res.json().catch(() => ({}));
@@ -445,7 +462,7 @@ export function NotificationCompose({ onSent }) {
               <option value="">— Choose subscriber —</option>
               {tokens.map((t) => (
                 <option key={t.hash} value={t.hash}>
-                  {platformIcon(t.platform)} {shortHash(t.hash)} · {uaSnippet(t.userAgent)}
+                  {tokenLabel(t)}
                 </option>
               ))}
             </Select>
