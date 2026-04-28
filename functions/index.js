@@ -33,15 +33,16 @@ const NOTIFICATION_ICON =
   'https://thescrambledlegs.com/android-chrome-192x192.png';
 const DEFAULT_CLICK_URL = 'https://thescrambledlegs.com/';
 
+// Build a "navigate-then-log" tracking URL that always lands on our origin
+// first. The page-load tracker (src/services/openTracking.js) sees ?n=, fires
+// logOpen from a real Window context (where keepalive/sendBeacon work), then
+// follows the &to= redirect. This sidesteps SW lifetime + sendBeacon-in-SW
+// limits + CORS preflight races that broke open-tracking from PWA clicks.
 function buildClickUrl(base, notifId) {
-  try {
-    const u = new URL(base || DEFAULT_CLICK_URL);
-    u.searchParams.set('n', notifId);
-    return u.toString();
-  } catch (e) {
-    const sep = (base || DEFAULT_CLICK_URL).includes('?') ? '&' : '?';
-    return `${base || DEFAULT_CLICK_URL}${sep}n=${encodeURIComponent(notifId)}`;
-  }
+  const dest = (base || DEFAULT_CLICK_URL).trim();
+  const params = new URLSearchParams({ n: notifId });
+  if (dest && dest !== DEFAULT_CLICK_URL) params.set('to', dest);
+  return `${DEFAULT_CLICK_URL}?${params.toString()}`;
 }
 
 async function verifyAdmin(req, res) {

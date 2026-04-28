@@ -5,6 +5,7 @@ import HotDogCounter from './pages/HotDogCounter';
 import AdminPage from './pages/AdminPage';
 import LesterPark from './pages/LesterPark';
 import AuthButton from './components/AuthButton';
+import UpdateAvailableToast from './components/UpdateAvailableToast';
 import { logEvent } from './services/analytics';
 import { setInstallPrompt } from './services/pwaInstall';
 
@@ -32,6 +33,7 @@ function App() {
   return (
     <Router basename={basename}>
       <AuthButton />
+      <UpdateAvailableToast />
       <Routes>
         <Route path="/" element={<Home />} />
         {/* Event deep-link route — renders Home with the sheet open */}

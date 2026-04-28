@@ -5,6 +5,8 @@ import { createGlobalStyle } from 'styled-components';
 // Side-effect import: parses ?n= notif-open param and pings the logOpen function.
 import './services/openTracking';
 import './services/ai';
+// Cache-mismatch self-heal + new-version detection.
+import './services/freshness';
 
 // Create unique IDs for the application
 const BUILD_ID = `${process.env.NODE_ENV}-${new Date().toISOString().replace(/[:.]/g, '')}`;

@@ -1,12 +1,11 @@
-// Page-load notification open tracker.
+// Page-load notification open tracker — primary path (navigate-then-log).
 //
-// When a user lands on the site with ?n={notifId} in the URL (typically from
-// tapping a push notification), we fire-and-forget a GET to the logOpen
-// Cloud Function so the admin history view can show open counts. Then we
-// strip the ?n= param via history.replaceState() so it doesn't pollute the URL.
-//
-// This is the belt-and-suspenders backup for the SW notificationclick handler.
-// If both fire we'll over-count by 1 — accepted tradeoff per NOTIFICATIONS.md.
+// Cloud Function builds notification click URLs as:
+//   https://thescrambledlegs.com/?n={notifId}&to={encoded-real-destination}
+// User taps notification → SW opens that URL → this script runs in a real
+// Window context (where keepalive fetch + sendBeacon both work), logs the
+// open, then redirects to ?to= if present. This sidesteps SW termination,
+// CORS preflight races, and sendBeacon-not-available-in-SW gotchas.
 
 const LOG_OPEN_URL =
   'https://logopen-57u2xumnxa-uc.a.run.app';
@@ -26,11 +25,34 @@ const LS_TOKEN_HASH = 'sl_notif_token_hash';
     url.searchParams.set('notifId', notifId);
     if (tokenHash) url.searchParams.set('tokenHash', tokenHash);
 
-    // Fire-and-forget. mode:no-cors so we don't need preflight handshake.
-    fetch(url.toString(), { method: 'GET', mode: 'no-cors', keepalive: true }).catch(() => {});
+    // Try sendBeacon first (most reliable across navigation), fall back to fetch.
+    const logUrl = url.toString();
+    let beaconSent = false;
+    try {
+      if (navigator && typeof navigator.sendBeacon === 'function') {
+        beaconSent = navigator.sendBeacon(logUrl);
+      }
+    } catch (e) { /* ignore */ }
+    if (!beaconSent) {
+      fetch(logUrl, { method: 'GET', keepalive: true }).catch(() => {});
+    }
 
-    // Clean the URL so the param doesn't stick around.
+    // If the click was originally for an external URL, redirect there now.
+    const to = params.get('to');
+    if (to) {
+      try {
+        const dest = new URL(to, window.location.origin);
+        // Allow same-origin or any http(s) destination.
+        if (dest.protocol === 'http:' || dest.protocol === 'https:') {
+          window.location.replace(dest.toString());
+          return;
+        }
+      } catch (e) { /* ignore — fall through to clean URL */ }
+    }
+
+    // Clean ?n= and ?to= so they don't stick around.
     params.delete('n');
+    params.delete('to');
     const cleaned =
       window.location.pathname +
       (params.toString() ? '?' + params.toString() : '') +

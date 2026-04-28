@@ -8,6 +8,7 @@ import { ref, push, set } from 'firebase/database';
 import { database } from '../services/firebase';
 import { setupForegroundHandler } from '../services/messaging';
 import { logEvent } from '../services/analytics';
+import { signUp, signIn, friendlyAuthError } from '../services/auth';
 
 const HOME_VIEW_KEY = 'sl_home_view_logged';
 
@@ -351,6 +352,8 @@ function Home() {
   // Form state
   const [name, setName] = useState('');
   const [email, setEmail] = useState('');
+  const [password, setPassword] = useState('');
+  const [signupError, setSignupError] = useState('');
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [submitted, setSubmitted] = useState(false);
   
@@ -445,44 +448,70 @@ function Home() {
   // Handle form submission
   const handleSubmit = async (e) => {
     e.preventDefault();
-    
-    // Basic validation
-    if (!name.trim() || !email.trim()) {
-      alert('Please fill in all fields');
+    setSignupError('');
+
+    if (!name.trim() || !email.trim() || !password) {
+      setSignupError('Please fill in all fields.');
       return;
     }
-    
-    // Email format validation
     const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
     if (!emailRegex.test(email)) {
-      alert('Please enter a valid email address');
+      setSignupError('Please enter a valid email address.');
       return;
     }
-    
+    if (password.length < 6) {
+      setSignupError('Password must be at least 6 characters.');
+      return;
+    }
+
     setIsSubmitting(true);
-    
+
     try {
-      // Create a new entry in the 'newsletter registrants' database
+      const trimmedEmail = email.trim();
+      const trimmedName = name.trim();
+
+      // Log into newsletterRegistrants for the admin Signups tab.
       const registrantsRef = ref(database, 'newsletterRegistrants');
       const newRegistrantRef = push(registrantsRef);
-      
-      // Add timestamp
       await set(newRegistrantRef, {
-        name,
-        email,
-        timestamp: Date.now()
+        name: trimmedName,
+        email: trimmedEmail,
+        timestamp: Date.now(),
       });
-      
-      logEvent('newsletter_signup', { email });
-      // Show success message
+      logEvent('newsletter_signup', { email: trimmedEmail });
+
+      // Create the auth account with the chosen password. If an account already
+      // exists for this email, fall back to signing in with the supplied password.
+      try {
+        const user = await signUp(trimmedEmail, password);
+        // Stamp the chosen display name on the auth profile.
+        try {
+          await set(ref(database, `userProfiles/${user.uid}/displayName`), trimmedName);
+        } catch (_) {}
+      } catch (err) {
+        if (err && err.code === 'auth/email-already-in-use') {
+          try {
+            await signIn(trimmedEmail, password);
+          } catch (signInErr) {
+            setSignupError(
+              'That email already has an account but the password didn\'t match. ' +
+              'Use the cog (top-right) to sign in or reset your password.'
+            );
+            return;
+          }
+        } else {
+          setSignupError(friendlyAuthError(err && err.code));
+          return;
+        }
+      }
+
       setSubmitted(true);
-      
-      // Reset form
       setName('');
       setEmail('');
+      setPassword('');
     } catch (error) {
       console.error('Error submitting form:', error);
-      alert('Something went wrong. Please try again later.');
+      setSignupError('Something went wrong. Please try again later.');
     } finally {
       setIsSubmitting(false);
     }
@@ -538,21 +567,44 @@ function Home() {
               
               <InputGroup>
                 <InputLabel htmlFor="email">Email</InputLabel>
-                <Input 
+                <Input
                   id="email"
-                  type="email" 
+                  type="email"
                   value={email}
                   onChange={(e) => setEmail(e.target.value)}
                   placeholder="Your email address"
+                  autoComplete="email"
                   required
                 />
               </InputGroup>
-              
-              <SubmitButton 
-                type="submit" 
+
+              <InputGroup>
+                <InputLabel htmlFor="password">Password</InputLabel>
+                <Input
+                  id="password"
+                  type="password"
+                  value={password}
+                  onChange={(e) => setPassword(e.target.value)}
+                  placeholder="Choose a password (6+ characters)"
+                  autoComplete="new-password"
+                  required
+                  minLength={6}
+                />
+              </InputGroup>
+
+              {signupError && (
+                <div style={{
+                  color: '#FF8E8E', fontSize: 13, marginTop: -4, marginBottom: 8, textAlign: 'center',
+                }}>
+                  {signupError}
+                </div>
+              )}
+
+              <SubmitButton
+                type="submit"
                 disabled={isSubmitting}
               >
-                {isSubmitting ? 'Submitting...' : 'Get Crackin\''}
+                {isSubmitting ? 'Creating account…' : 'Get Crackin\''}
               </SubmitButton>
             </Form>
           ) : (

@@ -47,52 +47,34 @@ messaging.onBackgroundMessage((payload) => {
   });
 });
 
-// Tap → close + log open + open the click URL (or focus an existing tab).
+// Tap → close + open the click URL.
+//
+// Note: clickUrl is an internal tracking URL like
+//   https://thescrambledlegs.com/?n={notifId}&to={realDestination}
+// built by the sendPush Cloud Function. The page-load tracker in
+// src/services/openTracking.js fires logOpen from the Window context (where
+// keepalive fetch + sendBeacon work properly) and then redirects to ?to=.
+// We intentionally do NO logging from the SW — sendBeacon isn't available
+// in ServiceWorkerGlobalScope and keepalive is ignored there, so fetch from
+// a SW that's about to be terminated by focus-steal loses the race.
 self.addEventListener('notificationclick', (event) => {
   event.notification.close();
   const data = (event.notification && event.notification.data) || {};
   const clickUrl = data.clickUrl || 'https://thescrambledlegs.com/';
-  const notifId = data.notifId || '';
 
-  // Fire the open-log immediately, before any awaits. sendBeacon survives
-  // SW termination on cross-origin window navigation; fetch is a fallback.
-  // Keeping this OUTSIDE the async IIFE so it dispatches synchronously.
-  let logPromise = Promise.resolve();
-  if (notifId) {
-    const url = new URL(LOG_OPEN_URL);
-    url.searchParams.set('notifId', notifId);
-    const logUrl = url.toString();
-    let beaconSent = false;
-    try {
-      if (self.navigator && typeof self.navigator.sendBeacon === 'function') {
-        beaconSent = self.navigator.sendBeacon(logUrl);
-      }
-    } catch (e) { /* fallthrough to fetch */ }
-    if (!beaconSent) {
-      logPromise = fetch(logUrl, { method: 'GET', keepalive: true }).catch(() => {});
-    }
-  }
-
-  event.waitUntil(
-    Promise.all([
-      logPromise,
-      (async () => {
-        const allClients = await clients.matchAll({ type: 'window', includeUncontrolled: true });
-        for (const c of allClients) {
-          try {
-            if (c.url && c.url.indexOf('thescrambledlegs.com') !== -1) {
-              await c.focus();
-              if ('navigate' in c) {
-                try { await c.navigate(clickUrl); } catch (e) { /* cross-origin nav blocked */ }
-              }
-              return;
-            }
-          } catch (e) {
-            // continue
+  event.waitUntil((async () => {
+    const allClients = await clients.matchAll({ type: 'window', includeUncontrolled: true });
+    for (const c of allClients) {
+      try {
+        if (c.url && c.url.indexOf('thescrambledlegs.com') !== -1) {
+          await c.focus();
+          if ('navigate' in c) {
+            try { await c.navigate(clickUrl); } catch (e) { /* cross-origin nav blocked */ }
           }
+          return;
         }
-        await clients.openWindow(clickUrl);
-      })(),
-    ])
-  );
+      } catch (e) { /* continue */ }
+    }
+    await clients.openWindow(clickUrl);
+  })());
 });

@@ -23,6 +23,8 @@ import {
   isStandalonePWA,
 } from '../services/pwaInstall';
 import { logEvent } from '../services/analytics';
+import { useNavigate } from 'react-router-dom';
+import { useCurrentUser } from '../services/auth';
 
 const fadeIn = keyframes`from { opacity: 0; } to { opacity: 1; }`;
 const sheetSlide = keyframes`from { transform: translateY(100%); } to { transform: translateY(0); }`;
@@ -287,6 +289,8 @@ function extFromFile(file) {
 }
 
 function Sheet({ user, onClose }) {
+  const { isAdmin } = useCurrentUser();
+  const navigate = useNavigate();
   const fileRef = useRef(null);
   const [profile, setProfile] = useState(null);
   const [displayName, setDisplayName] = useState('');
@@ -504,7 +508,7 @@ function Sheet({ user, onClose }) {
           </Card>
 
           <Card>
-            <SectionLabel>Notifications</SectionLabel>
+            <SectionLabel>Notifications & app</SectionLabel>
             {subscribed ? (
               <>
                 <StatusOk>✓ Notifications on</StatusOk>
@@ -518,20 +522,19 @@ function Sheet({ user, onClose }) {
                 {subErr && <ErrLine>{subErr}</ErrLine>}
               </>
             )}
-          </Card>
 
-          {(showInstallSection || installed) && (
-            <Card>
-              <SectionLabel>Install app</SectionLabel>
-              {installed ? (
-                <StatusOk>✓ Installed</StatusOk>
-              ) : (
-                <PrimaryBtn type="button" onClick={onInstall}>
-                  Install Scrambled Legs app
-                </PrimaryBtn>
-              )}
-            </Card>
-          )}
+            <div style={{ height: 12 }} />
+
+            {installed ? (
+              <StatusOk>✓ PWA installed</StatusOk>
+            ) : showInstallSection ? (
+              <PrimaryBtn type="button" onClick={onInstall}>
+                Install Scrambled Legs app
+              </PrimaryBtn>
+            ) : (
+              <Note>Install the PWA from your browser menu to enable home-screen launching.</Note>
+            )}
+          </Card>
 
           <Card>
             <SectionLabel>Password</SectionLabel>
@@ -541,6 +544,18 @@ function Sheet({ user, onClose }) {
             {resetErr && <ErrLine>{resetErr}</ErrLine>}
             {resetInfo && <InfoLine>{resetInfo}</InfoLine>}
           </Card>
+
+          {isAdmin && (
+            <Card>
+              <SectionLabel>Admin</SectionLabel>
+              <PrimaryBtn
+                type="button"
+                onClick={() => { onClose(); navigate('/admin1'); }}
+              >
+                → Admin Panel
+              </PrimaryBtn>
+            </Card>
+          )}
 
           <Card>
             <SectionLabel>Sign out</SectionLabel>

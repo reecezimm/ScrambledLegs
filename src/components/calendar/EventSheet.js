@@ -251,13 +251,13 @@ function SheetContent({ event, onClose }) {
 
           {event.description && <EventDesc className="event-desc">{event.description}</EventDesc>}
 
-          <RsvpToggle event={event} />
-
           <WeatherPanel event={event} />
 
           <EventActions event={event} />
 
           <KudosCta event={event} isSheetContext={true} />
+
+          <RsvpToggle event={event} />
 
           <EventLeaderboard event={event} />
         </Body>

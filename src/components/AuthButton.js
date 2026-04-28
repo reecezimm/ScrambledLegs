@@ -51,8 +51,8 @@ const SignInPill = styled.button`
 `;
 
 const AvatarBtn = styled.button`
-  width: 40px;
-  height: 40px;
+  width: 50px;
+  height: 50px;
   border-radius: 50%;
   border: 2px solid #FFC72C;
   padding: 0;
@@ -62,7 +62,7 @@ const AvatarBtn = styled.button`
   justify-content: center;
   font-family: 'Fredoka', sans-serif;
   font-weight: 700;
-  font-size: 18px;
+  font-size: 22px;
   color: #1a1a1a;
   text-transform: uppercase;
   background: ${(p) => p.$photo
