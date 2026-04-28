@@ -70,7 +70,15 @@ const inputCss = `
 `;
 const Input = styled.input`${inputCss}`;
 const TextArea = styled.textarea`${inputCss} resize: vertical; min-height: 84px;`;
-const Select = styled.select`${inputCss}`;
+const Select = styled.select`
+  ${inputCss}
+  background: #1c1c1e;
+  color-scheme: dark;
+  option {
+    background: #1c1c1e;
+    color: #f4f4f4;
+  }
+`;
 
 const ToggleRow = styled.div`
   display: flex;

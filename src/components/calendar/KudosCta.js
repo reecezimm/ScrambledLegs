@@ -56,8 +56,145 @@ const HD_CHALLENGE_BANDS = [
    // General crew pressure
    "The crew has seen better",
    "Soft boiled at best",
-   "The yolk's on you"],
+   "The yolk's on you",
+   // Jordan (Bad Egg) — prefers running, crashes constantly
+   "Jordan would rather run",
+   "Bad Egg is judging you",
+   "Jordan crashed harder than that",
+   "Running is NOT cycling, Jordan",
+   "Even Bad Egg mashes better",
+   // Dave SWIDZ — sends it everywhere, bars included
+   "SWIDZ already sent it",
+   "Dave's at the bar. Are you?",
+   "Send it like SWIDZ",
+   "SWIDZ would've sent that by now",
+   "Dave's getting a beer. Keep going.",
+   // Pig Boy — broken bones, couch potato
+   "Pig Boy watched from the couch",
+   "Every bone Pig Boy broke screams harder",
+   "Pig Boy's wrist is judging you",
+   "Pig Boy has no more excuses. Do you?",
+   "Even Pig Boy remembers how to send it",
+   // Reed Peer — boundary waters, lazy lake vibes
+   "Reed is paddling right now",
+   "Peer thinks this is too hard",
+   "Boundary waters > your effort",
+   "Reed's on a lake. What's your excuse?",
+   "Even the fattest Reed pedals harder",
+   // Casey Newton — dentist, Zwift dad speed
+   "Casey's Zwift PR is a certified dad pace",
+   "Dr. Newton flosses harder than you mash",
+   "Casey trained all winter on a stationary bike for this",
+   "Newton's dentist hands could squeeze harder",
+   "Casey guarantees dad speed. He delivered. Can you?",
+   // Tyler VANDAL — stubborn story-teller, guaranteed finisher
+   "VANDAL is chasing you with a story you've heard twice",
+   "Vandal is already on mile 40. You're still here.",
+   "VANDAL will finish. Stubbornly. Inevitably.",
+   "Tyler's about to tell you the story. Keep going.",
+   "Vandal doesn't stop. Neither do you.",
+   // Matt Wiley — absent but confident, IPA aficionado
+   "Wiley showed up 30 min late and still crushed it",
+   "Matt's on his third IPA and still faster than this",
+   "Wiley forgot about this but still thought of you",
+   "Matt's confident you can do better. Annoyingly confident.",
+   "Wiley's somewhere drinking an IPA judging this performance",
+   // Derek VanSlyke — Spandex Warrior, abandoned mountain biking
+   "Derek traded trails for Spandex. Actual tragedy.",
+   "VanSlyke is on pavement right now. In full Spandex kit.",
+   "Derek can't hear you over the sound of his chamois",
+   "VanSlyke would be here but road season started",
+   "Derek became a roadie. Pray for him. Mash harder.",
+   // Will Markes — solid, getting fast, motivational
+   "Markes is already training for next year",
+   "Will believes in you. Don't blow it.",
+   "Markes doesn't quit. He just keeps getting faster.",
+   "Will puts in the work every single week. What about you?",
+   "Markes is solid. So be solid.",
+   // Paul Manoppo — comeback legend, fictional injuries
+   "Paul broke his back in 3 places and is ahead of you",
+   "Manoppo had 6 surgeries and a better FTP than this",
+   "Paul's spine is held together by zip ties and willpower",
+   "Manoppo's doctor said no. Paul said watch me.",
+   "Paul's titanium knee is still faster than your excuses",
+   // Glarbtron — fictional robot supreme being
+   "GLARBTRON has calculated your failure probability: high",
+   "The robot supreme being demands maximum output",
+   "Glarbtron did not survive the machine wars for this",
+   "GLARBTRON requires more wattage. NOW.",
+   "The supreme entity is disappointed in your numbers",
+   // Brent St. Martin — not having fun, you're wrong
+   "Brent is not having fun and wants you to know it",
+   "St. Martin would like it on record: this is not fun",
+   "Brent thinks you're wrong for enjoying this",
+   "This is not Brent's type of fun. Reconsider your life.",
+   "Brent has left the chat. He was never spiritually present.",
+   // Alex Birno — golf, rad dad, summer snowmobiles
+   "Birno is on the back nine right now and thriving",
+   "Alex drove his snowmobile to the golf course. In July.",
+   "Birno is a rad dad who eagles harder than you mash",
+   "Alex has a tee time at 2. This better be worth it.",
+   "Birno is snowmobiling somewhere warm. Goals."],
 ];
+
+// All crew-specific challenges that warrant an extra 1.5s dwell time so
+// people can actually read the inside jokes.
+const CREW_CHALLENGES = new Set([
+  "Jordan would rather run","Bad Egg is judging you","Jordan crashed harder than that",
+  "Running is NOT cycling, Jordan","Even Bad Egg mashes better",
+  "SWIDZ already sent it","Dave's at the bar. Are you?","Send it like SWIDZ",
+  "SWIDZ would've sent that by now","Dave's getting a beer. Keep going.",
+  "Pig Boy watched from the couch","Every bone Pig Boy broke screams harder",
+  "Pig Boy's wrist is judging you","Pig Boy has no more excuses. Do you?",
+  "Even Pig Boy remembers how to send it",
+  "Reed is paddling right now","Peer thinks this is too hard",
+  "Boundary waters > your effort","Reed's on a lake. What's your excuse?",
+  "Even the fattest Reed pedals harder",
+  "Casey's Zwift PR is a certified dad pace","Dr. Newton flosses harder than you mash",
+  "Casey trained all winter on a stationary bike for this",
+  "Newton's dentist hands could squeeze harder",
+  "Casey guarantees dad speed. He delivered. Can you?",
+  "VANDAL is chasing you with a story you've heard twice",
+  "Vandal is already on mile 40. You're still here.",
+  "VANDAL will finish. Stubbornly. Inevitably.",
+  "Tyler's about to tell you the story. Keep going.",
+  "Vandal doesn't stop. Neither do you.",
+  "Wiley showed up 30 min late and still crushed it",
+  "Matt's on his third IPA and still faster than this",
+  "Wiley forgot about this but still thought of you",
+  "Matt's confident you can do better. Annoyingly confident.",
+  "Wiley's somewhere drinking an IPA judging this performance",
+  "Derek traded trails for Spandex. Actual tragedy.",
+  "VanSlyke is on pavement right now. In full Spandex kit.",
+  "Derek can't hear you over the sound of his chamois",
+  "VanSlyke would be here but road season started",
+  "Derek became a roadie. Pray for him. Mash harder.",
+  "Markes is already training for next year",
+  "Will believes in you. Don't blow it.",
+  "Markes doesn't quit. He just keeps getting faster.",
+  "Will puts in the work every single week. What about you?",
+  "Markes is solid. So be solid.",
+  "Paul broke his back in 3 places and is ahead of you",
+  "Manoppo had 6 surgeries and a better FTP than this",
+  "Paul's spine is held together by zip ties and willpower",
+  "Manoppo's doctor said no. Paul said watch me.",
+  "Paul's titanium knee is still faster than your excuses",
+  "GLARBTRON has calculated your failure probability: high",
+  "The robot supreme being demands maximum output",
+  "Glarbtron did not survive the machine wars for this",
+  "GLARBTRON requires more wattage. NOW.",
+  "The supreme entity is disappointed in your numbers",
+  "Brent is not having fun and wants you to know it",
+  "St. Martin would like it on record: this is not fun",
+  "Brent thinks you're wrong for enjoying this",
+  "This is not Brent's type of fun. Reconsider your life.",
+  "Brent has left the chat. He was never spiritually present.",
+  "Birno is on the back nine right now and thriving",
+  "Alex drove his snowmobile to the golf course. In July.",
+  "Birno is a rad dad who eagles harder than you mash",
+  "Alex has a tee time at 2. This better be worth it.",
+  "Birno is snowmobiling somewhere warm. Goals.",
+]);
 
 const HD_FIRST_25 = [
   "MASH!", "MASH! MASH!", "GO GO GO!", "KEEP GOING!", "DON'T STOP!",
@@ -199,15 +336,31 @@ const CtaTop = styled.div`
   align-items: center;
   gap: 10px;
   flex-shrink: 0;
+  transition: opacity 0.2s;
+
+  /* In idle, shrink the count display so it doesn't overlap the centered
+     MASH ME overlay — tucks into the left corner as a subtle indicator */
+  ${HdCta}.is-idle & {
+    gap: 5px;
+    opacity: 0.65;
+  }
 `;
 
-const CtaEmoji = styled.span`font-size: 30px; line-height: 1;`;
+const CtaEmoji = styled.span`
+  font-size: 30px;
+  line-height: 1;
+
+  ${HdCta}.is-idle & { font-size: 17px; }
+`;
 
 const CtaCount = styled.span`
   font-size: 26px;
   font-weight: 700;
   line-height: 1;
   font-variant-numeric: tabular-nums;
+  transition: font-size 0.2s;
+
+  ${HdCta}.is-idle & { font-size: 13px; font-weight: 600; }
 `;
 
 const CtaText = styled.span`
@@ -458,10 +611,12 @@ export default function KudosCta({ event, isSheetContext }) {
     // Intensity
     btn.dataset.intensity = String(bandForPress(pressCount));
 
-    // Challenge text
+    // Challenge text — crew-specific challenges get 1.5s extra dwell (4s total)
+    // so there's time to actually read the inside jokes.
     const now = Date.now();
     const isHandTuned = pressCount <= HD_FIRST_25.length;
-    const shouldRefreshChallenge = isHandTuned || (now - hdLastChallengeAtRef.current >= 2500);
+    const currentDwell = CREW_CHALLENGES.has(hdLastChallengeRef.current) ? 4000 : 2500;
+    const shouldRefreshChallenge = isHandTuned || (now - hdLastChallengeAtRef.current >= currentDwell);
     if (shouldRefreshChallenge) {
       const challenge = pickChallenge(pressCount, hdLastChallengeRef.current);
       hdLastChallengeRef.current = challenge;

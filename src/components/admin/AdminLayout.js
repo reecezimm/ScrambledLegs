@@ -1,5 +1,6 @@
 import React from 'react';
 import styled, { keyframes } from 'styled-components';
+import { useNavigate } from 'react-router-dom';
 
 const float = keyframes`
   0% { transform: translate(0, 0) rotate(0deg); }
@@ -143,13 +144,30 @@ const Body = styled.main`
   }
 `;
 
+const HomeBtn = styled(SignOutBtn)`
+  background: rgba(255,199,44,0.10);
+  border-color: rgba(255,199,44,0.25);
+  color: #FFC72C;
+  &:hover { background: rgba(255,199,44,0.18); }
+`;
+
+const HeaderActions = styled.div`
+  display: flex;
+  align-items: center;
+  gap: 8px;
+`;
+
 export function AdminLayout({ tab, onTabChange, onSignOut, children }) {
+  const navigate = useNavigate();
   return (
     <Page>
       <FloatingEggs />
       <HeaderBar>
-        <Brand>🌭 Admin · Scrambled Legs</Brand>
-        <SignOutBtn type="button" onClick={onSignOut}>Sign Out</SignOutBtn>
+        <Brand>🥚 Admin · Scrambled Legs</Brand>
+        <HeaderActions>
+          <HomeBtn type="button" onClick={() => navigate('/')}>← Home</HomeBtn>
+          <SignOutBtn type="button" onClick={onSignOut}>Sign Out</SignOutBtn>
+        </HeaderActions>
       </HeaderBar>
       <TabsRow>
         <Tab

@@ -10,7 +10,7 @@ const sheetSlide = keyframes`from { transform: translateY(100%); } to { transfor
 
 const Grid = styled.div`
   display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(72px, 1fr));
+  grid-template-columns: repeat(${p => p.$cols || 4}, minmax(0, 1fr));
   gap: 8px;
   margin-top: 14px;
 `;
@@ -223,7 +223,7 @@ export default function EventActions({ event }) {
 
   return (
     <>
-      <Grid>
+      <Grid $cols={event.routeUrl ? 4 : 3}>
         <ActionBtn href={directionsUrl(event)} target="_blank" rel="noopener noreferrer">
           <NavIcon />
           <span>Directions</span>

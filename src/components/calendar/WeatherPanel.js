@@ -99,7 +99,7 @@ const Fallback = styled.div`
   letter-spacing: 0.04em;
 `;
 
-export default function WeatherPanel({ event }) {
+export default function WeatherPanel({ event, onData }) {
   const lat = event?.startLoc?.lat;
   const lng = event?.startLoc?.lng;
   const timestamp = event?.start;
@@ -110,6 +110,12 @@ export default function WeatherPanel({ event }) {
     inRange ? lng : null,
     inRange ? timestamp : null
   );
+
+  // Bubble the loaded weather data up so the chip in the banner can
+  // show the real icon + temperature instead of the static placeholder.
+  React.useEffect(() => {
+    if (data && onData) onData(data);
+  }, [data, onData]);
 
   if (!inRange) {
     return <Fallback>Forecast available 10 days before the ride</Fallback>;

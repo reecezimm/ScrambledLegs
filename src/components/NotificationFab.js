@@ -345,7 +345,8 @@ export function NotificationFab() {
     setState(getSubscriptionState());
   }, []);
 
-  // Hide for unsupported and subscribed. NotificationOnPill renders the subscribed pill.
+  // Hide entirely when subscribed or unsupported — no pill, no bell, nothing.
+  // If they want to disable notifications they can do it through browser settings.
   if (state === 'unsupported' || state === 'subscribed') return null;
 
   if (state === 'blocked') {

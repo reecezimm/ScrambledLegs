@@ -26,12 +26,12 @@ const NOTIFICATION_ICON =
 
 // ---------- platform detection ----------
 
-function isIOS() {
+export function isIOS() {
   if (typeof navigator === 'undefined') return false;
   return /iPad|iPhone|iPod/.test(navigator.userAgent) && !window.MSStream;
 }
 
-function isStandalone() {
+export function isStandalone() {
   if (typeof window === 'undefined') return false;
   if (window.matchMedia && window.matchMedia('(display-mode: standalone)').matches) {
     return true;
@@ -129,16 +129,23 @@ export async function requestAndSubscribe() {
     );
   }
 
+  // *** requestPermission MUST be called immediately — before any other awaits.
+  // Mobile browsers (Chrome Android, Safari iOS) require the permission dialog
+  // to be triggered synchronously within the user-gesture call stack. Any
+  // async operation before this call can break that requirement, causing the
+  // browser to silently return 'default' without showing the dialog at all.
+  const permission = await Notification.requestPermission();
+  if (permission !== 'granted') {
+    throw new Error(
+      permission === 'denied'
+        ? 'Notifications are blocked. Open your browser settings to re-enable.'
+        : 'Permission was not granted. Please try again and tap Allow.'
+    );
+  }
+
   const messaging = await getMessagingIfSupported();
   if (!messaging) {
     throw new Error('Firebase messaging is not available in this browser.');
-  }
-
-  // Permission prompt. iOS will reject this if not running as installed PWA;
-  // the FAB UI guards against that with the ios_needs_install state.
-  const permission = await Notification.requestPermission();
-  if (permission !== 'granted') {
-    throw new Error(`Permission ${permission}.`);
   }
 
   const swReg = await ensureServiceWorker();
@@ -152,15 +159,26 @@ export async function requestAndSubscribe() {
 
   const hash = await sha256Hex(token);
 
-  await set(ref(database, `fcmTokens/${hash}`), {
-    token,
-    createdAt: serverTimestamp(),
-    lastSeenAt: serverTimestamp(),
-    userAgent:
-      typeof navigator !== 'undefined' ? navigator.userAgent.slice(0, 400) : '',
-    platform: detectPlatform(),
-    isStandalone: isStandalone(),
-  });
+  try {
+    await set(ref(database, `fcmTokens/${hash}`), {
+      token,
+      createdAt: serverTimestamp(),
+      lastSeenAt: serverTimestamp(),
+      userAgent:
+        typeof navigator !== 'undefined' ? navigator.userAgent.slice(0, 400) : '',
+      platform: detectPlatform(),
+      isStandalone: isStandalone(),
+    });
+    console.log('[messaging] Token written to Firebase /fcmTokens/', hash.slice(0, 8));
+  } catch (writeErr) {
+    // Surface clearly — usually means database rules haven't been deployed yet.
+    console.error('[messaging] Token write FAILED — likely Firebase rules not deployed:', writeErr.message);
+    throw new Error(
+      'Subscribed but could not save your token to Firebase. ' +
+      'Run `firebase deploy --only database` to deploy the database rules. ' +
+      'Error: ' + writeErr.message
+    );
+  }
 
   try {
     localStorage.setItem(LS_TOKEN_HASH, hash);

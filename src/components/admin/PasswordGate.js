@@ -118,7 +118,7 @@ export function PasswordGate({ onAuthed }) {
       <FloatingEggs count={5} />
       <Center>
         <Card onSubmit={submit}>
-          <Title>🌭 Admin Access</Title>
+          <Title>🥚 Admin Access</Title>
           <Subhead>Crew only</Subhead>
           <Input
             type="password"

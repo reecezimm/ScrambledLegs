@@ -104,7 +104,15 @@ const TextArea = styled.textarea`
   min-height: 96px;
   font-family: 'Inter', sans-serif;
 `;
-const Select = styled.select`${inputCss}`;
+const Select = styled.select`
+  ${inputCss}
+  background: #1c1c1e;
+  color-scheme: dark;
+  option {
+    background: #1c1c1e;
+    color: #f4f4f4;
+  }
+`;
 
 const TwoCol = styled.div`
   display: grid;

@@ -32,7 +32,7 @@ const SectionLabel = styled.div`
   letter-spacing: 0.18em;
   text-transform: uppercase;
   color: rgba(255,255,255,0.55);
-  margin: 28px 4px 12px;
+  margin: 10px 4px 12px;
 
   &::after {
     content: '';

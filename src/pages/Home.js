@@ -2,7 +2,7 @@ import React, { useEffect, useState } from 'react';
 import styled, { keyframes } from 'styled-components';
 import Footer from '../components/Footer';
 import NotificationFab from '../components/NotificationFab';
-import NotificationOnPill from '../components/NotificationOnPill';
+import InstallPrompt from '../components/InstallPrompt';
 import CalendarWidget from '../components/calendar';
 import { ref, push, set } from 'firebase/database';
 import { database } from '../services/firebase';
@@ -84,18 +84,18 @@ const Subtitle = styled.h2`
   font-weight: 400;
   letter-spacing: 0.15em;
   text-transform: uppercase;
-  margin: 0 0 25px;
+  margin: 0 0 10px;
   opacity: 0.9;
   filter: drop-shadow(0 2px 4px rgba(0,0,0,0.1));
-  
+
   @media (max-width: 768px) {
     font-size: 1.1rem;
-    margin-bottom: 20px;
+    margin-bottom: 8px;
   }
-  
+
   @media (max-width: 480px) {
     font-size: 0.9rem;
-    margin-bottom: 15px;
+    margin-bottom: 6px;
     letter-spacing: 0.12em;
   }
 `;
@@ -555,7 +555,7 @@ function Home() {
       
       <Footer />
       <NotificationFab />
-      <NotificationOnPill />
+      <InstallPrompt />
     </HomeContainer>
   );
 }

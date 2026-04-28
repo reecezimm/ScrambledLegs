@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useState, useCallback } from 'react';
 import styled, { keyframes } from 'styled-components';
 import EventMap from './EventMap';
 import RideLeaderBadge from './RideLeaderBadge';
@@ -93,6 +93,7 @@ const WeatherChip = styled.div`
 
 const Body = styled.div`
   padding: 18px 18px 14px;
+  text-align: left;
 
   &.has-rl .event-name,
   &.has-rl .event-meta { padding-right: 92px; }
@@ -189,6 +190,10 @@ const Empty = styled.div`
 `;
 
 export default function EventFeatured({ event }) {
+  // Lift weather data so the banner chip and the panel both show real values.
+  const [liveWeather, setLiveWeather] = useState(null);
+  const handleWeatherData = useCallback((wx) => setLiveWeather(wx), []);
+
   if (!event) {
     return (
       <Empty>
@@ -219,8 +224,8 @@ export default function EventFeatured({ event }) {
 
       {inWeatherRange && (
         <WeatherChip>
-          <span>🌤</span>
-          <span>—°</span>
+          <span>{liveWeather?.icon || '🌤'}</span>
+          <span>{liveWeather?.temp != null ? `${liveWeather.temp}°` : '—°'}</span>
         </WeatherChip>
       )}
 
@@ -247,7 +252,7 @@ export default function EventFeatured({ event }) {
 
         {event.description && <EventDesc className="event-desc">{event.description}</EventDesc>}
 
-        <WeatherPanel event={event} />
+        <WeatherPanel event={event} onData={handleWeatherData} />
 
         <EventCountdown event={event} />
 

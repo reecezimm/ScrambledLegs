@@ -159,6 +159,7 @@ export function spawnPhrase(btn, phraseCooldownRef, lastPhraseIndexRef) {
   phraseCooldownRef.current = now + 5000;
 
   const PHRASES = [
+    // Core
     "Get crackin'!", "Egg-cellent!", "Sunny side up!", "You rock!",
     "Send it!", "Grease lightning!", "Mustard moves!", "Wheels up!",
     "Yolks on you!", "Hot dog hero!", "Crank it!", "Sender alert!",
@@ -166,7 +167,33 @@ export function spawnPhrase(btn, phraseCooldownRef, lastPhraseIndexRef) {
     "You're in! 🥚", "Roll call answered!", "See you Wednesday!",
     "Yolked + stoked!", "Eggs-traordinary!", "Cracked it!",
     "On the roster!", "Whisk on!", "Wednesday loading…",
-    "Locked and loaded!"
+    "Locked and loaded!",
+    // Jordan / Bad Egg
+    "Bad Egg approved!", "Jordan would run. You ride.",
+    // SWIDZ
+    "SWIDZ would send it!", "Dave's at the bar — keep going!",
+    // Pig Boy
+    "Pig Boy's watching!", "Pig Boy's wrist approves!",
+    // Reed
+    "Reed's on a lake!", "Boundary waters can wait!",
+    // Casey Newton
+    "Dad speed activated!", "Dr. Newton is proud!",
+    // Tyler VANDAL
+    "VANDAL will finish. Always.", "Vandal heard this story twice!",
+    // Matt Wiley
+    "Wiley showed up late and crushed it!", "IPA energy!",
+    // Derek VanSlyke
+    "Derek's in Spandex. You're not.", "Trail life, no Spandex!",
+    // Will Markes
+    "Markes believes in you!", "Will puts in the work!",
+    // Paul Manoppo
+    "Manoppo had 6 surgeries. Still faster.", "Comeback energy!",
+    // Glarbtron
+    "GLARBTRON approves!", "Supreme entity satisfied.",
+    // Brent St. Martin
+    "Brent hates this. You love it.", "Not Brent's fun — yours!",
+    // Alex Birno
+    "Birno is on the back nine!", "Snowmobile in July energy!",
   ];
   let i;
   do { i = Math.floor(Math.random() * PHRASES.length); }
