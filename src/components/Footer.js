@@ -2,7 +2,7 @@ import React from 'react';
 import styled from 'styled-components';
 
 // Increment this value for each update
-const APP_VERSION = "0.3.0";
+const APP_VERSION = "3.1";
 
 const FooterContainer = styled.footer`
   position: relative;
