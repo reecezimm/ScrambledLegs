@@ -1,8 +1,12 @@
 import React, { useEffect, useState } from 'react';
 import styled, { keyframes } from 'styled-components';
 import Footer from '../components/Footer';
+import NotificationFab from '../components/NotificationFab';
+import NotificationOnPill from '../components/NotificationOnPill';
+import CalendarWidget from '../components/calendar';
 import { ref, push, set } from 'firebase/database';
 import { database } from '../services/firebase';
+import { setupForegroundHandler } from '../services/messaging';
 
 const floatAnimation = keyframes`
   0% {
@@ -419,6 +423,12 @@ function Home() {
     };
     
     window.addEventListener('resize', handleResize);
+
+    // Wire foreground push handler so subscribed users see notifications
+    // even when the page is open and focused. Best-effort; safe to call
+    // multiple times — internal idempotence guard.
+    setupForegroundHandler();
+
     return () => window.removeEventListener('resize', handleResize);
   }, []);
   
@@ -492,7 +502,10 @@ function Home() {
         <Subtitle>
           DULUTH'S PREMIER RACE TEAM
         </Subtitle>
-        
+
+        {/* Calendar Widget — rides, events, kudos */}
+        <CalendarWidget />
+
         {/* Join Us Form */}
         <FormSection>
           <FormTitle>JOIN THE SCRAMBLED LEGS</FormTitle>
@@ -541,6 +554,8 @@ function Home() {
       </ContentContainer>
       
       <Footer />
+      <NotificationFab />
+      <NotificationOnPill />
     </HomeContainer>
   );
 }

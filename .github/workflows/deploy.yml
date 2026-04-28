@@ -27,6 +27,7 @@ jobs:
         env:
           CI: false # Don't treat warnings as errors
           DISABLE_ESLINT_PLUGIN: true # Disable ESLint during build
+          REACT_APP_FIREBASE_VAPID_KEY: ${{ secrets.REACT_APP_FIREBASE_VAPID_KEY }}
 
       - name: Copy CNAME to build folder
         run: cp CNAME build/ || echo "No CNAME file found"

@@ -1,0 +1,1099 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="theme-color" content="#1a1a1a">
+<title>Scrambled Legs · Nav Mockup</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Fredoka:wght@400;500;600;700&family=Inter:wght@400;500;600;700&family=Montserrat:wght@400;600;700&display=swap" rel="stylesheet">
+<style>
+:root {
+  --bg-deep:        #1a1a1a;
+  --bg-elev:        #232325;
+  --bg-card:        rgba(255,255,255,0.04);
+  --bg-card-hover:  rgba(255,255,255,0.07);
+  --border-soft:    rgba(255,255,255,0.10);
+  --border-yolk:    rgba(255,199,44,0.25);
+  --text:           #f4f4f4;
+  --text-mute:      rgba(255,255,255,0.55);
+  --text-dim:       rgba(255,255,255,0.32);
+  --yolk:           #FFC72C;
+  --yolk-light:     #FFE66D;
+  --hot:            #FF6B6B;
+  --hot-deep:       #FF8E53;
+  --orange:         #FF8800;
+  --green:          #6FCF97;
+  --shadow-card:    0 12px 40px rgba(0,0,0,0.35);
+  --shadow-glow:    0 0 32px rgba(255,199,44,0.12);
+  --ease-spring:    cubic-bezier(.5,1.4,.5,1);
+  --ease-out:       cubic-bezier(.22,.61,.36,1);
+}
+
+* { margin: 0; padding: 0; box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
+
+html, body {
+  background: linear-gradient(160deg, #1a1a1a 0%, #232325 100%);
+  color: var(--text);
+  font-family: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
+  min-height: 100vh;
+  overflow-x: hidden;
+}
+
+button { font: inherit; color: inherit; }
+
+/* ───────── floating eggs ───────── */
+.egg-bg {
+  position: fixed; inset: 0; pointer-events: none; z-index: 0; overflow: hidden;
+}
+.egg {
+  position: absolute; pointer-events: none; user-select: none;
+  font-size: 28px; opacity: 0.10;
+  animation: floatEgg var(--dur,22s) ease-in-out infinite;
+  animation-delay: var(--delay,0s);
+}
+@keyframes floatEgg {
+  0%   { transform: translate(0,0) rotate(0deg); }
+  33%  { transform: translate(12vw,-8vh) rotate(120deg); }
+  66%  { transform: translate(-12vw,8vh) rotate(240deg); }
+  100% { transform: translate(0,0) rotate(360deg); }
+}
+
+/* ───────── variant switcher (mockup-only) ───────── */
+.variant-bar {
+  position: sticky; top: 0; z-index: 9999;
+  background: rgba(20,20,20,0.85);
+  backdrop-filter: blur(14px);
+  -webkit-backdrop-filter: blur(14px);
+  border-bottom: 1px solid var(--border-yolk);
+  padding: 8px 10px;
+  display: flex; gap: 6px;
+  overflow-x: auto; scrollbar-width: none;
+  font-family: 'Montserrat', sans-serif;
+}
+.variant-bar::-webkit-scrollbar { display: none; }
+.variant-bar .vbtn {
+  flex-shrink: 0;
+  padding: 8px 14px;
+  font-size: 10px; font-weight: 700;
+  letter-spacing: 0.14em; text-transform: uppercase;
+  color: var(--text-mute);
+  background: rgba(255,255,255,0.04);
+  border: 1px solid var(--border-soft);
+  border-radius: 999px;
+  cursor: pointer;
+  transition: all 0.18s ease;
+  white-space: nowrap;
+}
+.variant-bar .vbtn:hover { color: var(--text); border-color: var(--border-yolk); }
+.variant-bar .vbtn.is-active {
+  background: var(--yolk); color: #000; border-color: var(--yolk);
+  box-shadow: 0 0 18px rgba(255,199,44,0.35);
+}
+
+/* ───────── stage / variant section ───────── */
+.stage {
+  position: relative; z-index: 1;
+  min-height: calc(100vh - 44px);
+  display: flex; flex-direction: column;
+}
+.variant { display: none; }
+.variant.is-active { display: flex; flex-direction: column; flex: 1; }
+
+/* ───────── shared mock content ───────── */
+.page-area {
+  flex: 1;
+  position: relative;
+  width: 100%;
+  max-width: 480px;
+  margin: 0 auto;
+  padding: 24px 18px 24px;
+}
+.page-area.with-bottom-pad { padding-bottom: 110px; }
+.page-area.with-top-pad    { padding-top: 88px; }
+.page-area.with-top-pad-l  { padding-top: 120px; }
+.page-area.with-top-pad-xl { padding-top: 160px; }
+
+.mock-page {
+  animation: pageIn 0.32s var(--ease-out);
+}
+@keyframes pageIn {
+  from { opacity: 0; transform: translateY(8px); }
+  to   { opacity: 1; transform: translateY(0); }
+}
+
+.mock-page h2 {
+  font-family: 'Fredoka', sans-serif;
+  font-weight: 700;
+  font-size: clamp(22px, 6vw, 28px);
+  letter-spacing: 0.01em;
+  background: linear-gradient(45deg, var(--yolk-light), var(--yolk));
+  -webkit-background-clip: text; -webkit-text-fill-color: transparent;
+  margin-bottom: 4px;
+}
+.mock-page .sub {
+  font-family: 'Montserrat', sans-serif;
+  font-size: 10px; letter-spacing: 0.18em; text-transform: uppercase;
+  color: var(--text-mute);
+  margin-bottom: 22px;
+}
+
+/* — Home mock — */
+.mini-section-label {
+  display: flex; align-items: center; gap: 10px;
+  font-family: 'Montserrat',sans-serif;
+  font-size: 11px; letter-spacing: 0.18em;
+  text-transform: uppercase; color: var(--text-mute);
+  margin: 4px 4px 12px;
+}
+.mini-section-label::after {
+  content:''; flex: 1; height: 1px;
+  background: linear-gradient(90deg, var(--border-soft), transparent);
+}
+.mini-card {
+  background: linear-gradient(140deg, rgba(255,199,44,0.06), rgba(255,107,107,0.04));
+  border: 1px solid var(--border-yolk);
+  border-radius: 22px;
+  padding: 18px;
+  box-shadow: var(--shadow-card), var(--shadow-glow);
+  backdrop-filter: blur(10px);
+}
+.mini-card .chip {
+  display: inline-flex; align-items: center; gap: 6px;
+  padding: 5px 11px; border-radius: 999px;
+  background: rgba(255,199,44,0.18); color: var(--yolk-light);
+  font-family: 'Montserrat', sans-serif;
+  font-size: 9px; font-weight: 700; letter-spacing: 0.16em; text-transform: uppercase;
+  border: 1px solid rgba(255,255,255,0.18);
+}
+.mini-card .chip .dot {
+  width: 6px; height: 6px; border-radius: 50%;
+  background: var(--yolk); box-shadow: 0 0 8px var(--yolk);
+  animation: pulse 1.6s infinite;
+}
+@keyframes pulse {
+  0%,100% { transform: scale(1); opacity: 1; }
+  50%     { transform: scale(1.4); opacity: 0.55; }
+}
+.mini-card .ev-name {
+  font-family: 'Fredoka', sans-serif;
+  font-size: 22px; font-weight: 700;
+  background: linear-gradient(45deg, #ffffff, #f0d97a);
+  -webkit-background-clip: text; -webkit-text-fill-color: transparent;
+  margin-top: 12px; line-height: 1.15;
+}
+.mini-card .ev-meta {
+  display: flex; flex-wrap: wrap; gap: 8px 14px;
+  margin-top: 8px;
+  font-size: 12px; color: var(--text-mute);
+}
+.mini-card .ev-meta svg { width: 13px; height: 13px; color: var(--yolk); vertical-align: -2px; margin-right: 4px; }
+.mini-card .countdown {
+  margin-top: 14px; padding: 12px;
+  text-align: center;
+  border-radius: 12px;
+  background: rgba(0,0,0,0.30);
+  border: 1px solid var(--border-soft);
+}
+.mini-card .countdown .lbl {
+  font-family: 'Montserrat', sans-serif;
+  font-size: 9px; font-weight: 700; letter-spacing: 0.18em; text-transform: uppercase;
+  color: var(--text-mute);
+}
+.mini-card .countdown .val {
+  font-family: 'Fredoka', sans-serif;
+  font-weight: 600; font-size: 22px; margin-top: 2px;
+  background: linear-gradient(45deg, var(--yolk-light), var(--orange));
+  -webkit-background-clip: text; -webkit-text-fill-color: transparent;
+  font-variant-numeric: tabular-nums;
+}
+.newsletter {
+  margin-top: 22px; padding: 18px;
+  border: 1px dashed var(--border-soft);
+  border-radius: 16px;
+  background: rgba(255,255,255,0.02);
+}
+.newsletter .nlh {
+  font-family: 'Fredoka', sans-serif;
+  font-size: 16px; font-weight: 600;
+  margin-bottom: 4px;
+}
+.newsletter .nls {
+  font-size: 12px; color: var(--text-mute); margin-bottom: 12px;
+}
+.newsletter .nlf {
+  display: flex; gap: 6px;
+}
+.newsletter input {
+  flex: 1; min-width: 0;
+  background: rgba(255,255,255,0.05);
+  border: 1px solid var(--border-soft);
+  border-radius: 10px;
+  padding: 10px 12px;
+  color: var(--text);
+  font-family: inherit;
+  font-size: 13px;
+  outline: none;
+}
+.newsletter input:focus { border-color: var(--yolk); }
+.newsletter button {
+  background: linear-gradient(45deg, var(--hot), var(--hot-deep));
+  border: none;
+  padding: 10px 16px;
+  border-radius: 10px;
+  color: #fff;
+  font-weight: 700;
+  font-size: 12px;
+  letter-spacing: 0.05em;
+  text-transform: uppercase;
+  cursor: pointer;
+}
+
+/* — Hot Dogs mock — */
+.hd-wrap {
+  margin-top: 16px;
+  display: flex; flex-direction: column; align-items: center;
+  text-align: center;
+}
+.hd-btn {
+  width: 200px; height: 200px;
+  border-radius: 50%;
+  background: radial-gradient(circle at 30% 30%, var(--hot), var(--hot-deep) 65%, #c93f3f);
+  border: none;
+  cursor: pointer;
+  display: flex; align-items: center; justify-content: center;
+  flex-direction: column;
+  box-shadow: 0 12px 36px rgba(255,107,107,0.45), inset 0 -8px 16px rgba(0,0,0,0.18);
+  transition: transform 0.12s ease;
+}
+.hd-btn:active { transform: scale(0.95); }
+.hd-btn .num {
+  font-family: 'Fredoka', sans-serif;
+  font-size: 56px; font-weight: 700; color: #fff;
+  text-shadow: 0 2px 10px rgba(0,0,0,0.3);
+  font-variant-numeric: tabular-nums;
+  line-height: 1;
+}
+.hd-btn .ico { font-size: 30px; margin-top: 4px; }
+.hd-meta {
+  margin-top: 22px;
+  font-family: 'Montserrat', sans-serif;
+  font-size: 10px; letter-spacing: 0.18em; text-transform: uppercase;
+  color: var(--text-mute);
+}
+.hd-stat {
+  margin-top: 8px;
+  font-family: 'Fredoka', sans-serif;
+  font-size: 18px; color: var(--text);
+}
+.hd-stat span { color: var(--yolk); font-weight: 700; }
+
+/* — About mock — */
+.crew-photo {
+  margin-top: 8px;
+  width: 100%;
+  aspect-ratio: 16 / 10;
+  border-radius: 18px;
+  background:
+    linear-gradient(140deg, rgba(255,199,44,0.10), rgba(255,107,107,0.06)),
+    repeating-linear-gradient(45deg, rgba(255,255,255,0.02) 0 12px, transparent 12px 24px);
+  border: 1px dashed var(--border-soft);
+  display: flex; align-items: center; justify-content: center;
+  color: var(--text-dim);
+  font-family: 'Montserrat', sans-serif;
+  font-size: 10px; letter-spacing: 0.18em; text-transform: uppercase;
+}
+.about-copy { margin-top: 20px; font-size: 14px; line-height: 1.65; color: rgba(255,255,255,0.78); }
+.about-copy p + p { margin-top: 12px; }
+.join-cta {
+  margin-top: 22px; padding: 16px;
+  background: rgba(255,199,44,0.06);
+  border: 1px solid var(--border-yolk);
+  border-radius: 16px;
+  text-align: center;
+}
+.join-cta .h {
+  font-family: 'Fredoka', sans-serif;
+  font-size: 18px; font-weight: 600; color: var(--yolk-light);
+  margin-bottom: 4px;
+}
+.join-cta .p { font-size: 13px; color: var(--text-mute); margin-bottom: 12px; }
+.join-cta button {
+  background: linear-gradient(45deg, var(--hot), var(--hot-deep));
+  border: none;
+  padding: 10px 22px;
+  border-radius: 10px;
+  color: #fff;
+  font-weight: 700;
+  font-size: 12px;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  cursor: pointer;
+}
+
+.proto-note {
+  text-align: center;
+  margin: 28px auto 8px;
+  font-family: 'Montserrat', sans-serif;
+  font-size: 9px; letter-spacing: 0.16em; text-transform: uppercase;
+  color: var(--text-dim);
+}
+
+/* ═══════════════════════════════════════════════════════════════
+   VARIANT 1 — BOTTOM TAB BAR
+   ═══════════════════════════════════════════════════════════════ */
+.v1-topbar {
+  position: sticky; top: 44px; z-index: 50;
+  text-align: center;
+  padding: 14px 16px 10px;
+  background: linear-gradient(180deg, rgba(26,26,26,0.92), rgba(26,26,26,0.6));
+  backdrop-filter: blur(10px);
+}
+.v1-topbar .wm {
+  font-family: 'Fredoka', sans-serif;
+  font-weight: 700; font-size: 16px;
+  letter-spacing: 0.02em;
+  background: linear-gradient(45deg, var(--yolk-light), var(--yolk));
+  -webkit-background-clip: text; -webkit-text-fill-color: transparent;
+}
+.v1-topbar .sl {
+  font-family: 'Montserrat', sans-serif;
+  font-size: 9px; letter-spacing: 0.20em; text-transform: uppercase;
+  color: var(--text-mute);
+  margin-top: 2px;
+}
+.v1-tabbar {
+  position: fixed;
+  left: 50%; transform: translateX(-50%);
+  bottom: 14px;
+  width: calc(100% - 24px);
+  max-width: 420px;
+  background: rgba(28,28,30,0.78);
+  backdrop-filter: blur(20px) saturate(140%);
+  -webkit-backdrop-filter: blur(20px) saturate(140%);
+  border: 1px solid var(--border-soft);
+  border-radius: 22px;
+  padding: 10px 8px;
+  display: grid; grid-template-columns: 1fr 1fr 1fr;
+  z-index: 100;
+  box-shadow: 0 14px 44px rgba(0,0,0,0.5), 0 0 0 1px rgba(255,255,255,0.03);
+}
+.v1-tab {
+  position: relative;
+  background: transparent; border: none; cursor: pointer;
+  padding: 10px 4px 8px;
+  display: flex; flex-direction: column; align-items: center; gap: 4px;
+  color: var(--text-mute);
+  border-radius: 16px;
+  transition: color 0.2s ease;
+}
+.v1-tab svg { width: 22px; height: 22px; transition: transform 0.25s var(--ease-spring); }
+.v1-tab .lbl {
+  font-family: 'Montserrat', sans-serif;
+  font-size: 9px; font-weight: 700;
+  letter-spacing: 0.10em; text-transform: uppercase;
+}
+.v1-tab .dotind {
+  position: absolute; top: 4px;
+  width: 4px; height: 4px; border-radius: 50%;
+  background: var(--yolk);
+  opacity: 0; transform: scale(0);
+  transition: all 0.25s var(--ease-spring);
+  box-shadow: 0 0 6px var(--yolk);
+}
+.v1-tab.is-active { color: var(--yolk); }
+.v1-tab.is-active svg { transform: translateY(-2px) scale(1.08); }
+.v1-tab.is-active .dotind { opacity: 1; transform: scale(1); }
+.v1-pill {
+  position: absolute;
+  top: 6px; left: 0;
+  width: 33.333%;
+  height: calc(100% - 12px);
+  background: rgba(255,199,44,0.10);
+  border: 1px solid rgba(255,199,44,0.22);
+  border-radius: 16px;
+  pointer-events: none;
+  transition: transform 0.42s var(--ease-spring);
+  will-change: transform;
+}
+.v1-pill[data-i="0"] { transform: translateX(0); }
+.v1-pill[data-i="1"] { transform: translateX(100%); }
+.v1-pill[data-i="2"] { transform: translateX(200%); }
+
+/* ═══════════════════════════════════════════════════════════════
+   VARIANT 2 — HAMBURGER → FULL-SCREEN TAKEOVER
+   ═══════════════════════════════════════════════════════════════ */
+.v2-topbar {
+  position: fixed; top: 44px; left: 0; right: 0;
+  z-index: 60;
+  display: flex; justify-content: space-between; align-items: center;
+  padding: 16px 20px;
+  background: linear-gradient(180deg, rgba(26,26,26,0.85), rgba(26,26,26,0));
+  backdrop-filter: blur(8px);
+}
+.v2-wm {
+  font-family: 'Fredoka', sans-serif;
+  font-weight: 700; font-size: 17px;
+  background: linear-gradient(45deg, var(--yolk-light), var(--yolk));
+  -webkit-background-clip: text; -webkit-text-fill-color: transparent;
+}
+.v2-burger {
+  background: rgba(255,255,255,0.05);
+  border: 1px solid var(--border-soft);
+  border-radius: 12px;
+  padding: 10px 12px;
+  cursor: pointer;
+  display: flex; flex-direction: column; gap: 4px;
+  width: 44px; height: 40px;
+  align-items: center; justify-content: center;
+  transition: background 0.2s, border-color 0.2s;
+}
+.v2-burger:hover { background: rgba(255,255,255,0.08); border-color: var(--border-yolk); }
+.v2-burger .l1, .v2-burger .l2, .v2-burger .l3 {
+  width: 18px; height: 2px;
+  background: var(--text);
+  border-radius: 2px;
+  transition: all 0.3s var(--ease-spring);
+}
+.v2-burger .l2 {
+  width: 12px;
+  background: var(--yolk);
+  align-self: flex-end;
+  border-radius: 4px 4px 4px 4px;
+  height: 4px;
+}
+.v2-burger.is-open .l1 { transform: translateY(6px) rotate(45deg); }
+.v2-burger.is-open .l2 { opacity: 0; transform: scaleX(0); }
+.v2-burger.is-open .l3 { transform: translateY(-6px) rotate(-45deg); }
+
+.v2-overlay {
+  position: fixed; inset: 0;
+  z-index: 200;
+  background: linear-gradient(160deg, #1a1a1a, #2c1f1f);
+  display: flex; flex-direction: column;
+  justify-content: center; align-items: center;
+  pointer-events: none;
+  opacity: 0;
+  transform: translateY(-20px);
+  transition: opacity 0.35s var(--ease-out), transform 0.45s var(--ease-out);
+}
+.v2-overlay.is-open { pointer-events: auto; opacity: 1; transform: translateY(0); }
+.v2-overlay-bg {
+  position: absolute; inset: 0;
+  pointer-events: none;
+  overflow: hidden;
+}
+.v2-overlay-bg .big-egg {
+  position: absolute;
+  font-size: 360px;
+  opacity: 0.04;
+  bottom: -80px; right: -80px;
+  transform: rotate(-15deg);
+}
+.v2-close {
+  position: absolute; top: 24px; right: 22px;
+  width: 44px; height: 44px;
+  border-radius: 50%;
+  background: rgba(255,255,255,0.05);
+  border: 1px solid var(--border-soft);
+  color: var(--text);
+  cursor: pointer;
+  font-size: 22px;
+  display: flex; align-items: center; justify-content: center;
+}
+.v2-close:hover { background: rgba(255,255,255,0.1); border-color: var(--border-yolk); color: var(--yolk); }
+.v2-overhead {
+  font-family: 'Montserrat', sans-serif;
+  font-size: 10px; letter-spacing: 0.32em; text-transform: uppercase;
+  color: var(--text-dim);
+  position: absolute; top: 30px; left: 24px;
+}
+.v2-links {
+  display: flex; flex-direction: column;
+  gap: 28px;
+  text-align: center;
+  position: relative; z-index: 2;
+}
+.v2-links button {
+  background: none; border: none;
+  cursor: pointer;
+  font-family: 'Fredoka', sans-serif;
+  font-weight: 700;
+  font-size: clamp(44px, 12vw, 64px);
+  line-height: 0.95;
+  letter-spacing: -0.01em;
+  color: var(--text);
+  position: relative;
+  padding: 0 8px;
+  transition: transform 0.3s var(--ease-spring);
+}
+.v2-links button .tag {
+  display: block;
+  font-family: 'Montserrat', sans-serif;
+  font-weight: 600;
+  font-size: 10px;
+  letter-spacing: 0.32em;
+  text-transform: uppercase;
+  color: var(--text-mute);
+  margin-top: 8px;
+  opacity: 0.7;
+}
+.v2-links button:hover {
+  transform: translateY(-2px);
+  background: linear-gradient(45deg, var(--yolk-light), var(--orange));
+  -webkit-background-clip: text; -webkit-text-fill-color: transparent;
+}
+.v2-links button.is-active {
+  background: linear-gradient(45deg, var(--yolk-light), var(--yolk));
+  -webkit-background-clip: text; -webkit-text-fill-color: transparent;
+}
+.v2-links button.is-active::after {
+  content: '·';
+  position: absolute;
+  top: 50%; left: -28px;
+  transform: translateY(-50%);
+  font-size: 50px;
+  color: var(--yolk);
+  -webkit-text-fill-color: var(--yolk);
+  animation: bounceIn 0.5s var(--ease-spring);
+}
+@keyframes bounceIn {
+  from { transform: translateY(-50%) scale(0); }
+  to   { transform: translateY(-50%) scale(1); }
+}
+.v2-foot {
+  position: absolute; bottom: 32px; left: 0; right: 0;
+  text-align: center;
+  font-family: 'Montserrat', sans-serif;
+  font-size: 9px; letter-spacing: 0.32em; text-transform: uppercase;
+  color: var(--text-dim);
+}
+
+/* ═══════════════════════════════════════════════════════════════
+   VARIANT 3 — FLOATING PILL NAV
+   ═══════════════════════════════════════════════════════════════ */
+.v3-topbar {
+  position: fixed; top: 44px; left: 0; right: 0;
+  z-index: 50;
+  padding: 14px 16px 0;
+  text-align: center;
+  pointer-events: none;
+}
+.v3-topbar .wm {
+  font-family: 'Fredoka', sans-serif;
+  font-weight: 700; font-size: 14px;
+  letter-spacing: 0.02em;
+  background: linear-gradient(45deg, var(--yolk-light), var(--yolk));
+  -webkit-background-clip: text; -webkit-text-fill-color: transparent;
+  pointer-events: auto;
+  display: inline-block;
+}
+.v3-pillnav {
+  position: fixed;
+  top: 90px; left: 50%; transform: translateX(-50%);
+  z-index: 60;
+  width: calc(100% - 32px);
+  max-width: 320px;
+  background: rgba(28,28,30,0.7);
+  backdrop-filter: blur(18px) saturate(140%);
+  -webkit-backdrop-filter: blur(18px) saturate(140%);
+  border: 1px solid var(--border-soft);
+  border-radius: 999px;
+  padding: 5px;
+  display: grid; grid-template-columns: 1fr 1fr 1fr;
+  box-shadow: 0 8px 28px rgba(0,0,0,0.5);
+}
+.v3-seg {
+  position: relative;
+  z-index: 2;
+  background: transparent; border: none;
+  cursor: pointer;
+  padding: 9px 10px;
+  border-radius: 999px;
+  font-family: 'Montserrat', sans-serif;
+  font-size: 11px; font-weight: 700;
+  letter-spacing: 0.10em; text-transform: uppercase;
+  color: var(--text-mute);
+  transition: color 0.32s var(--ease-out);
+  white-space: nowrap;
+}
+.v3-seg.is-active { color: #1a1a1a; }
+.v3-thumb {
+  position: absolute;
+  top: 5px; left: 5px;
+  width: calc((100% - 10px) / 3);
+  height: calc(100% - 10px);
+  background: linear-gradient(45deg, var(--yolk-light), var(--yolk));
+  border-radius: 999px;
+  box-shadow: 0 4px 14px rgba(255,199,44,0.45);
+  transition: transform 0.5s var(--ease-spring);
+  z-index: 1;
+}
+.v3-thumb[data-i="0"] { transform: translateX(0); }
+.v3-thumb[data-i="1"] { transform: translateX(100%); }
+.v3-thumb[data-i="2"] { transform: translateX(200%); }
+
+/* ═══════════════════════════════════════════════════════════════
+   VARIANT 4 — EDITORIAL / LOGO-FIRST
+   ═══════════════════════════════════════════════════════════════ */
+.v4-topbar {
+  position: relative;
+  text-align: center;
+  padding: 36px 20px 22px;
+}
+.v4-bell {
+  position: absolute; top: 36px; right: 20px;
+  width: 32px; height: 32px;
+  border-radius: 50%;
+  background: rgba(255,255,255,0.04);
+  border: 1px solid var(--border-soft);
+  display: flex; align-items: center; justify-content: center;
+  font-size: 13px;
+  cursor: pointer;
+  transition: all 0.2s ease;
+}
+.v4-bell:hover { color: var(--yolk); border-color: var(--border-yolk); }
+.v4-logo {
+  font-family: 'Fredoka', sans-serif;
+  font-weight: 700;
+  font-size: clamp(26px, 7vw, 34px);
+  letter-spacing: 0.005em;
+  background: linear-gradient(45deg, #fff 30%, var(--yolk-light) 70%, var(--yolk));
+  -webkit-background-clip: text; -webkit-text-fill-color: transparent;
+  line-height: 1;
+}
+.v4-logo .amp { color: var(--hot); -webkit-text-fill-color: var(--hot); font-weight: 500; }
+.v4-tag {
+  font-family: 'Montserrat', sans-serif;
+  font-size: 9px;
+  letter-spacing: 0.42em;
+  text-transform: uppercase;
+  color: var(--text-mute);
+  margin-top: 8px;
+}
+.v4-divider {
+  width: 32px; height: 1px;
+  margin: 18px auto 14px;
+  background: var(--border-yolk);
+}
+.v4-nav {
+  display: flex; align-items: center; justify-content: center;
+  gap: 10px;
+  font-family: 'Montserrat', sans-serif;
+}
+.v4-nav button {
+  background: none; border: none;
+  cursor: pointer;
+  font-family: inherit;
+  font-size: 11px; font-weight: 700;
+  letter-spacing: 0.22em;
+  text-transform: uppercase;
+  color: var(--text-mute);
+  padding: 6px 4px;
+  position: relative;
+  transition: color 0.2s ease;
+}
+.v4-nav button:hover { color: var(--text); }
+.v4-nav button.is-active { color: var(--yolk); }
+.v4-nav button.is-active::after {
+  content:'';
+  position: absolute;
+  left: 50%; bottom: -2px;
+  transform: translateX(-50%);
+  width: 16px; height: 2px;
+  background: var(--yolk);
+  border-radius: 2px;
+  animation: underlineIn 0.35s var(--ease-spring);
+}
+@keyframes underlineIn {
+  from { width: 0; opacity: 0; }
+  to   { width: 16px; opacity: 1; }
+}
+.v4-sep {
+  color: var(--text-dim);
+  font-size: 12px;
+  user-select: none;
+}
+
+@media (max-width: 380px) {
+  .v4-nav button { font-size: 10px; letter-spacing: 0.18em; }
+}
+</style>
+</head>
+<body>
+
+<div class="egg-bg" id="eggs"></div>
+
+<!-- ───────── variant switcher (mockup-only) ───────── -->
+<div class="variant-bar" id="vbar">
+  <button class="vbtn is-active" data-v="1">V1 · Bottom Tabs</button>
+  <button class="vbtn" data-v="2">V2 · Hamburger Takeover</button>
+  <button class="vbtn" data-v="3">V3 · Floating Pill</button>
+  <button class="vbtn" data-v="4">V4 · Editorial</button>
+</div>
+
+<div class="stage">
+
+  <!-- ═══════════ V1 — BOTTOM TAB BAR ═══════════ -->
+  <section class="variant is-active" data-variant="1">
+    <div class="v1-topbar">
+      <div class="wm">Scrambled Legs</div>
+      <div class="sl">An honest mountain bike club</div>
+    </div>
+    <div class="page-area with-bottom-pad" data-page-slot="1"></div>
+
+    <nav class="v1-tabbar" aria-label="Primary">
+      <span class="v1-pill" data-i="0"></span>
+      <button class="v1-tab is-active" data-route="home" data-i="0">
+        <span class="dotind"></span>
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+          <rect x="3" y="4" width="18" height="18" rx="3"/>
+          <line x1="3" y1="10" x2="21" y2="10"/>
+          <line x1="8" y1="2" x2="8" y2="6"/>
+          <line x1="16" y1="2" x2="16" y2="6"/>
+          <circle cx="8" cy="15" r="1.4" fill="currentColor"/>
+          <circle cx="13" cy="15" r="1.4" fill="currentColor"/>
+        </svg>
+        <span class="lbl">Home</span>
+      </button>
+      <button class="v1-tab" data-route="hotdogs" data-i="1">
+        <span class="dotind"></span>
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+          <rect x="2" y="9" width="20" height="6" rx="3"/>
+          <path d="M5 12 h14" stroke-dasharray="2 2.5"/>
+        </svg>
+        <span class="lbl">Hot Dogs</span>
+      </button>
+      <button class="v1-tab" data-route="about" data-i="2">
+        <span class="dotind"></span>
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+          <path d="M12 3 C 7 3 5 9 5 13 a7 7 0 0 0 14 0 C 19 9 17 3 12 3 z"/>
+        </svg>
+        <span class="lbl">About</span>
+      </button>
+    </nav>
+  </section>
+
+  <!-- ═══════════ V2 — HAMBURGER TAKEOVER ═══════════ -->
+  <section class="variant" data-variant="2">
+    <div class="v2-topbar">
+      <div class="v2-wm">Scrambled Legs</div>
+      <button class="v2-burger" id="v2-burger" aria-label="Open menu">
+        <span class="l1"></span>
+        <span class="l2"></span>
+        <span class="l3"></span>
+      </button>
+    </div>
+    <div class="page-area with-top-pad" data-page-slot="2"></div>
+
+    <div class="v2-overlay" id="v2-overlay">
+      <div class="v2-overlay-bg">
+        <span class="big-egg">🥚</span>
+      </div>
+      <div class="v2-overhead">Index · 2026</div>
+      <button class="v2-close" id="v2-close" aria-label="Close">×</button>
+      <div class="v2-links">
+        <button data-route="home" class="is-active">
+          Home
+          <span class="tag">The Schedule</span>
+        </button>
+        <button data-route="hotdogs">
+          Hot Dogs
+          <span class="tag">The Count</span>
+        </button>
+        <button data-route="about">
+          About
+          <span class="tag">The Crew</span>
+        </button>
+      </div>
+      <div class="v2-foot">Three pages · One ride · Many hot dogs</div>
+    </div>
+  </section>
+
+  <!-- ═══════════ V3 — FLOATING PILL NAV ═══════════ -->
+  <section class="variant" data-variant="3">
+    <div class="v3-topbar">
+      <div class="wm">Scrambled Legs</div>
+    </div>
+    <nav class="v3-pillnav" aria-label="Primary">
+      <span class="v3-thumb" data-i="0"></span>
+      <button class="v3-seg is-active" data-route="home" data-i="0">Home</button>
+      <button class="v3-seg" data-route="hotdogs" data-i="1">Hot Dogs</button>
+      <button class="v3-seg" data-route="about" data-i="2">About</button>
+    </nav>
+    <div class="page-area with-top-pad-l" data-page-slot="3"></div>
+  </section>
+
+  <!-- ═══════════ V4 — EDITORIAL / LOGO-FIRST ═══════════ -->
+  <section class="variant" data-variant="4">
+    <header class="v4-topbar">
+      <button class="v4-bell" title="Notifications">🔔</button>
+      <div class="v4-logo">Scrambled<span class="amp"> · </span>Legs</div>
+      <div class="v4-tag">An Honest MTB Club · Est. Duluth</div>
+      <div class="v4-divider"></div>
+      <nav class="v4-nav" aria-label="Primary">
+        <button class="is-active" data-route="home">Schedule</button>
+        <span class="v4-sep">·</span>
+        <button data-route="hotdogs">Hot Dogs</button>
+        <span class="v4-sep">·</span>
+        <button data-route="about">About</button>
+      </nav>
+    </header>
+    <div class="page-area" data-page-slot="4"></div>
+  </section>
+
+</div>
+
+<script>
+/* ════════════════════════════════════════════════════════════════
+   SCRAMBLED LEGS · NAVIGATION PROTOTYPE
+   4 variants. Each has internal route state. Switch variants via
+   the sticky top bar — content swaps inside each variant via tabs.
+   ════════════════════════════════════════════════════════════════ */
+
+/* ───────── floating eggs ───────── */
+(function eggBg() {
+  const root = document.getElementById('eggs');
+  const count = window.innerWidth <= 480 ? 6 : 9;
+  for (let i = 0; i < count; i++) {
+    const e = document.createElement('div');
+    e.className = 'egg';
+    e.textContent = '🥚';
+    e.style.top  = (Math.random()*100)+'%';
+    e.style.left = (Math.random()*100)+'%';
+    e.style.fontSize = (22 + Math.random()*16)+'px';
+    e.style.setProperty('--dur', (18 + Math.random()*10)+'s');
+    e.style.setProperty('--delay', (-Math.random()*15)+'s');
+    root.appendChild(e);
+  }
+})();
+
+/* ───────── mock content templates ───────── */
+const ICONS = {
+  cal:   '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="4" width="18" height="18" rx="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/></svg>',
+  clock: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg>',
+  pin:   '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0 1 18 0z"/><circle cx="12" cy="10" r="3"/></svg>',
+};
+
+function pageHome() {
+  return `
+    <div class="mock-page">
+      <h2>Schedule</h2>
+      <div class="sub">Where, when, and who's bringing the goods</div>
+
+      <div class="mini-section-label">Up Next</div>
+      <div class="mini-card">
+        <span class="chip"><span class="dot"></span>Upcoming</span>
+        <div class="ev-name">Lester Park Wednesday Roll</div>
+        <div class="ev-meta">
+          <span>${ICONS.cal} Wed, May 6</span>
+          <span>${ICONS.clock} 5:45 PM</span>
+          <span>${ICONS.pin} Lester Trailhead</span>
+        </div>
+        <div class="countdown">
+          <div class="lbl">Starts in</div>
+          <div class="val">2d · 14h · 22m</div>
+        </div>
+      </div>
+
+      <div class="newsletter">
+        <div class="nlh">Get the weekly drop</div>
+        <div class="nls">Where we're rolling, who's hosting, what's brewing.</div>
+        <div class="nlf">
+          <input type="email" placeholder="you@trailmail.com">
+          <button>Subscribe</button>
+        </div>
+      </div>
+
+      <div class="proto-note">(this is a nav prototype — content is placeholder)</div>
+    </div>
+  `;
+}
+
+function pageHotdogs() {
+  return `
+    <div class="mock-page">
+      <h2>Hot Dog Counter</h2>
+      <div class="sub">Tap to add. Don't ask why.</div>
+
+      <div class="hd-wrap">
+        <button class="hd-btn" id="hdb">
+          <span class="num" id="hdn">47</span>
+          <span class="ico">🌭</span>
+        </button>
+        <div class="hd-meta">Your lifetime count</div>
+        <div class="hd-stat">Crew total · <span>3,418</span></div>
+      </div>
+
+      <div class="proto-note">(this is a nav prototype — content is placeholder)</div>
+    </div>
+  `;
+}
+
+function pageAbout() {
+  return `
+    <div class="mock-page">
+      <h2>About the Crew</h2>
+      <div class="sub">Six dummies and a tow rope</div>
+
+      <div class="crew-photo">[ Crew Photo Placeholder ]</div>
+
+      <div class="about-copy">
+        <p>We're a small band of mountain bikers in Duluth, Minnesota who turned a Wednesday-evening roll into something that resembles a club. Sort of. Mostly we just argue about which trail is least muddy.</p>
+        <p>The pace is honest — fast when we feel like it, social when we don't. Newcomers always welcome, no drop policy, full send mentality, hot dogs at the end.</p>
+        <p>If you ride a mountain bike and own a windbreaker, you're already 80% of the way to membership.</p>
+      </div>
+
+      <div class="join-cta">
+        <div class="h">Want in?</div>
+        <div class="p">Show up Wednesday at 5:45. Bring water and a sense of humor.</div>
+        <button>Join the List</button>
+      </div>
+
+      <div class="proto-note">(this is a nav prototype — content is placeholder)</div>
+    </div>
+  `;
+}
+
+const PAGES = { home: pageHome, hotdogs: pageHotdogs, about: pageAbout };
+
+/* ───────── per-variant route state ───────── */
+const variantState = { 1: 'home', 2: 'home', 3: 'home', 4: 'home' };
+
+function renderVariantPage(variant) {
+  const route = variantState[variant];
+  const slot = document.querySelector(`[data-page-slot="${variant}"]`);
+  if (!slot) return;
+  slot.innerHTML = PAGES[route]();
+
+  // hot-dog button counter (mock)
+  const hdb = slot.querySelector('#hdb');
+  if (hdb) {
+    const num = slot.querySelector('#hdn');
+    let n = parseInt(num.textContent, 10);
+    hdb.addEventListener('click', () => {
+      n += 1;
+      num.textContent = n;
+      num.animate(
+        [{ transform: 'scale(1)' },{ transform: 'scale(1.18)' },{ transform: 'scale(1)' }],
+        { duration: 220, easing: 'ease-out' }
+      );
+    });
+  }
+}
+
+/* ───────── V1 — bottom tab bar ───────── */
+function setupV1() {
+  const tabs = document.querySelectorAll('[data-variant="1"] .v1-tab');
+  const pill = document.querySelector('[data-variant="1"] .v1-pill');
+  tabs.forEach(t => {
+    t.addEventListener('click', () => {
+      tabs.forEach(x => x.classList.remove('is-active'));
+      t.classList.add('is-active');
+      pill.dataset.i = t.dataset.i;
+      variantState[1] = t.dataset.route;
+      renderVariantPage(1);
+    });
+  });
+}
+
+/* ───────── V2 — hamburger overlay ───────── */
+function setupV2() {
+  const burger = document.getElementById('v2-burger');
+  const overlay = document.getElementById('v2-overlay');
+  const closeBtn = document.getElementById('v2-close');
+  const links = overlay.querySelectorAll('.v2-links button');
+
+  function open() {
+    overlay.classList.add('is-open');
+    burger.classList.add('is-open');
+  }
+  function close() {
+    overlay.classList.remove('is-open');
+    burger.classList.remove('is-open');
+  }
+  burger.addEventListener('click', () => {
+    if (overlay.classList.contains('is-open')) close(); else open();
+  });
+  closeBtn.addEventListener('click', close);
+
+  links.forEach(l => {
+    l.addEventListener('click', () => {
+      links.forEach(x => x.classList.remove('is-active'));
+      l.classList.add('is-active');
+      variantState[2] = l.dataset.route;
+      renderVariantPage(2);
+      // small delay so the user sees the active state flip
+      setTimeout(close, 280);
+    });
+  });
+
+  // close on Escape
+  document.addEventListener('keydown', (e) => {
+    if (e.key === 'Escape' && overlay.classList.contains('is-open')) close();
+  });
+}
+
+/* ───────── V3 — pill segmented ───────── */
+function setupV3() {
+  const segs = document.querySelectorAll('[data-variant="3"] .v3-seg');
+  const thumb = document.querySelector('[data-variant="3"] .v3-thumb');
+  segs.forEach(s => {
+    s.addEventListener('click', () => {
+      segs.forEach(x => x.classList.remove('is-active'));
+      s.classList.add('is-active');
+      thumb.dataset.i = s.dataset.i;
+      variantState[3] = s.dataset.route;
+      renderVariantPage(3);
+    });
+  });
+}
+
+/* ───────── V4 — editorial ───────── */
+function setupV4() {
+  const btns = document.querySelectorAll('[data-variant="4"] .v4-nav button');
+  btns.forEach(b => {
+    b.addEventListener('click', () => {
+      btns.forEach(x => x.classList.remove('is-active'));
+      b.classList.add('is-active');
+      variantState[4] = b.dataset.route;
+      renderVariantPage(4);
+    });
+  });
+}
+
+/* ───────── variant switcher ───────── */
+function setupVariantBar() {
+  const buttons = document.querySelectorAll('#vbar .vbtn');
+  const variants = document.querySelectorAll('.variant');
+  buttons.forEach(b => {
+    b.addEventListener('click', () => {
+      buttons.forEach(x => x.classList.remove('is-active'));
+      b.classList.add('is-active');
+      const v = b.dataset.v;
+      variants.forEach(x => x.classList.toggle('is-active', x.dataset.variant === v));
+      // Make sure the current variant's page is rendered
+      renderVariantPage(parseInt(v, 10));
+      // close v2 overlay if leaving v2
+      if (v !== '2') {
+        document.getElementById('v2-overlay').classList.remove('is-open');
+        document.getElementById('v2-burger').classList.remove('is-open');
+      }
+      window.scrollTo({ top: 0, behavior: 'instant' });
+    });
+  });
+}
+
+/* ───────── boot ───────── */
+setupV1();
+setupV2();
+setupV3();
+setupV4();
+setupVariantBar();
+
+// initial render of all four variants' default pages
+[1,2,3,4].forEach(renderVariantPage);
+</script>
+</body>
+</html>

@@ -2,8 +2,8 @@ import React, { useState, useEffect } from 'react';
 import styled from 'styled-components';
 import { Link } from 'react-router-dom';
 import Footer from '../components/Footer';
-import { getDatabase, ref, onValue, set, push, update } from 'firebase/database';
-import { app, database } from '../services/firebase';
+import { ref, onValue, set, push, update } from 'firebase/database';
+import { database } from '../services/firebase';
 
 // Hot dog quotes
 const HOTDOG_QUOTES = [
@@ -347,18 +347,6 @@ const LogClose = styled.button`
   &:hover {
     opacity: 1;
   }
-`;
-
-const BrandingSpan = styled.span`
-  background: linear-gradient(45deg, #FF6B6B, #FFE66D);
-  -webkit-background-clip: text;
-  -webkit-text-fill-color: transparent;
-`;
-
-const Trademark = styled.span`
-  font-size: 0.8em;
-  vertical-align: super;
-  margin-left: 2px;
 `;
 
 const LoginOverlay = styled.div`

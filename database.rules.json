@@ -1,0 +1,52 @@
+{
+  "rules": {
+    ".read": false,
+    ".write": false,
+    "events": {
+      ".read": true,
+      ".write": true,
+      ".indexOn": ["start"],
+      "$id": {
+        "hotdogs": {
+          ".validate": "newData.isNumber()"
+        }
+      }
+    },
+    "newsletterRegistrants": {
+      ".write": true,
+      ".read": false
+    },
+    "users": {
+      ".read": true,
+      ".write": true
+    },
+    "hotdogLogs": {
+      ".read": true,
+      ".write": true
+    },
+    "hotdogCounter": {
+      ".read": true,
+      ".write": true
+    },
+    "fcmTokens": {
+      ".read": false,
+      ".write": false,
+      "$hash": {
+        ".write": "$hash.matches(/^[a-f0-9]{64}$/)",
+        ".validate": "newData.hasChildren(['token']) && newData.child('token').isString()",
+        "token": { ".validate": "newData.isString() && newData.val().length < 4096" },
+        "createdAt": { ".validate": "newData.isNumber() || newData.val() == now" },
+        "lastSeenAt": { ".validate": "newData.isNumber() || newData.val() == now" },
+        "userAgent": { ".validate": "newData.isString() && newData.val().length < 500" },
+        "platform": { ".validate": "newData.isString() && newData.val().length < 32" },
+        "isStandalone": { ".validate": "newData.isBoolean()" },
+        "$other": { ".validate": false }
+      }
+    },
+    "notifications": {
+      ".read": true,
+      ".write": false,
+      ".indexOn": ["sentAt"]
+    }
+  }
+}

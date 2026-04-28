@@ -3,23 +3,78 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <meta name="theme-color" content="#FF8800">
-  <meta name="description" content="Home of the Twin Ports premier mountain bike team">
-  
-  <!-- Cache-busting meta tags -->
-  <meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate">
-  <meta http-equiv="Pragma" content="no-cache">
-  <meta http-equiv="Expires" content="0">
-  
+
+  <title>Scrambled Legs · Duluth Mountain Bike Race Team</title>
+  <meta name="description" content="Scrambled Legs is Duluth's premier mountain bike race team. Group rides, race calendar, and trail conditions for the Twin Ports' best singletrack.">
+  <link rel="canonical" href="https://thescrambledlegs.com/">
+  <meta name="robots" content="index, follow">
+  <meta name="theme-color" content="#FFC72C">
+
+  <!-- Open Graph -->
+  <meta property="og:type" content="website">
+  <meta property="og:site_name" content="Scrambled Legs">
+  <meta property="og:title" content="Scrambled Legs · Duluth Mountain Bike Race Team">
+  <meta property="og:description" content="Scrambled Legs is Duluth's premier mountain bike race team. Group rides, race calendar, and trail conditions for the Twin Ports' best singletrack.">
+  <meta property="og:url" content="https://thescrambledlegs.com/">
+  <meta property="og:image" content="https://thescrambledlegs.com/android-chrome-512x512.png">
+
+  <!-- Twitter -->
+  <meta name="twitter:card" content="summary_large_image">
+  <meta name="twitter:title" content="Scrambled Legs · Duluth Mountain Bike Race Team">
+  <meta name="twitter:description" content="Scrambled Legs is Duluth's premier mountain bike race team. Group rides, race calendar, and trail conditions for the Twin Ports' best singletrack.">
+  <meta name="twitter:image" content="https://thescrambledlegs.com/android-chrome-512x512.png">
+
+  <!-- Geo -->
+  <meta name="geo.region" content="US-MN">
+  <meta name="geo.placename" content="Duluth">
+  <meta name="geo.position" content="46.7867;-92.1005">
+  <meta name="ICBM" content="46.7867;-92.1005">
+
   <link rel="icon" href="%PUBLIC_URL%/favicon.ico">
   <link rel="icon" type="image/png" sizes="32x32" href="%PUBLIC_URL%/favicon-32x32.png">
   <link rel="icon" type="image/png" sizes="16x16" href="%PUBLIC_URL%/favicon-16x16.png">
   <link rel="apple-touch-icon" href="%PUBLIC_URL%/apple-touch-icon.png">
-  <title>Scrambled Legs</title>
+  <link rel="manifest" href="%PUBLIC_URL%/manifest.json">
+
+  <!-- iOS PWA install metadata. Required for iPhone web push: user must
+       Add to Home Screen and launch from there before notifications work. -->
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+  <meta name="apple-mobile-web-app-title" content="Scrambled Legs">
+  <meta name="mobile-web-app-capable" content="yes">
+
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-  <link href="https://fonts.googleapis.com/css2?family=Fredoka:wght@400;700&family=Inter:wght@400;500;600&display=swap&display=swap" rel="stylesheet">
-  
+  <link href="https://fonts.googleapis.com/css2?family=Fredoka:wght@400;700&family=Inter:wght@400;500;600&display=swap" rel="stylesheet">
+
+  <!-- Leaflet (used by admin map picker) -->
+  <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
+  <script defer src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+
+  <script type="application/ld+json">
+  {
+    "@context": "https://schema.org",
+    "@type": "SportsOrganization",
+    "name": "Scrambled Legs",
+    "description": "Duluth's premier mountain bike race team. Group rides, race calendar, and trail conditions for the Twin Ports' best singletrack.",
+    "url": "https://thescrambledlegs.com/",
+    "logo": "https://thescrambledlegs.com/android-chrome-512x512.png",
+    "sport": "Mountain biking",
+    "address": {
+      "@type": "PostalAddress",
+      "addressLocality": "Duluth",
+      "addressRegion": "MN",
+      "addressCountry": "US"
+    },
+    "areaServed": {
+      "@type": "Place",
+      "name": "Duluth, MN and Twin Ports area"
+    },
+    "slogan": "Duluth's premier mountain bike race team",
+    "sameAs": []
+  }
+  </script>
+
   <!-- Start Single Page Apps for GitHub Pages -->
   <script type="text/javascript">
     // Single Page Apps for GitHub Pages
@@ -34,7 +89,7 @@
     // the single page app to route accordingly.
     (function(l) {
       if (l.search[1] === '/' ) {
-        var decoded = l.search.slice(1).split('&').map(function(s) { 
+        var decoded = l.search.slice(1).split('&').map(function(s) {
           return s.replace(/~and~/g, '&')
         }).join('?');
         window.history.replaceState(null, null,
@@ -47,7 +102,7 @@
 </head>
 <body>
   <div id="root"></div>
-  
+
   <!-- Fallback content in case JavaScript fails to load -->
   <noscript>
     <div style="padding: 20px; text-align: center; color: white; background-color: #2c3539;">

@@ -1,0 +1,40 @@
+// Scrambled Legs — Firebase Storage rules.
+//
+// SECURITY POSTURE (intentional, per user):
+// These rules deliberately allow public, unauthenticated writes to the two
+// image-upload paths. The only way to discover the upload UX is past the
+// in-app password gate at /admin1, so the practical attack surface is small.
+// Worst case is junk uploads to known-pattern URLs (rideLeaders/{id}.{ext},
+// banners/{id}.{ext}), which the user can clean up via the Firebase console.
+// We accept this tradeoff for v1 to keep the admin UX as simple as a password.
+//
+// Hard caps enforced here:
+//   rideLeaders/* — must be image, < 2MB
+//   banners/*     — must be image, < 5MB
+// Reads are public (the public widget renders these URLs).
+// All other paths are denied by the catch-all match at the bottom.
+
+rules_version = '2';
+service firebase.storage {
+  match /b/{bucket}/o {
+    match /rideLeaders/{file=**} {
+      allow read: if true;
+      allow write: if request.resource != null
+                    && request.resource.size < 2 * 1024 * 1024
+                    && request.resource.contentType.matches('image/.*');
+      allow delete: if true;
+    }
+
+    match /banners/{file=**} {
+      allow read: if true;
+      allow write: if request.resource != null
+                    && request.resource.size < 5 * 1024 * 1024
+                    && request.resource.contentType.matches('image/.*');
+      allow delete: if true;
+    }
+
+    match /{path=**} {
+      allow read, write: if false;
+    }
+  }
+}

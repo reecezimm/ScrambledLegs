@@ -14,6 +14,8 @@ function App() {
     <Router basename={basename}>
       <Routes>
         <Route path="/" element={<Home />} />
+        {/* Event deep-link route — renders Home with the sheet open */}
+        <Route path="/events/:eventId" element={<Home />} />
         {/* Main route for hot dog counter */}
         <Route path="/hotdog-counter" element={<HotDogCounter />} />
         {/* Support HD.html legacy route */}

@@ -1,0 +1,3119 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="theme-color" content="#1a1a1a">
+<title>Scrambled Legs · Calendar Mockup</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Fredoka:wght@400;500;600;700&family=Inter:wght@400;500;600;700&family=Montserrat:wght@400;600;700&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css">
+<style>
+:root {
+  --bg-deep:        #1a1a1a;
+  --bg-elev:        #232325;
+  --bg-card:        rgba(255,255,255,0.04);
+  --bg-card-hover:  rgba(255,255,255,0.07);
+  --border-soft:    rgba(255,255,255,0.10);
+  --border-yolk:    rgba(255,199,44,0.25);
+  --text:           #f4f4f4;
+  --text-mute:      rgba(255,255,255,0.55);
+  --text-dim:       rgba(255,255,255,0.32);
+  --yolk:           #FFC72C;
+  --yolk-light:     #FFE66D;
+  --hot:            #FF6B6B;
+  --hot-deep:       #FF8E53;
+  --orange:         #FF8800;
+  --green:          #6FCF97;
+  --amber:          #FFB155;
+  --shadow-card:    0 12px 40px rgba(0,0,0,0.35);
+  --shadow-glow:    0 0 32px rgba(255,199,44,0.12);
+}
+
+* { margin: 0; padding: 0; box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
+
+html, body {
+  background: linear-gradient(160deg, #1a1a1a 0%, #232325 100%);
+  color: var(--text);
+  font-family: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
+  min-height: 100vh;
+  overflow-x: hidden;
+}
+body { padding: 20px 16px 80px; }
+@media (max-width: 480px) { body { padding: 12px 12px 80px; } }
+
+/* ───────── floating eggs ───────── */
+.egg {
+  position: fixed; pointer-events: none; user-select: none;
+  font-size: 28px; opacity: 0.12; z-index: 0;
+  animation: floatEgg var(--dur,22s) ease-in-out infinite;
+  animation-delay: var(--delay,0s);
+}
+@keyframes floatEgg {
+  0%   { transform: translate(0,0) rotate(0deg); }
+  33%  { transform: translate(12vw,-8vh) rotate(120deg); }
+  66%  { transform: translate(-12vw,8vh) rotate(240deg); }
+  100% { transform: translate(0,0) rotate(360deg); }
+}
+
+/* ───────── page wrapper ───────── */
+.page { position: relative; z-index: 1; max-width: 560px; margin: 0 auto; }
+
+.page-header { text-align: center; padding: 8px 0 24px; }
+.page-header h1 {
+  font-family: 'Fredoka',sans-serif;
+  font-size: clamp(22px,5.5vw,28px);
+  font-weight: 700;
+  letter-spacing: 0.02em;
+  background: linear-gradient(45deg, var(--yolk-light), var(--yolk));
+  -webkit-background-clip: text; -webkit-text-fill-color: transparent;
+}
+.page-header p {
+  font-family: 'Montserrat',sans-serif;
+  font-size: 11px; letter-spacing: 0.15em;
+  text-transform: uppercase; color: var(--text-mute); margin-top: 4px;
+}
+
+/* ───────── section labels ───────── */
+.section-label {
+  display: flex; align-items: center; gap: 10px;
+  font-family: 'Montserrat',sans-serif;
+  font-size: 11px; letter-spacing: 0.18em;
+  text-transform: uppercase; color: var(--text-mute);
+  margin: 28px 4px 12px;
+}
+.section-label::after {
+  content: ''; flex: 1; height: 1px;
+  background: linear-gradient(90deg, var(--border-soft), transparent);
+}
+
+/* ───────── featured card ───────── */
+.featured {
+  position: relative;
+  background: linear-gradient(140deg, rgba(255,199,44,0.06), rgba(255,107,107,0.04));
+  border: 1px solid var(--border-yolk);
+  border-radius: 22px;
+  overflow: hidden;
+  box-shadow: var(--shadow-card), var(--shadow-glow);
+  backdrop-filter: blur(10px);
+}
+.featured-map { position: relative; height: 200px; background: var(--bg-deep); z-index: 1; }
+.featured-map .leaflet-container { width: 100%; height: 100%; background: var(--bg-deep); border-radius: 0; }
+.featured-map::after {
+  content:''; position:absolute; inset:0;
+  background: linear-gradient(180deg, transparent 60%, rgba(26,26,26,0.85) 100%);
+  pointer-events: none;
+  z-index: 2;
+}
+
+.status-chip {
+  position: absolute; top: 14px; left: 14px; z-index: 20;
+  display: inline-flex; align-items: center; gap: 6px;
+  padding: 6px 12px; border-radius: 999px;
+  font-family: 'Montserrat',sans-serif;
+  font-size: 10px; font-weight: 700; letter-spacing: 0.14em; text-transform: uppercase;
+  backdrop-filter: blur(8px); border: 1px solid rgba(255,255,255,0.18);
+}
+.status-chip .dot { width: 6px; height: 6px; border-radius: 50%; }
+.status-chip[data-status="upcoming"]   { background: rgba(255,199,44,0.18); color: var(--yolk-light); }
+.status-chip[data-status="upcoming"] .dot   { background: var(--yolk); box-shadow: 0 0 8px var(--yolk); animation: pulse 1.6s infinite; }
+.status-chip[data-status="in_progress"] { background: rgba(111,207,151,0.18); color: var(--green); }
+.status-chip[data-status="in_progress"] .dot { background: var(--green); box-shadow: 0 0 8px var(--green); animation: pulse 1.2s infinite; }
+.status-chip[data-status="beers"]       { background: rgba(255,177,85,0.18); color: var(--amber); }
+.status-chip[data-status="beers"] .dot       { background: var(--amber); box-shadow: 0 0 8px var(--amber); animation: pulse 2s infinite; }
+@keyframes pulse {
+  0%,100% { transform: scale(1); opacity: 1; }
+  50%     { transform: scale(1.4); opacity: 0.55; }
+}
+
+.weather-chip {
+  position: absolute; top: 14px; right: 14px; z-index: 20;
+  display: inline-flex; align-items: center; gap: 6px;
+  padding: 6px 10px 6px 8px; border-radius: 999px;
+  background: rgba(0,0,0,0.45); border: 1px solid var(--border-soft);
+  backdrop-filter: blur(8px);
+  font-size: 12px; font-weight: 600; color: var(--text);
+}
+
+.featured-body { padding: 18px 18px 14px; }
+
+.event-name {
+  font-family: 'Fredoka',sans-serif;
+  font-size: clamp(22px,6vw,28px);
+  font-weight: 700; line-height: 1.15;
+  background: linear-gradient(45deg, #ffffff, #f0d97a);
+  -webkit-background-clip: text; -webkit-text-fill-color: transparent;
+}
+
+.event-meta {
+  display: flex; flex-wrap: wrap; gap: 8px 14px;
+  margin-top: 10px;
+  font-size: 13px; color: var(--text-mute); font-weight: 500;
+}
+.event-meta span { display: inline-flex; align-items: center; gap: 6px; }
+.event-meta svg { width: 14px; height: 14px; color: var(--yolk); flex-shrink: 0; }
+
+.tags { display: flex; flex-wrap: wrap; gap: 6px; margin-top: 12px; }
+.tag {
+  font-family: 'Inter',sans-serif;
+  font-size: 11px; font-weight: 600;
+  padding: 4px 10px; border-radius: 999px;
+  background: rgba(255,199,44,0.10);
+  border: 1px solid var(--border-yolk);
+  color: var(--yolk-light);
+}
+.tag.diff-race  { background: rgba(255,107,107,0.12); border-color: rgba(255,107,107,0.30); color: #ffb3b3; }
+.tag.diff-chill { background: rgba(111,207,151,0.10); border-color: rgba(111,207,151,0.30); color: #b6e9cb; }
+.tag.diff-work  { background: rgba(255,177,85,0.10); border-color: rgba(255,177,85,0.30); color: #ffd2a3; }
+
+.event-desc {
+  font-size: 14px; line-height: 1.55;
+  color: rgba(255,255,255,0.78); margin-top: 14px;
+}
+
+/* ───────── countdown ───────── */
+.countdown-block {
+  margin-top: 18px; padding: 14px 14px 12px;
+  border-radius: 14px;
+  background: rgba(0,0,0,0.30);
+  border: 1px solid var(--border-soft);
+  text-align: center;
+}
+.countdown-label {
+  font-family: 'Montserrat',sans-serif;
+  font-size: 10px; font-weight: 600; letter-spacing: 0.16em; text-transform: uppercase;
+  color: var(--text-mute); margin-bottom: 6px;
+}
+.countdown-display {
+  font-family: 'Fredoka',sans-serif;
+  font-weight: 600;
+  font-size: clamp(20px,5vw,26px);
+  letter-spacing: 0.04em;
+  font-variant-numeric: tabular-nums;
+  background: linear-gradient(45deg, var(--yolk-light), var(--orange));
+  -webkit-background-clip: text; -webkit-text-fill-color: transparent;
+}
+.countdown-display .sep { color: var(--text-dim); margin: 0 6px; -webkit-text-fill-color: var(--text-dim); }
+.countdown-display.is-progress { background: linear-gradient(45deg, var(--green), #b6e9cb); -webkit-background-clip: text; -webkit-text-fill-color: transparent; }
+.countdown-display.is-beers    { background: linear-gradient(45deg, var(--amber), #ffd2a3); -webkit-background-clip: text; -webkit-text-fill-color: transparent; }
+
+/* ───────── action row ───────── */
+.actions { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; margin-top: 14px; }
+.btn {
+  display: inline-flex; align-items: center; justify-content: center; gap: 6px;
+  font-family: 'Inter',sans-serif;
+  font-size: 13px; font-weight: 600;
+  padding: 12px 14px; border-radius: 12px;
+  border: 1px solid var(--border-soft);
+  background: var(--bg-card); color: var(--text);
+  cursor: pointer; transition: all 0.15s ease;
+  text-decoration: none; white-space: nowrap;
+}
+.btn:hover { background: var(--bg-card-hover); transform: translateY(-1px); }
+.btn:active { transform: translateY(0); }
+.btn svg { width: 16px; height: 16px; flex-shrink: 0; }
+.btn-primary {
+  grid-column: 1 / -1;
+  background: linear-gradient(45deg, var(--hot), var(--hot-deep));
+  border: none; font-weight: 700; font-size: 14px; padding: 14px;
+  letter-spacing: 0.04em; text-transform: uppercase;
+  box-shadow: 0 4px 16px rgba(255,107,107,0.3);
+}
+.btn-primary:hover { box-shadow: 0 6px 22px rgba(255,107,107,0.42); }
+.actions-secondary { display: flex; gap: 8px; margin-top: 8px; flex-wrap: wrap; }
+.actions-secondary .btn { flex: 1; min-width: 0; font-size: 12px; padding: 10px 12px; }
+
+/* ───────── secondary actions grid (4-up, wraps on narrow) ───────── */
+.actions-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(72px, 1fr));
+  gap: 8px;
+  margin-top: 14px;
+}
+.action-btn {
+  display: flex; flex-direction: column; align-items: center; justify-content: center;
+  gap: 4px;
+  padding: 10px 6px 9px;
+  background: var(--bg-card);
+  border: 1px solid var(--border-soft);
+  border-radius: 11px;
+  color: var(--text);
+  font-family: 'Inter',sans-serif;
+  font-size: 11px;
+  font-weight: 600;
+  cursor: pointer;
+  text-decoration: none;
+  letter-spacing: 0.02em;
+  transition: all 0.15s ease;
+}
+.action-btn svg { width: 18px; height: 18px; color: var(--yolk); }
+.action-btn:hover {
+  background: var(--bg-card-hover);
+  border-color: var(--border-yolk);
+  transform: translateY(-1px);
+}
+.action-btn:active { transform: translateY(0); }
+
+/* ───────── HOT DOG CTA (primary, bottom of card) ─────────
+   Pulsing primary call-to-action. Rotates idle text. On press, cycles through
+   escalating challenge phrases by band (1-2 / 3-5 / 6-9 / 10-14 / 15-24 / 25+).
+   Visual intensity scales with the band (--hd-scale + box-shadow + animation
+   speed + gradient shift). Resets to idle after 5s with no presses. */
+.kudos-row {
+  margin-top: 14px;
+  position: relative;
+}
+.hd-cta {
+  position: relative;
+  width: 100%;
+  padding: var(--hd-pad-y, 14px) 18px;
+  border: none;
+  border-radius: 16px;
+  background: linear-gradient(135deg, var(--hot), var(--hot-deep));
+  color: white;
+  cursor: pointer;
+  display: flex; align-items: center; justify-content: space-between;
+  gap: 14px;
+  box-shadow: 0 6px 22px rgba(255,107,107,0.40);
+  font-family: 'Fredoka',sans-serif;
+  /* overflow: visible so the button can grow beyond its layout box. */
+  overflow: visible;
+  --hd-scale: 1;
+  --hd-rest: 1;
+  --hd-rest-y: 1;          /* extra vertical-only growth multiplied on top */
+  transform-origin: center center;
+  transform: scale(var(--hd-scale)) scaleY(var(--hd-rest-y, 1));
+  transition:
+    transform 0.18s cubic-bezier(.34,1.56,.64,1),
+    padding  0.20s ease-out,
+    background 0.3s;
+  animation: hdCtaPulse 1.5s ease-in-out infinite;
+  z-index: 1;
+}
+
+/* During an active mash session, elevate the button above the vignette
+   and bg-egg layer so it's always the focal point of the tunnel. */
+body[data-mashing="1"] .kudos-row {
+  z-index: 700;
+}
+@keyframes hdCtaPulse {
+  0%, 100% { box-shadow: 0 6px 22px rgba(255,107,107,0.40); }
+  50%      { box-shadow: 0 10px 34px rgba(255,107,107,0.70); }
+}
+.hd-cta:active { --hd-scale: calc(var(--hd-rest, 1) * 0.96); transition-duration: 0.08s; }
+/* Lock the button while the save/burn animation is running. Clicks won't
+   register, cursor is default, the burst is allowed to complete and reset. */
+.hd-cta.is-saving,
+.hd-cta.is-burning {
+  pointer-events: none;
+  cursor: default;
+}
+.hd-cta-top { display: flex; align-items: center; gap: 10px; flex-shrink: 0; }
+.hd-cta-emoji { font-size: 30px; line-height: 1; }
+.hd-cta-count {
+  font-size: 26px; font-weight: 700; line-height: 1;
+  font-variant-numeric: tabular-nums;
+}
+.hd-cta-text {
+  font-size: 13px; font-weight: 600;
+  letter-spacing: 0.04em; text-transform: uppercase;
+  text-align: right;
+  flex: 1; min-width: 0;
+  white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+  opacity: 0.95;
+  transition: opacity 0.22s ease;
+}
+.hd-cta-text.is-fading { opacity: 0; }
+.hd-cta-text.is-saving {
+  color: var(--yolk-light);
+  font-style: italic;
+}
+/* Animated ellipsis — text becomes "saving" + a 3-step blinking dots */
+.hd-cta-text.is-saving::after {
+  content: '';
+  display: inline-block;
+  width: 1.5em;
+  text-align: left;
+  animation: blinkDots 1.1s steps(4, end) infinite;
+}
+@keyframes blinkDots {
+  0%   { content: '';    }
+  25%  { content: '.';   }
+  50%  { content: '..';  }
+  75%  { content: '...'; }
+  100% { content: '';    }
+}
+
+/* +N COUNTER + CHALLENGE TEXT — both live OUTSIDE the button now (as
+   siblings inside .kudos-row) so the button's scale transform doesn't
+   carry them along. They stay anchored to the row's layout box (which
+   stays inside the event card). The button can grow wildly via scale
+   and the text stays put inside the card. */
+.kudos-row {
+  position: relative;
+  /* No padding reserve needed — mash-sub is now inside the centered overlay,
+     not anchored to the bottom of the row. */
+}
+
+.hd-cta-mash {
+  position: absolute;
+  left: 50%;
+  /* Default (saving / burning / idle): center in the row */
+  top: 50%;
+  transform: translate(-50%, -50%) scale(var(--mash-scale, 1));
+  pointer-events: none;
+  opacity: 0;
+  transition: opacity 0.18s, transform 0.25s cubic-bezier(.34,1.56,.64,1);
+  z-index: 5;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: flex-end;
+  gap: 6px;
+  max-width: 95%;
+  width: max-content;
+  text-align: center;
+}
+
+/* During active mashing, anchor the overlay to the BOTTOM of the card
+   so it grows UPWARD. The challenge phrase pins at the bottom, +N floats
+   above it — no matter how big +N gets, nothing clips at the card edge. */
+.hd-cta.is-mashing ~ .hd-cta-mash {
+  top: auto;
+  bottom: 6px;
+  transform: translateX(-50%) scale(var(--mash-scale, 1));
+  justify-content: flex-end;
+}
+/* sibling selector: state classes live on the button, overlays sit after it */
+.hd-cta.is-mashing ~ .hd-cta-mash,
+.hd-cta.is-saving  ~ .hd-cta-mash,
+.hd-cta.is-burning ~ .hd-cta-mash { opacity: 1; }
+
+.mash-num {
+  font-family: 'Fredoka',sans-serif;
+  font-weight: 700;
+  font-variant-numeric: tabular-nums;
+  font-size: 30px;
+  line-height: 1;
+  color: #fff;
+  text-shadow: 0 3px 12px rgba(0,0,0,0.85), 0 0 24px rgba(255,255,255,0.45);
+  transition: font-size 0.22s ease;
+  text-align: center;
+  max-width: 100%;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+/* CHALLENGE PHRASE — second line inside the centered overlay, directly below
+   the +N counter. Font size is set dynamically from JS (setSub()) so even
+   the longest phrase always fits on ONE line — never wraps, never ellipsis.
+   Flex child of .hd-cta-mash. */
+.mash-sub {
+  font-family: 'Fredoka',sans-serif;
+  font-weight: 700;
+  font-style: italic;
+  font-size: 24px;             /* JS overrides this; just a sane default */
+  line-height: 1.1;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  color: var(--yolk-light);
+  text-shadow:
+    0 0 12px rgba(255,199,44,0.55),
+    0 0 24px rgba(255,107,107,0.4),
+    0 2px 8px rgba(0,0,0,0.8);
+  opacity: 0;
+  transition: opacity 0.22s;
+  pointer-events: none;
+  white-space: nowrap;          /* single line always */
+  text-align: center;
+}
+
+/* Phase: idle (no presses yet, or post-burn reset) — big "MASH ME" centered
+   like an emergency-stop button label. Top-left 🌭 + running total stays
+   VISIBLE so visitors immediately read this as "the hot dog counter."
+   Right-side text is hidden; the centered overlay does the call to action. */
+.hd-cta.is-idle .hd-cta-text { opacity: 0; transition: opacity 0.25s; }
+.hd-cta.is-idle ~ .hd-cta-mash { opacity: 1; }
+.hd-cta.is-idle ~ .hd-cta-mash .mash-num {
+  font-size: clamp(20px, 6.5vw, 30px) !important;
+  font-weight: 700;
+  letter-spacing: 0.18em;
+  text-transform: uppercase;
+  color: #fff;
+  text-shadow:
+    0 0 10px rgba(255,255,255,0.7),
+    0 0 22px rgba(255,199,44,0.65),
+    0 0 38px rgba(255,107,107,0.55),
+    0 4px 14px rgba(0,0,0,0.55);
+  animation: idleEmergencyPulse 1.5s ease-in-out infinite;
+}
+@media (max-width: 380px) {
+  .hd-cta.is-idle ~ .hd-cta-mash .mash-num {
+    letter-spacing: 0.14em;
+  }
+  .hd-cta.is-idle .hd-cta-emoji { font-size: 22px; }
+  .hd-cta.is-idle .hd-cta-count { font-size: 18px; }
+}
+.hd-cta.is-idle ~ .hd-cta-mash .mash-sub { opacity: 0; }
+@keyframes idleEmergencyPulse {
+  0%, 100% {
+    transform: scale(1);
+    text-shadow:
+      0 0 8px rgba(255,255,255,0.55),
+      0 0 18px rgba(255,199,44,0.55),
+      0 0 30px rgba(255,107,107,0.45),
+      0 4px 14px rgba(0,0,0,0.55);
+  }
+  50% {
+    transform: scale(1.06);
+    text-shadow:
+      0 0 18px rgba(255,255,255,0.95),
+      0 0 36px rgba(255,199,44,0.9),
+      0 0 60px rgba(255,107,107,0.7),
+      0 0 90px rgba(255,255,200,0.4),
+      0 4px 18px rgba(0,0,0,0.55);
+  }
+}
+
+/* Mashing — from press 1, the in-button text (top-left 🌭+count and
+   right-side challenge) is HIDDEN. They live inside the scaling button
+   and would visually shift on every press, so we drop them entirely
+   the moment a burst starts. The +N counter (mash-num) and the
+   challenge phrase (mash-sub) are siblings of the button anchored to
+   the row — they stay rock solid no matter how big the button grows. */
+.hd-cta.is-mashing .hd-cta-top,
+.hd-cta.is-mashing .hd-cta-text {
+  opacity: 0;
+  transition: opacity 0.2s;
+}
+.hd-cta.is-mashing ~ .hd-cta-mash .mash-sub { opacity: 1; }
+/* deep-mashing class is kept on the button for visual band changes
+   (intensity 0-5 styling) but no longer toggles layout. */
+
+/* Phase: saving — "saving N" in the centered overlay with blinking dots */
+.hd-cta.is-saving .hd-cta-top,
+.hd-cta.is-saving .hd-cta-text { opacity: 0; transition: opacity 0.25s; }
+.hd-cta.is-saving ~ .hd-cta-mash .mash-num {
+  color: var(--yolk-light);
+  font-style: italic;
+  letter-spacing: 0.02em;
+}
+.hd-cta.is-saving ~ .hd-cta-mash .mash-num::after {
+  content: '';
+  display: inline-block;
+  width: 1.4em;
+  text-align: left;
+  animation: blinkDots 1.1s steps(4, end) infinite;
+}
+.hd-cta.is-saving ~ .hd-cta-mash .mash-sub { opacity: 0; }
+
+/* Phase: burn — 4-second flash with a "you must be scrambled" taunt that
+   pulses repeatedly. Big, glowing, hard to ignore — the goal is to make
+   the user feel called out and want to come back swinging. */
+.hd-cta.is-burning .hd-cta-top,
+.hd-cta.is-burning .hd-cta-text { opacity: 0; transition: opacity 0.25s; }
+.hd-cta.is-burning ~ .hd-cta-mash {
+  white-space: normal;
+}
+.hd-cta.is-burning ~ .hd-cta-mash .mash-num {
+  font-size: clamp(22px, 6.5vw, 34px) !important;
+  font-style: italic;
+  font-weight: 700;
+  color: #fff;
+  letter-spacing: 0.05em;
+  text-transform: uppercase;
+  white-space: normal;
+  text-align: center;
+  line-height: 1.15;
+  text-shadow:
+    0 0 14px rgba(255,255,255,0.7),
+    0 0 28px rgba(255,199,44,0.6),
+    0 0 48px rgba(255,107,107,0.55),
+    0 4px 16px rgba(0,0,0,0.7);
+  animation: burnFlash 4s cubic-bezier(.34,1.56,.64,1) forwards;
+}
+.hd-cta.is-burning ~ .hd-cta-mash .mash-sub { opacity: 0; }
+@keyframes burnFlash {
+  /* Pop in */
+  0%   { opacity: 0; transform: scale(0.65); }
+  6%   { opacity: 1; transform: scale(1.18); }
+  12%  { opacity: 1; transform: scale(1.00); }
+  /* Pulse 1 */
+  22%  { transform: scale(1.10); }
+  30%  { transform: scale(1.00); }
+  /* Pulse 2 */
+  42%  { transform: scale(1.10); }
+  50%  { transform: scale(1.00); }
+  /* Pulse 3 */
+  62%  { transform: scale(1.08); }
+  70%  { transform: scale(1.00); }
+  /* Pulse 4 */
+  80%  { transform: scale(1.06); }
+  88%  { opacity: 1; transform: scale(1.00); }
+  /* Fade out */
+  100% { opacity: 0; transform: scale(0.95); }
+}
+
+/* COLOR CYCLE — gradient driven by --hd-hue (JS sets it per press, cycles
+   through the full spectrum every ~26 presses). Bands no longer override
+   `background` so the hue cycle dominates. */
+.hd-cta {
+  background: linear-gradient(135deg,
+    hsl(var(--hd-hue, 0), 85%, 60%),
+    hsl(calc(var(--hd-hue, 0) + 35), 90%, 50%));
+}
+
+/* Visual band shadow + animation only — color comes from --hd-hue above */
+.hd-cta[data-intensity="0"] { box-shadow: 0 6px 22px rgba(255,107,107,0.40); }
+.hd-cta[data-intensity="1"] { box-shadow: 0 8px 28px rgba(255,107,107,0.55);  animation-duration: 1.3s; }
+.hd-cta[data-intensity="2"] { box-shadow: 0 10px 36px rgba(255,107,107,0.65); animation-duration: 1.1s; }
+.hd-cta[data-intensity="3"] { box-shadow: 0 14px 48px rgba(255,107,107,0.78); animation: hdCtaThrob 0.85s ease-in-out infinite; }
+.hd-cta[data-intensity="4"] { box-shadow: 0 20px 70px rgba(255,255,255,0.65); animation: hdCtaThrob 0.65s ease-in-out infinite; }
+.hd-cta[data-intensity="5"] { box-shadow: 0 24px 90px rgba(255,255,200,0.85), 0 0 60px rgba(255,255,255,0.5); animation: hdCtaThrob 0.45s ease-in-out infinite; }
+.hd-cta[data-intensity="6"] { box-shadow: 0 30px 120px rgba(255,255,255,1), 0 0 100px rgba(255,255,200,0.95); animation: hdCtaThrob 0.30s ease-in-out infinite; }
+.hd-cta:not(:active) { --hd-scale: var(--hd-rest, 1); }
+
+/* Throb — a more aggressive pulse that adds filter brightness/saturation
+   on top of the box-shadow swell. Replaces the milder hdCtaPulse at higher
+   bands. */
+@keyframes hdCtaThrob {
+  0%, 100% { filter: brightness(1) saturate(1); }
+  50%      { filter: brightness(1.30) saturate(1.45); }
+}
+
+.hd-cta .ping {
+  position: absolute; inset: 0; border-radius: 16px;
+  background: rgba(255,255,255,0.22);
+  animation: hdPing 0.45s ease-out forwards;
+  pointer-events: none;
+}
+@keyframes hdPing {
+  0%   { opacity: 0.7; }
+  100% { opacity: 0; transform: scale(1.04); }
+}
+
+/* ───────── weather panel (prominent, real Open-Meteo data) ───────── */
+.weather-panel {
+  display: flex; align-items: center; gap: 14px;
+  margin-top: 14px; padding: 12px 14px;
+  background: linear-gradient(135deg, rgba(135,206,250,0.08), rgba(255,199,44,0.04));
+  border: 1px solid rgba(135,206,250,0.22);
+  border-radius: 12px;
+  position: relative;
+  overflow: hidden;
+}
+.weather-panel.is-loading::after {
+  content: '';
+  position: absolute; left: -50%; top: 0;
+  width: 50%; height: 100%;
+  background: linear-gradient(90deg, transparent, rgba(255,255,255,0.06), transparent);
+  animation: shimmer 1.5s linear infinite;
+}
+@keyframes shimmer {
+  0%   { transform: translateX(0); }
+  100% { transform: translateX(400%); }
+}
+.weather-icon-big { font-size: 34px; line-height: 1; flex-shrink: 0; }
+.weather-temp-big {
+  font-family: 'Fredoka',sans-serif;
+  font-size: 26px; font-weight: 700; line-height: 1;
+  background: linear-gradient(45deg, #87CEFA, var(--yolk-light));
+  -webkit-background-clip: text; -webkit-text-fill-color: transparent;
+  font-variant-numeric: tabular-nums;
+}
+.weather-details {
+  display: flex; flex-direction: column; gap: 3px;
+  flex: 1; min-width: 0;
+}
+.weather-desc {
+  font-family: 'Fredoka',sans-serif;
+  font-size: 14px; font-weight: 600; color: var(--text);
+  white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+}
+.weather-extra {
+  font-size: 11px; color: var(--text-mute);
+  display: flex; gap: 10px; flex-wrap: wrap;
+}
+.weather-extra .warn { color: var(--amber); font-weight: 600; }
+.weather-source {
+  position: absolute; bottom: 4px; right: 8px;
+  font-size: 8px; letter-spacing: 0.1em; text-transform: uppercase;
+  color: var(--text-dim); opacity: 0.6;
+}
+
+/* ───────── ride leader (overlay, half-on-banner half-on-body) ───────── */
+.rl-overlay {
+  position: absolute;
+  right: 16px;
+  /* Banner is 200px tall; avatar is 76px; overlap ~46px banner + 30px body */
+  top: 154px;
+  z-index: 30;          /* must outrank Leaflet panes (max 700) — established stacking context on .featured-map keeps that confined, but keep this high anyway */
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  pointer-events: none;
+}
+.rl-avatar {
+  position: relative;
+  width: 76px; height: 76px;
+  pointer-events: auto;
+}
+.rl-photo {
+  width: 100%; height: 100%;
+  border-radius: 50%;
+  border: 3px solid var(--bg-deep);
+  box-shadow: 0 6px 18px rgba(0,0,0,0.55), 0 0 0 2px var(--yolk);
+  object-fit: cover;
+  background: linear-gradient(135deg, #555, #333);
+  display: block;
+}
+/* The orbit container rotates around the avatar's center, sweeping the crown
+   along the top arc of the circle from upper-left to upper-right. */
+.rl-crown-orbit {
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+  animation: rlCrownOrbit 5.5s ease-in-out infinite;
+  transform-origin: 50% 50%;
+}
+@keyframes rlCrownOrbit {
+  0%, 100% { transform: rotate(-30deg); }
+  50%      { transform: rotate(30deg); }
+}
+.rl-crown {
+  /* User-tuned: top:-31px sits the crown perfectly on the rotating gold
+     ring at the default 76px avatar size. The orbit container rotates
+     around (38, 38), so the crown traces an arc of radius
+     ~38 + |top + crown_height/2 - 38| ≈ 45px — just outside the gold
+     border (40px radius). Mobile (<380px breakpoint below) shrinks the
+     avatar to 68px so we proportionally adjust top + size to keep the
+     same visual placement. */
+  position: absolute;
+  top: -31px;
+  left: 50%;
+  transform: translateX(-50%);
+  font-size: 24px;
+  animation: rlCrownShimmer 1.8s ease-in-out infinite;
+}
+@keyframes rlCrownShimmer {
+  0%, 100% {
+    filter: drop-shadow(0 0 3px rgba(255,215,0,0.35))
+            drop-shadow(0 2px 3px rgba(0,0,0,0.6))
+            brightness(1) saturate(1);
+  }
+  50% {
+    filter: drop-shadow(0 0 14px rgba(255,215,0,0.95))
+            drop-shadow(0 0 5px rgba(255,255,200,0.65))
+            drop-shadow(0 2px 3px rgba(0,0,0,0.6))
+            brightness(1.35) saturate(1.4);
+  }
+}
+.rl-meta {
+  margin-top: 6px;
+  text-align: center;
+  pointer-events: none;
+  max-width: 96px;
+  width: 96px;
+}
+.rl-meta .rl-label {
+  display: block;
+  font-family: 'Montserrat',sans-serif;
+  font-size: 8px;
+  font-weight: 700;
+  letter-spacing: 0.22em;
+  text-transform: uppercase;
+  color: var(--yolk);
+  text-shadow: 0 1px 4px rgba(0,0,0,0.85), 0 0 8px rgba(0,0,0,0.8);
+}
+.rl-meta .rl-name {
+  display: -webkit-box;
+  -webkit-box-orient: vertical;
+  -webkit-line-clamp: 2;        /* allow long names to wrap to 2 lines on mobile */
+  font-family: 'Fredoka',sans-serif;
+  font-size: 13px;
+  font-weight: 600;
+  line-height: 1.2;
+  color: var(--text);
+  text-shadow: 0 1px 6px rgba(0,0,0,0.95), 0 0 10px rgba(0,0,0,0.85);
+  margin-top: 1px;
+  overflow: hidden;
+  word-break: break-word;
+}
+@media (max-width: 380px) {
+  .rl-overlay { right: 12px; top: 158px; }
+  .rl-avatar  { width: 68px; height: 68px; }
+  /* Crown scales with the avatar: 68/76 ≈ 0.89 ratio.
+     top: -31 * 0.89 ≈ -28; font-size: 24 * 0.89 ≈ 22 */
+  .rl-crown   { top: -28px; font-size: 22px; }
+  .rl-meta    { max-width: 88px; width: 88px; }
+  .rl-meta .rl-name { font-size: 12px; }
+  .featured-body.has-rl .event-name,
+  .featured-body.has-rl .event-meta { padding-right: 84px; }
+}
+/* Reserve space on the right when a ride leader is present so text doesn't
+   collide with the avatar in the upper portion of the body. */
+.featured-body.has-rl .event-name,
+.featured-body.has-rl .event-meta { padding-right: 92px; }
+
+/* ───────── banner override ───────── */
+.featured-banner {
+  position: relative;
+  height: 200px;
+  background-size: cover;
+  background-position: center;
+  background-color: var(--bg-deep);
+}
+.featured-banner::after {
+  content:''; position:absolute; inset:0;
+  background: linear-gradient(180deg, rgba(0,0,0,0.20) 0%, transparent 50%, rgba(26,26,26,0.85) 100%);
+  pointer-events: none;
+}
+
+/* ───────── coming up list ───────── */
+.coming-list { display: flex; flex-direction: column; gap: 8px; }
+.coming-card {
+  display: flex; align-items: stretch; gap: 14px;
+  padding: 12px 14px;
+  background: var(--bg-card);
+  border: 1px solid var(--border-soft);
+  border-radius: 14px;
+  position: relative; opacity: 0.92;
+}
+.coming-card .date-stamp {
+  flex-shrink: 0; width: 54px; text-align: center;
+  padding: 6px 0; border-right: 1px solid var(--border-soft);
+}
+.coming-card .date-stamp .month {
+  font-family: 'Montserrat',sans-serif;
+  font-size: 10px; font-weight: 700; letter-spacing: 0.12em; text-transform: uppercase;
+  color: var(--yolk);
+}
+.coming-card .date-stamp .day {
+  font-family: 'Fredoka',sans-serif;
+  font-size: 22px; font-weight: 700;
+  color: var(--text); line-height: 1; margin: 2px 0 1px;
+}
+.coming-card .date-stamp .weekday { font-size: 10px; color: var(--text-mute); font-weight: 500; }
+.coming-card .info { flex: 1; display: flex; flex-direction: column; justify-content: center; min-width: 0; }
+.coming-card .info .name {
+  font-family: 'Fredoka',sans-serif;
+  font-size: 15px; font-weight: 600; color: var(--text);
+  white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+}
+.coming-card .info .meta {
+  font-size: 12px; color: var(--text-mute); margin-top: 3px;
+  display: flex; gap: 10px; flex-wrap: wrap;
+}
+.coming-card .lock {
+  position: absolute; top: 10px; right: 10px;
+  width: 14px; height: 14px; color: var(--text-dim);
+}
+
+/* Unlocked variant — admin has opened this future event for visitors */
+.coming-card.is-unlocked {
+  background: linear-gradient(90deg, rgba(255,199,44,0.06), rgba(255,107,107,0.03));
+  border-color: var(--border-yolk);
+  opacity: 1;
+  cursor: pointer;
+  transition: transform 0.15s ease, background 0.15s ease, border-color 0.15s ease;
+}
+.coming-card.is-unlocked:hover {
+  transform: translateY(-1px);
+  background: linear-gradient(90deg, rgba(255,199,44,0.10), rgba(255,107,107,0.05));
+  border-color: rgba(255,199,44,0.45);
+}
+.coming-card.is-unlocked .unlock-icon {
+  position: absolute; top: 10px; right: 10px;
+  width: 14px; height: 14px;
+  font-size: 14px;
+  line-height: 14px;
+  text-align: center;
+  filter: drop-shadow(0 0 6px rgba(255,199,44,0.6));
+}
+
+/* ───────── locked toast (transient bottom snackbar) ───────── */
+.lock-toast {
+  position: fixed;
+  left: 50%;
+  bottom: 28px;
+  transform: translateX(-50%) translateY(20px);
+  background: rgba(20,20,20,0.95);
+  border: 1px solid var(--border-yolk);
+  color: var(--text);
+  font-family: 'Inter',sans-serif;
+  font-size: 13px;
+  font-weight: 500;
+  padding: 11px 18px;
+  border-radius: 999px;
+  box-shadow: 0 6px 24px rgba(0,0,0,0.5);
+  backdrop-filter: blur(8px);
+  z-index: 3000;
+  opacity: 0;
+  pointer-events: none;
+  transition: opacity 0.2s ease, transform 0.25s cubic-bezier(.22,.61,.36,1);
+  display: inline-flex; align-items: center; gap: 8px;
+  max-width: calc(100vw - 32px);
+  white-space: nowrap;
+}
+.lock-toast.is-visible {
+  opacity: 1;
+  transform: translateX(-50%) translateY(0);
+}
+.lock-toast svg { width: 14px; height: 14px; color: var(--yolk); flex-shrink: 0; }
+
+/* ───────── event detail sheet (full-ish bottom sheet; modeled on cal-sheet) ───────── */
+.evt-sheet {
+  position: fixed; inset: 0;
+  z-index: 2100;
+  display: flex; align-items: flex-end; justify-content: center;
+  pointer-events: none;
+}
+.evt-sheet[hidden] { display: none; }
+.evt-sheet-backdrop {
+  position: absolute; inset: 0;
+  background: rgba(0,0,0,0.65);
+  backdrop-filter: blur(6px);
+  pointer-events: auto;
+  animation: fadeIn 0.2s ease;
+}
+.evt-sheet-body {
+  position: relative;
+  width: 100%; max-width: 560px;
+  max-height: 92vh;
+  overflow-y: auto;
+  -webkit-overflow-scrolling: touch;
+  background: linear-gradient(160deg, #232325, #1a1a1a);
+  border: 1px solid var(--border-yolk);
+  border-radius: 20px 20px 0 0;
+  padding: 0 0 22px;
+  pointer-events: auto;
+  animation: sheetSlide 0.28s cubic-bezier(.22,.61,.36,1);
+  box-shadow: 0 -10px 50px rgba(0,0,0,0.55);
+}
+.evt-sheet-close {
+  position: absolute; top: 10px; right: 10px;
+  z-index: 40;
+  width: 34px; height: 34px;
+  border-radius: 50%;
+  background: rgba(0,0,0,0.55);
+  border: 1px solid var(--border-soft);
+  color: var(--text);
+  cursor: pointer;
+  display: flex; align-items: center; justify-content: center;
+  font-size: 18px; line-height: 1;
+  backdrop-filter: blur(6px);
+}
+.evt-sheet-close:hover { background: rgba(0,0,0,0.75); border-color: var(--border-yolk); }
+.evt-sheet-handle {
+  width: 40px; height: 4px;
+  margin: 8px auto 0;
+  background: var(--border-soft);
+  border-radius: 2px;
+}
+/* The sheet's inner card reuses .featured visual language but flat (no border/shadow) */
+.evt-sheet .featured {
+  border: none;
+  border-radius: 0;
+  box-shadow: none;
+  background: transparent;
+}
+.evt-weather-fallback {
+  margin-top: 14px;
+  padding: 10px 12px;
+  border: 1px dashed var(--border-soft);
+  border-radius: 10px;
+  font-size: 11px;
+  color: var(--text-mute);
+  text-align: center;
+  letter-spacing: 0.04em;
+}
+
+.show-more {
+  margin-top: 12px; width: 100%;
+  background: transparent; color: var(--text-mute);
+  border: 1px dashed var(--border-soft);
+  padding: 12px; border-radius: 12px;
+  font-family: 'Inter',sans-serif;
+  font-size: 12px; font-weight: 600; letter-spacing: 0.06em; text-transform: uppercase;
+  cursor: pointer; transition: all 0.15s;
+}
+.show-more:hover { color: var(--yolk); border-color: var(--border-yolk); }
+
+/* ───────── archive ───────── */
+.archive-toggle {
+  display: flex; align-items: center; justify-content: space-between;
+  width: 100%; margin-top: 24px;
+  padding: 14px 16px;
+  background: transparent; color: var(--text-mute);
+  border: 1px solid var(--border-soft); border-radius: 14px;
+  font-family: 'Montserrat',sans-serif;
+  font-size: 11px; font-weight: 600; letter-spacing: 0.16em; text-transform: uppercase;
+  cursor: pointer; transition: all 0.15s;
+}
+.archive-toggle:hover { color: var(--text); border-color: var(--border-yolk); }
+.archive-toggle .chev { transition: transform 0.2s; }
+.archive-toggle[aria-expanded="true"] .chev { transform: rotate(180deg); }
+.archive-body { margin-top: 8px; display: none; }
+.archive-body.is-open { display: block; }
+
+.archive-card {
+  display: flex; align-items: center; gap: 12px;
+  padding: 10px 14px;
+  background: rgba(255,255,255,0.02);
+  border-bottom: 1px solid var(--border-soft);
+  font-size: 13px;
+}
+.archive-card:first-child { border-top-left-radius: 12px; border-top-right-radius: 12px; }
+.archive-card:last-child  { border-bottom-left-radius: 12px; border-bottom-right-radius: 12px; }
+.archive-card .arch-date {
+  font-family: 'Montserrat',sans-serif;
+  font-size: 10px; font-weight: 600; letter-spacing: 0.12em; text-transform: uppercase;
+  color: var(--text-dim); width: 70px; flex-shrink: 0;
+}
+.archive-card .arch-name {
+  flex: 1; color: var(--text); font-weight: 500;
+  white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+}
+.archive-card .arch-kudos { font-size: 12px; color: var(--hot); font-weight: 600; flex-shrink: 0; }
+
+/* ───────── empty state ───────── */
+.empty {
+  text-align: center; padding: 38px 20px;
+  border: 1px dashed var(--border-soft); border-radius: 16px;
+  background: rgba(255,255,255,0.02);
+}
+.empty .em { font-size: 36px; margin-bottom: 8px; filter: grayscale(0.3); opacity: 0.7; }
+.empty .head {
+  font-family: 'Fredoka',sans-serif;
+  font-size: 17px; font-weight: 600; color: var(--text); margin-bottom: 4px;
+}
+.empty .sub { font-size: 13px; color: var(--text-mute); line-height: 1.5; }
+
+/* ───────── flying hot dogs ───────── */
+.flying-hot-dog {
+  position: fixed; pointer-events: none; z-index: 1000;
+  font-size: 36px; will-change: transform, opacity;
+}
+/* When the event sheet is open (z-index 2100), bump ALL mash-mode fixed
+   effects above it so they paint on the sheet, not behind it. */
+body[data-sheet-open="1"] .flying-hot-dog,
+body[data-sheet-open="1"] .flying-egg,
+body[data-sheet-open="1"] .phrase-char     { z-index: 9000; }
+body[data-sheet-open="1"] .mash-vignette   { z-index: 2200; }
+body[data-sheet-open="1"] .mash-flash      { z-index: 2150; }
+/* Shift the vignette clear-center lower — button is near the bottom of the
+   bottom sheet (≈88% from viewport top), not the page center (75%). */
+body[data-sheet-open="1"] .mash-vignette {
+  background: radial-gradient(
+    ellipse 58% 40% at 50% 88%,
+    transparent 16%,
+    rgba(0,0,0,0.70) 48%,
+    rgba(0,0,0,1) 92%
+  );
+}
+/* Ambient eggs also pop above the sheet when rainbow mode kicks in */
+body[data-sheet-open="1"][data-eggs-rainbow="1"] .egg { z-index: 2300; }
+/* Rainbow halo treatment — applied to a fraction of dogs at press 25+,
+   100% of dogs at press 100+. Cycles colored drop-shadows at high speed. */
+.flying-hot-dog.is-rainbow,
+.flying-egg.is-rainbow {
+  animation: rainbowHalo 0.7s linear infinite;
+}
+@keyframes rainbowHalo {
+  0%   { filter: drop-shadow(0 0 10px hsl(  0,100%,60%)) drop-shadow(0 0 22px hsl( 40,100%,60%)) brightness(1.3) saturate(1.5); }
+  17%  { filter: drop-shadow(0 0 10px hsl( 60,100%,60%)) drop-shadow(0 0 22px hsl(100,100%,60%)) brightness(1.3) saturate(1.5); }
+  33%  { filter: drop-shadow(0 0 10px hsl(120,100%,60%)) drop-shadow(0 0 22px hsl(160,100%,60%)) brightness(1.3) saturate(1.5); }
+  50%  { filter: drop-shadow(0 0 10px hsl(180,100%,60%)) drop-shadow(0 0 22px hsl(220,100%,60%)) brightness(1.3) saturate(1.5); }
+  67%  { filter: drop-shadow(0 0 10px hsl(240,100%,60%)) drop-shadow(0 0 22px hsl(280,100%,60%)) brightness(1.3) saturate(1.5); }
+  83%  { filter: drop-shadow(0 0 10px hsl(300,100%,60%)) drop-shadow(0 0 22px hsl(340,100%,60%)) brightness(1.3) saturate(1.5); }
+  100% { filter: drop-shadow(0 0 10px hsl(360,100%,60%)) drop-shadow(0 0 22px hsl(400,100%,60%)) brightness(1.3) saturate(1.5); }
+}
+
+/* Rainbow eggs — same emit pattern as hot dogs but spawn at random
+   chance once press count crosses 25. */
+.flying-egg {
+  position: fixed; pointer-events: none; z-index: 1000;
+  font-size: 28px; will-change: transform, opacity;
+}
+
+/* When mash overdrive kicks in (press 50+) the ambient floating background
+   eggs pop ABOVE the vignette, light up, and pulse rainbow. */
+body[data-eggs-rainbow="1"] .egg {
+  z-index: 550;            /* above vignette (500), below the button (700) */
+  opacity: 0.9;
+  animation:
+    floatEgg var(--dur,22s) ease-in-out infinite,
+    eggBgRainbow 1.4s linear infinite;
+}
+@keyframes eggBgRainbow {
+  0%   { filter: drop-shadow(0 0 12px hsl(  0,100%,60%)) brightness(1.5) saturate(1.6); }
+  17%  { filter: drop-shadow(0 0 12px hsl( 60,100%,60%)) brightness(1.5) saturate(1.6); }
+  33%  { filter: drop-shadow(0 0 12px hsl(120,100%,60%)) brightness(1.5) saturate(1.6); }
+  50%  { filter: drop-shadow(0 0 12px hsl(180,100%,60%)) brightness(1.5) saturate(1.6); }
+  67%  { filter: drop-shadow(0 0 12px hsl(240,100%,60%)) brightness(1.5) saturate(1.6); }
+  83%  { filter: drop-shadow(0 0 12px hsl(300,100%,60%)) brightness(1.5) saturate(1.6); }
+  100% { filter: drop-shadow(0 0 12px hsl(360,100%,60%)) brightness(1.5) saturate(1.6); }
+}
+
+/* Mash flash — full-screen color burst painted BEHIND the vignette so
+   it bleeds through the clear center where the button lives. Only fires
+   at press 100+. */
+.mash-flash {
+  position: fixed; inset: 0;
+  pointer-events: none;
+  z-index: 490;
+  opacity: 0;
+}
+
+/* ───────── mash vignette + ambient effects ─────────
+   When the user starts mashing, the page progressively darkens around
+   the button — full tunnel-vision by ~50 presses. Driven by the
+   --mash-energy CSS variable on <body>, set from JS each press
+   (clamped 0 → 1 over presses 1–50, fades back to 0 on save). */
+.mash-vignette {
+  position: fixed;
+  inset: 0;
+  pointer-events: none;
+  z-index: 500;
+  opacity: var(--mash-energy, 0);
+  /* Doubled — tighter clear center, harder fall, fully black edges. */
+  background: radial-gradient(
+    ellipse 58% 42% at 50% 75%,
+    transparent 16%,
+    rgba(0,0,0,0.7) 48%,
+    rgba(0,0,0,1) 92%
+  );
+  transition: opacity 0.45s ease;
+}
+
+/* ───────── shockwave dislodging ─────────
+   On every click we re-roll random per-element CSS vars (--jx, --jy, --jr,
+   --jls). Each element multiplies its own randomness by the global mash
+   energy + overdrive so displacement starts subtle and grows into chaos.
+   By press 100 (overdrive = 1), the page looks structurally broken. */
+.page-header h1, .page-header p,
+.section-label,
+.event-name, .event-meta, .event-meta span,
+.event-desc, .tags, .tags .tag,
+.coming-card .name, .coming-card .meta,
+.coming-card .date-stamp .day,
+.coming-card .date-stamp .month,
+.coming-card .date-stamp .weekday,
+.archive-toggle,
+.archive-card .arch-name,
+.archive-card .arch-date,
+.archive-card .arch-kudos,
+.weather-desc, .weather-extra, .countdown-display, .countdown-label {
+  transition: transform 0.20s cubic-bezier(.34,1.56,.64,1);
+  /* Transform-only shockwave — translate + rotate are GPU-composited and
+     do NOT trigger layout reflow. letter-spacing was removed because it
+     causes text to reflow (paragraph changes height), which physically
+     pushes the kudos row around in the document flow. */
+  transform:
+    translateX(calc(var(--jx, 0) * (var(--mash-energy, 0) * 14px + var(--mash-overdrive, 0) * 24px)))
+    translateY(calc(var(--jy, 0) * (var(--mash-energy, 0) *  9px + var(--mash-overdrive, 0) * 18px)))
+    rotate(calc(var(--jr, 0) * (var(--mash-energy, 0) * 3deg + var(--mash-overdrive, 0) * 5deg)));
+}
+
+/* Coming-up cards as a whole shudder slightly too */
+.coming-card {
+  --jx: 0; --jy: 0; --jr: 0;
+  transition: transform 0.20s cubic-bezier(.34,1.56,.64,1);
+  transform:
+    translateX(calc(var(--jx, 0) * (var(--mash-energy, 0) * 6px + var(--mash-overdrive, 0) * 12px)))
+    translateY(calc(var(--jy, 0) * (var(--mash-energy, 0) * 3px + var(--mash-overdrive, 0) * 8px)))
+    rotate(calc(var(--jr, 0) * (var(--mash-energy, 0) * 1deg + var(--mash-overdrive, 0) * 2deg)));
+}
+
+/* Hard exemption — the kudos row and everything in it MUST NOT shift,
+   wobble, or animate position with the shockwave. The +N counter and
+   challenge text need to stay readable while the rest of the page warps.
+   This zeroes out any inherited shockwave variables and overrides any
+   transform that might otherwise cascade in. */
+.kudos-row,
+.kudos-row *,
+.hd-cta-mash, .hd-cta-mash *,
+.mash-sub {
+  --jx: 0 !important;
+  --jy: 0 !important;
+  --jr: 0 !important;
+  --jls: 0 !important;
+}
+
+/* Page header pulses + bounces with mash energy. At energy 0 the keyframes
+   evaluate to no movement (translate 0, scale 1). At full energy the
+   header bobs ~3px and pulses ~4% larger. */
+.page-header {
+  animation: pageHeaderMashBounce 0.55s ease-in-out infinite;
+  transform-origin: 50% 50%;
+}
+@keyframes pageHeaderMashBounce {
+  0%, 100% { transform: translateY(0) scale(1); }
+  50% {
+    transform:
+      translateY(calc(var(--mash-energy, 0) * -3px))
+      scale(calc(1 + var(--mash-energy, 0) * 0.04));
+  }
+}
+
+/* Section labels do a softer parallel pulse for cohesion. */
+.section-label {
+  transition: opacity 0.4s ease;
+  opacity: calc(1 - var(--mash-energy, 0) * 0.85);
+}
+
+/* ───────── floating phrase ───────── */
+.phrase-char {
+  position: fixed; pointer-events: none; z-index: 1001;
+  font-family: 'Fredoka', sans-serif; font-weight: 700; font-size: 26px;
+  background: linear-gradient(45deg, var(--yolk-light), var(--orange));
+  -webkit-background-clip: text; -webkit-text-fill-color: transparent;
+  text-shadow: 0 0 16px rgba(255,199,44,0.55);
+  will-change: transform, opacity;
+}
+
+/* ───────── demo simulator (mockup-only) ───────── */
+.demo-sim {
+  position: fixed; bottom: 12px; right: 12px; z-index: 999;
+  background: rgba(20,20,20,0.92);
+  border: 1px solid var(--border-yolk); border-radius: 14px;
+  padding: 10px 12px; backdrop-filter: blur(10px);
+  font-family: 'Inter',sans-serif;
+  max-width: calc(100vw - 24px);
+  box-shadow: var(--shadow-card);
+}
+.demo-sim .demo-head {
+  font-family: 'Montserrat',sans-serif;
+  font-size: 9px; font-weight: 700; letter-spacing: 0.16em; text-transform: uppercase;
+  color: var(--yolk); margin-bottom: 6px;
+  display: flex; align-items: center; gap: 6px;
+}
+.demo-sim .demo-row { display: flex; gap: 5px; flex-wrap: wrap; }
+.demo-sim button {
+  font-family: 'Inter',sans-serif;
+  font-size: 11px; font-weight: 600;
+  padding: 6px 10px; border-radius: 8px;
+  border: 1px solid var(--border-soft);
+  background: rgba(255,255,255,0.04); color: var(--text);
+  cursor: pointer; transition: all 0.15s;
+}
+.demo-sim button:hover { background: rgba(255,255,255,0.10); }
+.demo-sim button.is-active { background: var(--yolk); color: #000; border-color: var(--yolk); }
+@media (max-width: 480px) {
+  .demo-sim { font-size: 10px; padding: 8px 10px; }
+  .demo-sim button { padding: 5px 8px; font-size: 10px; }
+}
+
+/* ───────── add-to-calendar bottom sheet ───────── */
+.cal-sheet {
+  position: fixed; inset: 0;
+  z-index: 2000;
+  display: flex; align-items: flex-end; justify-content: center;
+  pointer-events: none;
+}
+.cal-sheet[hidden] { display: none; }
+.cal-sheet-backdrop {
+  position: absolute; inset: 0;
+  background: rgba(0,0,0,0.55);
+  backdrop-filter: blur(4px);
+  pointer-events: auto;
+  animation: fadeIn 0.2s ease;
+}
+@keyframes fadeIn { from { opacity: 0; } to { opacity: 1; } }
+.cal-sheet-body {
+  position: relative;
+  width: 100%; max-width: 480px;
+  background: linear-gradient(160deg, #232325, #1a1a1a);
+  border: 1px solid var(--border-yolk);
+  border-radius: 20px 20px 0 0;
+  padding: 14px 16px 22px;
+  pointer-events: auto;
+  animation: sheetSlide 0.28s cubic-bezier(.22,.61,.36,1);
+  box-shadow: 0 -10px 50px rgba(0,0,0,0.5);
+}
+@keyframes sheetSlide {
+  from { transform: translateY(100%); }
+  to   { transform: translateY(0); }
+}
+.cal-sheet-handle {
+  width: 40px; height: 4px;
+  margin: 0 auto 12px;
+  background: var(--border-soft);
+  border-radius: 2px;
+}
+.cal-sheet-title {
+  font-family: 'Fredoka',sans-serif;
+  font-size: 17px; font-weight: 600;
+  color: var(--text);
+  text-align: center;
+  margin-bottom: 4px;
+}
+.cal-sheet-sub {
+  font-size: 12px; color: var(--text-mute);
+  text-align: center;
+  margin-bottom: 14px;
+}
+.cal-sheet-opt {
+  display: flex; align-items: center; gap: 12px;
+  width: 100%;
+  padding: 12px 14px;
+  margin-bottom: 8px;
+  background: var(--bg-card);
+  border: 1px solid var(--border-soft);
+  border-radius: 12px;
+  color: var(--text);
+  text-decoration: none;
+  cursor: pointer;
+  transition: all 0.15s;
+  font-family: 'Inter',sans-serif;
+  text-align: left;
+}
+.cal-sheet-opt:hover {
+  background: var(--bg-card-hover);
+  border-color: var(--border-yolk);
+  transform: translateY(-1px);
+}
+.cal-sheet-opt .opt-icon {
+  width: 36px; height: 36px;
+  border-radius: 10px;
+  display: flex; align-items: center; justify-content: center;
+  font-size: 18px; font-weight: 700;
+  flex-shrink: 0;
+}
+.cal-sheet-opt .opt-icon.g  { background: linear-gradient(135deg, #4285F4, #34A853); color: #fff; }
+.cal-sheet-opt .opt-icon.o  { background: linear-gradient(135deg, #0078D4, #2B88D8); color: #fff; }
+.cal-sheet-opt .opt-icon.a  { background: linear-gradient(135deg, #555, #2a2a2a); color: #fff; font-size: 22px; }
+.cal-sheet-opt .opt-name { font-size: 14px; font-weight: 600; }
+.cal-sheet-opt .opt-sub  { font-size: 11px; color: var(--text-mute); margin-top: 1px; }
+.cal-sheet-cancel {
+  width: 100%;
+  margin-top: 6px;
+  padding: 12px;
+  background: transparent;
+  border: none;
+  color: var(--text-mute);
+  font-family: 'Inter',sans-serif;
+  font-size: 13px;
+  font-weight: 600;
+  letter-spacing: 0.04em;
+  cursor: pointer;
+}
+.cal-sheet-cancel:hover { color: var(--text); }
+
+/* ───────── leaflet darkening ───────── */
+.leaflet-tile-pane { filter: brightness(0.85) saturate(0.7); }
+.leaflet-control-attribution { font-size: 9px !important; opacity: 0.5; }
+.pin-yolk {
+  background: var(--yolk);
+  width: 18px; height: 18px;
+  border-radius: 50%;
+  border: 3px solid #1a1a1a;
+  box-shadow: 0 0 0 2px var(--yolk), 0 0 18px rgba(255,199,44,0.8);
+}
+</style>
+</head>
+<body>
+
+<div id="eggs"></div>
+
+<!-- Vignette overlay — opacity tied to --mash-energy on body. Sits below
+     flying hot dogs (z 1000+) and above page content (z ~1). Button area
+     stays clear via the radial-gradient transparent center. -->
+<div class="mash-vignette" id="mash-vignette"></div>
+<!-- Mash flash — full-page color burst behind the vignette, fires per click
+     at press 100+. Bleeds through the vignette's clear center. -->
+<div class="mash-flash" id="mash-flash"></div>
+
+<div class="page">
+  <div class="page-header">
+    <h1>Scrambled Legs · Schedule</h1>
+    <p>Where, when, and who's bringing the goods</p>
+  </div>
+
+  <div id="featured-section">
+    <div class="section-label">Up Next</div>
+    <div id="featured-slot"></div>
+  </div>
+
+  <div id="coming-section">
+    <div class="section-label">Coming Up</div>
+    <div id="coming-slot"></div>
+  </div>
+
+  <div id="archive-section">
+    <button class="archive-toggle" id="archive-toggle" aria-expanded="false">
+      <span>Past rides</span>
+      <svg class="chev" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="6 9 12 15 18 9"/></svg>
+    </button>
+    <div class="archive-body" id="archive-slot"></div>
+  </div>
+</div>
+
+<div class="cal-sheet" id="cal-sheet" hidden>
+  <div class="cal-sheet-backdrop" id="cal-backdrop"></div>
+  <div class="cal-sheet-body">
+    <div class="cal-sheet-handle"></div>
+    <div class="cal-sheet-title">Add to calendar</div>
+    <div class="cal-sheet-sub">Pick where you keep your schedule</div>
+    <a class="cal-sheet-opt" id="cal-google" href="#" target="_blank" rel="noopener noreferrer">
+      <span class="opt-icon g">G</span>
+      <div><div class="opt-name">Google Calendar</div><div class="opt-sub">Opens in your Google account</div></div>
+    </a>
+    <a class="cal-sheet-opt" id="cal-outlook" href="#" target="_blank" rel="noopener noreferrer">
+      <span class="opt-icon o">⊞</span>
+      <div><div class="opt-name">Outlook</div><div class="opt-sub">Outlook.com or Office 365</div></div>
+    </a>
+    <button class="cal-sheet-opt" id="cal-apple" type="button">
+      <span class="opt-icon a"></span>
+      <div><div class="opt-name">Apple Calendar / .ics</div><div class="opt-sub">Auto-opens on iPhone & Mac · downloads on Windows</div></div>
+    </button>
+    <button class="cal-sheet-cancel" id="cal-cancel" type="button">Close</button>
+  </div>
+</div>
+
+<div class="evt-sheet" id="evt-sheet" hidden>
+  <div class="evt-sheet-backdrop" id="evt-backdrop"></div>
+  <div class="evt-sheet-body" id="evt-sheet-body">
+    <button class="evt-sheet-close" id="evt-close" type="button" aria-label="Close">×</button>
+    <div class="evt-sheet-handle"></div>
+    <div id="evt-sheet-slot"></div>
+  </div>
+</div>
+
+<div class="lock-toast" id="lock-toast" role="status" aria-live="polite"></div>
+
+<script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+<script>
+/* ════════════════════════════════════════════════════════════════
+   SCRAMBLED LEGS · CALENDAR WIDGET MOCKUP
+   Single-variant prototype based on the Card Stack direction.
+   Lifecycle: upcoming → in_progress (at start) → beers (start+2h) → archived (next day midnight local)
+   ════════════════════════════════════════════════════════════════ */
+
+const LIFECYCLE = { BEERS_AFTER_MS: 2 * 60 * 60 * 1000 };
+
+/* ─── Timezone-anchored lifecycle ─────────────────────────────────────
+   The team is in Duluth (Central Time). We anchor "this event's day"
+   and "the day after" to America/Chicago specifically — NOT the visitor's
+   device timezone. So a viewer in NYC at 1am ET (= midnight CT) still
+   sees the event as "in progress / beers"; the rollover happens when
+   it's actually midnight in Duluth.
+   Handles CDT/CST DST automatically via Intl. */
+const TIMEZONE = 'America/Chicago';
+
+function tzOffsetMs(timestamp, tz) {
+  const fmt = new Intl.DateTimeFormat('en-US', {
+    timeZone: tz, hourCycle: 'h23',
+    year: 'numeric', month: '2-digit', day: '2-digit',
+    hour: '2-digit', minute: '2-digit', second: '2-digit',
+  });
+  const parts = fmt.formatToParts(new Date(timestamp));
+  const get = (t) => parseInt(parts.find(p => p.type === t).value, 10);
+  const fakeUtc = Date.UTC(get('year'), get('month') - 1, get('day'),
+                            get('hour'), get('minute'), get('second'));
+  return fakeUtc - timestamp;  // offset of `tz` from UTC at that moment
+}
+
+function ctMidnightOf(year, month, day) {
+  // Compute the unix ms for "00:00:00 in America/Chicago on year-month-day"
+  const guessUtc = Date.UTC(year, month - 1, day, 12, 0, 0);  // noon UTC, safely in the same calendar day in CT
+  const offset = tzOffsetMs(guessUtc, TIMEZONE);
+  return Date.UTC(year, month - 1, day, 0, 0, 0) - offset;
+}
+
+function nextCtMidnightAfter(eventStart) {
+  const dateStr = new Intl.DateTimeFormat('en-CA', {
+    timeZone: TIMEZONE, year: 'numeric', month: '2-digit', day: '2-digit'
+  }).format(new Date(eventStart));
+  const [y, m, d] = dateStr.split('-').map(Number);
+  return ctMidnightOf(y, m, d + 1);  // Date.UTC handles month/day overflow
+}
+
+(function eggBg() {
+  const root = document.getElementById('eggs');
+  const count = window.innerWidth <= 480 ? 5 : 8;
+  for (let i = 0; i < count; i++) {
+    const e = document.createElement('div');
+    e.className = 'egg';
+    e.textContent = '🥚';
+    e.style.top  = (Math.random()*100)+'%';
+    e.style.left = (Math.random()*100)+'%';
+    e.style.fontSize = (22 + Math.random()*16)+'px';
+    e.style.setProperty('--dur', (18 + Math.random()*10)+'s');
+    e.style.setProperty('--delay', (-Math.random()*15)+'s');
+    root.appendChild(e);
+  }
+})();
+
+function nextWednesday(weeksAhead = 0) {
+  const d = new Date();
+  const day = d.getDay();
+  const daysUntilWed = (3 - day + 7) % 7 || 7;
+  d.setDate(d.getDate() + daysUntilWed + weeksAhead*7);
+  d.setHours(17, 45, 0, 0);
+  return d.getTime();
+}
+
+/* ─── Event schema (RTDB /events/{pushKey}) ──────────────────────────
+   {
+     name, description,
+     start: <unix ms>,
+     durationMinutes,
+     startLoc: { lat, lng, label },
+     endLoc:   { lat, lng, label },
+     difficulty, difficultyLabel,
+     tags: [],
+     rideLeader: { name, photoUrl },
+     bannerUrl, routeUrl,
+     hotdogs,
+     unlocked: <boolean>,   // admin flag — when true, the card in the
+                            // "Coming Up" list is tappable + visually
+                            // distinct, and the visitor can open a
+                            // detail sheet to see everything (incl. give
+                            // kudos). Default false → muted/locked card.
+     createdAt, updatedAt
+   }
+*/
+const EVENT_SEED = [
+  { id: 'evt1', name: "Lester Park Wednesday Roll",
+    description: "Casual social pace, ~12 miles, regroup at every fork. Bring lights for the way back.",
+    startLoc: { lat: 46.8369, lng: -92.0339, label: "Lester Park Trailhead" },
+    endLoc:   { lat: 46.8369, lng: -92.0339, label: "Lester Park Trailhead" },
+    distance: "12 mi", elevation: "850 ft", difficulty: "chill", difficultyLabel: "Casual",
+    weather: { temp: 62, icon: "🌤", desc: "Partly cloudy" },
+    rideLeader: { name: "Coach Lyle", photo: "https://i.pravatar.cc/120?u=lyle" },
+    routeUrl: "https://www.strava.com/routes/3157482",
+    hotdogs: 47 },
+  { id: 'evt2', name: "Hartley Hammerfest",
+    description: "Drop the hammer on Pleasant View loop. Race pace. No regrouping.",
+    startLoc: { lat: 46.8281, lng: -92.0986, label: "Hartley Nature Center" },
+    endLoc:   { lat: 46.8281, lng: -92.0986, label: "Hartley Nature Center" },
+    distance: "15 mi", elevation: "1,200 ft", difficulty: "race", difficultyLabel: "Race pace",
+    weather: { temp: 58, icon: "⛅", desc: "Cloudy" },
+    rideLeader: { name: "Sam 'Sender' K.", photo: "https://i.pravatar.cc/120?u=sam" },
+    routeUrl: "https://www.trailforks.com/region/hartley-park/",
+    hotdogs: 1247, unlocked: true },
+  { id: 'evt3', name: "Piedmont Point-to-Point",
+    description: "Shuttle ride. Park at Brewer, ride to Piedmont, beers at the end.",
+    startLoc: { lat: 46.7867, lng: -92.1612, label: "Piedmont Trailhead" },
+    endLoc:   { lat: 46.7714, lng: -92.1265, label: "Brewer Park" },
+    distance: "9 mi", elevation: "600 ft", difficulty: "chill", difficultyLabel: "Casual",
+    weather: { temp: 67, icon: "☀️", desc: "Sunny" },
+    rideLeader: { name: "Marty M.", photo: "https://i.pravatar.cc/120?u=marty" },
+    banner: "https://picsum.photos/seed/piedmont-banner/1200/400",
+    routeUrl: "https://www.strava.com/routes/3242510",
+    hotdogs: 71 },
+  { id: 'evt4', name: "Mission Creek Mash",
+    description: "All the climbs, none of the regrets. Bring snacks.",
+    startLoc: { lat: 46.7022, lng: -92.2089, label: "Mission Creek Trailhead" },
+    endLoc:   { lat: 46.7022, lng: -92.2089, label: "Mission Creek Trailhead" },
+    distance: "18 mi", elevation: "2,100 ft", difficulty: "race", difficultyLabel: "Hammer",
+    weather: { temp: 60, icon: "🌦", desc: "Light rain" },
+    rideLeader: { name: "Jenna B.", photo: "https://i.pravatar.cc/120?u=jenna" },
+    routeUrl: "https://ridewithgps.com/routes/12345678",
+    hotdogs: 19, unlocked: true },
+  { id: 'evt5', name: "COGGS Trail Cleanup + Ride",
+    description: "Trail work first hour, ride second. Bring gloves.",
+    startLoc: { lat: 46.8003, lng: -92.0928, label: "Chester Bowl" },
+    endLoc:   { lat: 46.8003, lng: -92.0928, label: "Chester Bowl" },
+    distance: "8 mi", elevation: "500 ft", difficulty: "work", difficultyLabel: "Trail work",
+    weather: { temp: 64, icon: "🌤", desc: "Mostly sunny" },
+    rideLeader: { name: "Trevor (COGGS)", photo: "https://i.pravatar.cc/120?u=trevor" },
+    hotdogs: 34 },
+  { id: 'evt6', name: "Fond du Lac Roll",
+    description: "Mellow lap on the south end. Coffee after.",
+    startLoc: { lat: 46.6593, lng: -92.2841, label: "Fond du Lac Park" },
+    endLoc:   { lat: 46.6593, lng: -92.2841, label: "Fond du Lac Park" },
+    distance: "10 mi", elevation: "400 ft", difficulty: "chill", difficultyLabel: "Casual",
+    weather: { temp: 71, icon: "☀️", desc: "Sunny" },
+    rideLeader: { name: "Coach Lyle", photo: "https://i.pravatar.cc/120?u=lyle" },
+    hotdogs: 12 },
+  { id: 'evt7', name: "Spirit Mountain Skills Night",
+    description: "Bring a beater. Drop sessions on the lower flow.",
+    startLoc: { lat: 46.7166, lng: -92.1825, label: "Spirit Mountain" },
+    endLoc:   { lat: 46.7166, lng: -92.1825, label: "Spirit Mountain" },
+    distance: "5 mi", elevation: "900 ft", difficulty: "race", difficultyLabel: "Skills",
+    weather: { temp: 59, icon: "⛅", desc: "Cloudy" },
+    rideLeader: { name: "Big Dave", photo: "https://i.pravatar.cc/120?u=dave" },
+    hotdogs: 8 },
+];
+
+const PAST_SEED = [
+  { id: 'past1',  name: "Lester Park Opener",      finalKudos: 92,  dayOffset: -7 },
+  { id: 'past2',  name: "Hartley Mud Fest",        finalKudos: 48,  dayOffset: -14 },
+  { id: 'past3',  name: "Piedmont Sufferfest",     finalKudos: 67,  dayOffset: -21 },
+  { id: 'past4',  name: "Season Kickoff",          finalKudos: 113, dayOffset: -28 },
+  { id: 'past5',  name: "Spring Cleanup Crew",     finalKudos: 41,  dayOffset: -35 },
+  { id: 'past6',  name: "Mission Creek Slogfest",  finalKudos: 28,  dayOffset: -42 },
+  { id: 'past7',  name: "COGGS Volunteer Day",     finalKudos: 55,  dayOffset: -49 },
+  { id: 'past8',  name: "Hartley Halloween Ride",  finalKudos: 88,  dayOffset: -56 },
+  { id: 'past9',  name: "Fond du Lac Frostbite",   finalKudos: 22,  dayOffset: -63 },
+  { id: 'past10', name: "Lester Park Last Light",  finalKudos: 76,  dayOffset: -70 },
+  { id: 'past11', name: "Spirit Mountain Skills",  finalKudos: 33,  dayOffset: -77 },
+  { id: 'past12', name: "Pre-Season Group Spin",   finalKudos: 19,  dayOffset: -84 },
+];
+
+let currentMode = 'live';
+let events = [];
+let pastEvents = [];
+
+function buildEvents(mode) {
+  events = EVENT_SEED.map((e, i) => ({ ...e, start: nextWednesday(i) }));
+  if (mode === 'soon')           events[0].start = Date.now() + 10_000;
+  else if (mode === 'in_progress') events[0].start = Date.now() - 30 * 60 * 1000;
+  else if (mode === 'beers')       events[0].start = Date.now() - 3 * 60 * 60 * 1000;
+  else if (mode === 'far')         events[0].start = Date.now() + 12 * 86400000;
+  else if (mode === 'empty')       events = [];
+
+  pastEvents = PAST_SEED.map(p => ({ ...p, start: Date.now() + p.dayOffset * 86400000 }));
+}
+
+function getStatus(ev) {
+  const now = Date.now();
+  if (now < ev.start) return 'upcoming';
+  if (now < ev.start + LIFECYCLE.BEERS_AFTER_MS) return 'in_progress';
+  // Archive when CENTRAL TIME midnight passes after the event's CT day —
+  // not the viewer's local midnight, not UTC midnight. Stays in "beers"
+  // for everyone until the team's home timezone flips the day.
+  if (now < nextCtMidnightAfter(ev.start)) return 'beers';
+  return 'archived';
+}
+
+const STATUS_LABEL = { upcoming: 'UPCOMING', in_progress: 'IN PROGRESS', beers: 'BEERS BEING CONSUMED' };
+
+function fmtCountdown(ms) {
+  if (ms <= 0) return null;
+  const totalSec = Math.floor(ms/1000);
+  const d = Math.floor(totalSec/86400);
+  const h = Math.floor((totalSec%86400)/3600);
+  const m = Math.floor((totalSec%3600)/60);
+  const s = totalSec%60;
+  const pad = (n) => String(n).padStart(2,'0');
+  if (d > 0) return `${d}d <span class="sep">·</span> ${pad(h)}h <span class="sep">·</span> ${pad(m)}m <span class="sep">·</span> ${pad(s)}s`;
+  if (h > 0) return `${pad(h)}h <span class="sep">·</span> ${pad(m)}m <span class="sep">·</span> ${pad(s)}s`;
+  return `${pad(m)}m <span class="sep">·</span> ${pad(s)}s`;
+}
+
+function fmtTimeSince(ms) {
+  const totalMin = Math.floor(ms/60000);
+  const h = Math.floor(totalMin/60);
+  const m = totalMin%60;
+  // Spell out "min" (instead of "m") so it can't be mis-read as miles.
+  if (h > 0) return `${h}h ${m} min in`;
+  return `${m} min in`;
+}
+
+const fmtDateLong = (ts) => new Intl.DateTimeFormat(undefined, { weekday:'short', month:'short', day:'numeric' }).format(new Date(ts));
+const fmtTime     = (ts) => new Intl.DateTimeFormat(undefined, { hour:'numeric', minute:'2-digit' }).format(new Date(ts));
+const fmtDayNum   = (ts) => new Date(ts).getDate();
+const fmtMonth    = (ts) => new Intl.DateTimeFormat(undefined, { month:'short' }).format(new Date(ts)).toUpperCase();
+const fmtWeekday  = (ts) => new Intl.DateTimeFormat(undefined, { weekday:'short' }).format(new Date(ts));
+const fmtCount    = (n) => new Intl.NumberFormat().format(n);  // "1,247" etc.
+
+/* Weather is only meaningfully available within 10 days. Used to gate
+   render of the .weather-panel block on both featured + unlocked sheets. */
+const WEATHER_HORIZON_DAYS = 10;
+function weatherInRange(eventStartMs) {
+  return (eventStartMs - Date.now()) / 86400000 <= WEATHER_HORIZON_DAYS;
+}
+
+function directionsUrl(ev) {
+  const isIOS = /iPad|iPhone|iPod/.test(navigator.userAgent);
+  const sameLoc = ev.startLoc.lat === ev.endLoc.lat && ev.startLoc.lng === ev.endLoc.lng;
+  if (isIOS) return `https://maps.apple.com/?daddr=${ev.startLoc.lat},${ev.startLoc.lng}`;
+  if (sameLoc) return `https://www.google.com/maps/dir/?api=1&destination=${ev.startLoc.lat},${ev.startLoc.lng}`;
+  return `https://www.google.com/maps/dir/?api=1&origin=${ev.startLoc.lat},${ev.startLoc.lng}&destination=${ev.endLoc.lat},${ev.endLoc.lng}`;
+}
+
+/* Build Google Calendar deep link — opens calendar.google.com with event pre-
+   filled. One click, no download. Best UX for users with a Google account. */
+function googleCalUrl(ev) {
+  const fmt = (ts) => new Date(ts).toISOString().replace(/[-:]/g,'').replace(/\.\d{3}/,'');
+  const params = new URLSearchParams({
+    action:   'TEMPLATE',
+    text:     ev.name,
+    dates:    `${fmt(ev.start)}/${fmt(ev.start + 2*60*60*1000)}`,
+    details:  `${ev.description}\n\nhttps://thescrambledlegs.com/events/${ev.id}`,
+    location: ev.startLoc.label,
+  });
+  return `https://calendar.google.com/calendar/render?${params.toString()}`;
+}
+
+/* Build Outlook (Outlook.com / Office 365) deep link — same idea. */
+function outlookCalUrl(ev) {
+  const params = new URLSearchParams({
+    path:    '/calendar/action/compose',
+    rru:     'addevent',
+    subject: ev.name,
+    startdt: new Date(ev.start).toISOString(),
+    enddt:   new Date(ev.start + 2*60*60*1000).toISOString(),
+    body:    `${ev.description}\n\nhttps://thescrambledlegs.com/events/${ev.id}`,
+    location: ev.startLoc.label,
+  });
+  return `https://outlook.live.com/calendar/0/deeplink/compose?${params.toString()}`;
+}
+
+function downloadIcs(ev) {
+  const fmtIcs = (ts) => new Date(ts).toISOString().replace(/[-:]/g,'').replace(/\.\d{3}/,'');
+  const start = fmtIcs(ev.start);
+  const end   = fmtIcs(ev.start + 2*60*60*1000);
+  const body =
+`BEGIN:VCALENDAR
+VERSION:2.0
+PRODID:-//Scrambled Legs//Calendar//EN
+BEGIN:VEVENT
+UID:${ev.id}@thescrambledlegs.com
+DTSTAMP:${fmtIcs(Date.now())}
+DTSTART:${start}
+DTEND:${end}
+SUMMARY:${ev.name}
+DESCRIPTION:${ev.description.replace(/\n/g,'\\n')}
+LOCATION:${ev.startLoc.label}
+GEO:${ev.startLoc.lat};${ev.startLoc.lng}
+URL:https://thescrambledlegs.com/events/${ev.id}
+END:VEVENT
+END:VCALENDAR`;
+  const blob = new Blob([body], { type: 'text/calendar;charset=utf-8' });
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement('a');
+  a.href = url; a.download = `${ev.id}.ics`;
+  a.click();
+  setTimeout(() => URL.revokeObjectURL(url), 500);
+}
+
+/* Share — uses Web Share API on Android/iOS (native share sheet picks the right
+   destination: Messages, Mail, Slack, etc.). Falls back to clipboard on desktop.
+   The shared URL points at /events/{id} which on production will have OG meta
+   tags so the link unfurls into a rich preview in iMessage/Slack/Discord/etc. */
+async function shareEvent(ev) {
+  const url = `https://thescrambledlegs.com/events/${ev.id}`;
+  const title = `${ev.name} · Scrambled Legs`;
+  const text =
+`${ev.name}
+🗓  ${fmtDateLong(ev.start)} · ${fmtTime(ev.start)}
+📍 ${ev.startLoc.label}${ev.rideLeader ? `
+🌭 Led by ${ev.rideLeader.name}` : ''}
+
+Join us at thescrambledlegs.com`;
+
+  if (navigator.share) {
+    try { await navigator.share({ title, text, url }); return; } catch(e) { /* user cancelled */ return; }
+  }
+  const fallback = `${title}\n\n${text}\n\n${url}`;
+  try {
+    await navigator.clipboard.writeText(fallback);
+    alert('Link copied to clipboard');
+  } catch (e) {
+    prompt('Copy this:', fallback);
+  }
+}
+
+const ICONS = {
+  pin:    '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0 1 18 0z"/><circle cx="12" cy="10" r="3"/></svg>',
+  clock:  '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg>',
+  cal:    '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="4" width="18" height="18" rx="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/></svg>',
+  nav:    '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polygon points="3 11 22 2 13 21 11 13 3 11"/></svg>',
+  share:  '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="18" cy="5" r="3"/><circle cx="6" cy="12" r="3"/><circle cx="18" cy="19" r="3"/><line x1="8.6" y1="13.5" x2="15.4" y2="17.5"/><line x1="15.4" y1="6.5" x2="8.6" y2="10.5"/></svg>',
+  lock:   '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="11" width="18" height="11" rx="2"/><path d="M7 11V7a5 5 0 0 1 10 0v4"/></svg>',
+  route:  '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="6" cy="19" r="3"/><circle cx="18" cy="5" r="3"/><path d="M6 16V8a4 4 0 0 1 4-4h4a4 4 0 0 1 4 4v0M18 8v8a4 4 0 0 1-4 4h-4a4 4 0 0 1-4-4v0"/></svg>',
+};
+
+/* Identify the route source for the title-attribute hint only — the visible
+   button label stays generic ("View Route") since the source can be anything
+   the admin pastes. */
+function routeSource(url) {
+  if (!url) return null;
+  try {
+    const host = new URL(url).hostname.toLowerCase();
+    if (host.includes('strava'))      return 'Strava';
+    if (host.includes('ridewithgps')) return 'Ride with GPS';
+    if (host.includes('trailforks'))  return 'Trailforks';
+    if (host.includes('komoot'))      return 'Komoot';
+    if (host.includes('garmin'))      return 'Garmin Connect';
+    if (url.toLowerCase().endsWith('.gpx')) return 'GPX file';
+    return null;
+  } catch { return null; }
+}
+
+/* ─── Open-Meteo weather (real data, free, no API key, ~10K calls/day limit)
+   Caches per (lat,lng,event-hour-bucket) in localStorage for 30 minutes so
+   re-renders / lifecycle simulations don't re-fetch. Falls back silently to
+   the mock weather baked into EVENT_SEED if the network/API fails. */
+const WMO_CODE = {
+  0:  ['☀️',  'Clear'],
+  1:  ['🌤',  'Mostly clear'],
+  2:  ['⛅',  'Partly cloudy'],
+  3:  ['☁️',  'Overcast'],
+  45: ['🌫',  'Fog'],
+  48: ['🌫',  'Freezing fog'],
+  51: ['🌦',  'Light drizzle'],
+  53: ['🌦',  'Drizzle'],
+  55: ['🌧',  'Heavy drizzle'],
+  61: ['🌧',  'Light rain'],
+  63: ['🌧',  'Rain'],
+  65: ['🌧',  'Heavy rain'],
+  71: ['🌨',  'Light snow'],
+  73: ['🌨',  'Snow'],
+  75: ['❄️',  'Heavy snow'],
+  77: ['🌨',  'Snow grains'],
+  80: ['🌦',  'Rain showers'],
+  81: ['🌧',  'Heavy showers'],
+  82: ['⛈',  'Violent showers'],
+  85: ['🌨',  'Snow showers'],
+  86: ['❄️',  'Heavy snow showers'],
+  95: ['⛈',  'Thunderstorm'],
+  96: ['⛈',  'Thunderstorm + hail'],
+  99: ['⛈',  'Severe thunderstorm'],
+};
+
+async function fetchWeather(lat, lng, eventStartMs) {
+  const startDate = new Date(eventStartMs);
+  const dateStr = `${startDate.getFullYear()}-${String(startDate.getMonth()+1).padStart(2,'0')}-${String(startDate.getDate()).padStart(2,'0')}`;
+  const cacheKey = `sl_wx_${lat.toFixed(3)}_${lng.toFixed(3)}_${dateStr}_${startDate.getHours()}`;
+  const cached = localStorage.getItem(cacheKey);
+  if (cached) {
+    try {
+      const obj = JSON.parse(cached);
+      if (obj.expires > Date.now()) return obj.data;
+    } catch {}
+  }
+
+  const daysOut = (eventStartMs - Date.now()) / 86400000;
+  // Open-Meteo only forecasts ~14 days, but we tighten the user-facing
+  // horizon to 10 days for predictable UX (forecasts get noisy past then).
+  if (daysOut > 10) return null;
+
+  const url = `https://api.open-meteo.com/v1/forecast`
+    + `?latitude=${lat}&longitude=${lng}`
+    + `&hourly=temperature_2m,weather_code,wind_speed_10m,precipitation_probability`
+    + `&daily=sunset`
+    + `&temperature_unit=fahrenheit&wind_speed_unit=mph&timezone=auto`
+    + `&start_date=${dateStr}&end_date=${dateStr}`;
+
+  try {
+    const res = await fetch(url);
+    if (!res.ok) return null;
+    const json = await res.json();
+    const hour = startDate.getHours();
+    const code = json.hourly.weather_code[hour];
+    const [icon, desc] = WMO_CODE[code] || ['🌤', 'Forecast'];
+    const data = {
+      temp:   Math.round(json.hourly.temperature_2m[hour]),
+      icon,
+      desc,
+      code,
+      wind:   Math.round(json.hourly.wind_speed_10m[hour]),
+      precip: json.hourly.precipitation_probability[hour] ?? 0,
+      sunset: json.daily?.sunset?.[0] || null,
+      real:   true,
+    };
+    localStorage.setItem(cacheKey, JSON.stringify({ data, expires: Date.now() + 30*60*1000 }));
+    return data;
+  } catch {
+    return null;
+  }
+}
+
+let featuredMap = null;
+let countdownTimer = null;
+
+function renderFeatured() {
+  const slot = document.getElementById('featured-slot');
+  if (countdownTimer) { clearInterval(countdownTimer); countdownTimer = null; }
+  if (featuredMap)    { featuredMap.remove(); featuredMap = null; }
+
+  if (!events.length) {
+    slot.innerHTML = `
+      <div class="empty">
+        <div class="em">🥚</div>
+        <div class="head">No rides on the books</div>
+        <div class="sub">Check back soon — the crew schedules new rides every week.</div>
+      </div>`;
+    return;
+  }
+
+  const ev = events[0];
+  const status = getStatus(ev);
+  if (status === 'archived') { events.shift(); renderFeatured(); return; }
+
+  const headerVisual = ev.banner
+    ? `<div class="featured-banner" style="background-image: url('${ev.banner}')"></div>`
+    : `<div class="featured-map" id="feat-map"></div>`;
+
+  const rideLeaderBlock = ev.rideLeader ? `
+    <div class="rl-overlay">
+      <div class="rl-avatar">
+        <img class="rl-photo" src="${ev.rideLeader.photo}" alt="${ev.rideLeader.name}" />
+        <div class="rl-crown-orbit"><span class="rl-crown">👑</span></div>
+      </div>
+      <div class="rl-meta">
+        <span class="rl-label">Ride Leader</span>
+        <span class="rl-name">${ev.rideLeader.name}</span>
+      </div>
+    </div>` : '';
+
+  slot.innerHTML = `
+    <div class="featured">
+      ${headerVisual}
+      <div class="status-chip" data-status="${status}">
+        <span class="dot"></span><span>${STATUS_LABEL[status]}</span>
+      </div>
+      ${weatherInRange(ev.start) ? `
+      <div class="weather-chip" title="Forecast for trailhead">
+        <span>${ev.weather.icon}</span>
+        <span>${ev.weather.temp}°</span>
+      </div>` : ''}
+      ${rideLeaderBlock}
+      <div class="featured-body${ev.rideLeader ? ' has-rl' : ''}">
+        <div class="event-name">${ev.name}</div>
+        <div class="event-meta">
+          <span>${ICONS.cal}${fmtDateLong(ev.start)}</span>
+          <span>${ICONS.clock}${fmtTime(ev.start)}</span>
+          <span>${ICONS.pin}${ev.startLoc.label}</span>
+        </div>
+        <div class="tags">
+          <span class="tag diff-${ev.difficulty}">${ev.difficultyLabel}</span>
+          <span class="tag">${ev.distance}</span>
+          <span class="tag">${ev.elevation}</span>
+        </div>
+        <div class="event-desc">${ev.description}</div>
+
+        ${weatherInRange(ev.start) ? `
+        <div class="weather-panel is-loading" id="weather-panel">
+          <span class="weather-icon-big" id="wx-icon">${ev.weather.icon}</span>
+          <div>
+            <span class="weather-temp-big" id="wx-temp">${ev.weather.temp}°</span>
+          </div>
+          <div class="weather-details">
+            <span class="weather-desc" id="wx-desc">${ev.weather.desc}</span>
+            <span class="weather-extra" id="wx-extra"><span>—</span></span>
+          </div>
+          <span class="weather-source" id="wx-source">forecast loading…</span>
+        </div>` : `
+        <div class="evt-weather-fallback">Forecast available 10 days before the ride</div>`}
+
+        <div class="countdown-block">
+          <div class="countdown-label" id="cd-label">${status === 'upcoming' ? 'Starts in' : 'Status'}</div>
+          <div class="countdown-display" id="cd-display"></div>
+        </div>
+
+        <div class="actions-grid">
+          <a class="action-btn" href="${directionsUrl(ev)}" target="_blank" rel="noopener noreferrer">
+            ${ICONS.nav}<span>Directions</span>
+          </a>
+          ${ev.routeUrl ? `
+          <a class="action-btn" href="${ev.routeUrl}" target="_blank" rel="noopener noreferrer" title="${routeSource(ev.routeUrl) ? 'Opens in ' + routeSource(ev.routeUrl) : 'Opens in a new tab'}">
+            ${ICONS.route}<span>Route</span>
+          </a>` : ''}
+          <button class="action-btn" id="ics-btn">${ICONS.cal}<span>Calendar</span></button>
+          <button class="action-btn" id="share-btn">${ICONS.share}<span>Share</span></button>
+        </div>
+
+        <div class="kudos-row">
+          <button class="hd-cta" id="kudos-btn" data-intensity="0" title="Mash for hot doggy dog love">
+            <div class="hd-cta-top">
+              <span class="hd-cta-emoji">🌭</span>
+              <span class="hd-cta-count" id="kudos-count">${fmtCount(ev.hotdogs)}</span>
+            </div>
+            <span class="hd-cta-text" id="kudos-text">Mash me</span>
+          </button>
+          <div class="hd-cta-mash" id="kudos-mash">
+            <span class="mash-num" id="kudos-mash-num">+1</span>
+            <span class="mash-sub" id="kudos-mash-sub"></span>
+          </div>
+        </div>
+      </div>
+    </div>
+  `;
+
+  /* fire weather fetch (don't await — UI shows mock immediately, swaps in real
+     data when it arrives). Skip entirely if we didn't render the panel. */
+  if (weatherInRange(ev.start)) fetchWeather(ev.startLoc.lat, ev.startLoc.lng, ev.start).then(w => {
+    const panel = document.getElementById('weather-panel');
+    if (!panel) return;
+    panel.classList.remove('is-loading');
+    if (w) {
+      document.getElementById('wx-icon').textContent  = w.icon;
+      document.getElementById('wx-temp').textContent  = `${w.temp}°`;
+      document.getElementById('wx-desc').textContent  = w.desc;
+      const parts = [];
+      parts.push(`<span>💨 ${w.wind} mph</span>`);
+      parts.push(`<span class="${w.precip >= 50 ? 'warn' : ''}">💧 ${w.precip}% rain</span>`);
+      if (w.sunset) {
+        const sunsetTime = new Intl.DateTimeFormat(undefined, { hour: 'numeric', minute: '2-digit' }).format(new Date(w.sunset));
+        parts.push(`<span>🌅 ${sunsetTime}</span>`);
+      }
+      document.getElementById('wx-extra').innerHTML = parts.join('');
+      document.getElementById('wx-source').textContent = 'open-meteo';
+      // also refresh the small chip on the banner
+      const chipIcon = slot.querySelector('.weather-chip span:first-child');
+      const chipTemp = slot.querySelector('.weather-chip span:last-child');
+      if (chipIcon) chipIcon.textContent = w.icon;
+      if (chipTemp) chipTemp.textContent = `${w.temp}°`;
+    } else {
+      // Open-Meteo wouldn't forecast (>14 days out) or network failed
+      document.getElementById('wx-source').textContent = 'forecast available 14d out';
+      document.getElementById('wx-extra').innerHTML = `<span>${ev.weather.desc}</span>`;
+    }
+  });
+
+  if (!ev.banner) {
+    setTimeout(() => {
+      featuredMap = L.map('feat-map', {
+        zoomControl: false, attributionControl: false, scrollWheelZoom: false, dragging: false, tap: false
+      }).setView([ev.startLoc.lat, ev.startLoc.lng], 13);
+      L.tileLayer('https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png', { subdomains:'abcd', maxZoom:19 }).addTo(featuredMap);
+      const yolkIcon = L.divIcon({ className: 'pin-yolk', iconSize: [18,18], iconAnchor: [9,9] });
+      L.marker([ev.startLoc.lat, ev.startLoc.lng], { icon: yolkIcon }).addTo(featuredMap);
+      if (ev.startLoc.lat !== ev.endLoc.lat || ev.startLoc.lng !== ev.endLoc.lng) {
+        L.marker([ev.endLoc.lat, ev.endLoc.lng], { icon: yolkIcon }).addTo(featuredMap);
+        L.polyline([[ev.startLoc.lat, ev.startLoc.lng], [ev.endLoc.lat, ev.endLoc.lng]],
+          { color: '#FFC72C', weight: 3, opacity: 0.7, dashArray: '6 8' }).addTo(featuredMap);
+        featuredMap.fitBounds([[ev.startLoc.lat, ev.startLoc.lng], [ev.endLoc.lat, ev.endLoc.lng]], { padding: [40,40] });
+      }
+    }, 30);
+  }
+
+  function tick() {
+    const s = getStatus(ev);
+    const display = document.getElementById('cd-display');
+    const label   = document.getElementById('cd-label');
+    if (!display) return;
+
+    if (s === 'archived') {
+      events.shift(); renderFeatured(); renderArchive(); return;
+    }
+
+    display.classList.toggle('is-progress', s === 'in_progress');
+    display.classList.toggle('is-beers',    s === 'beers');
+
+    if (s === 'upcoming') {
+      label.textContent = 'Starts in';
+      display.innerHTML = fmtCountdown(ev.start - Date.now());
+    } else if (s === 'in_progress') {
+      label.textContent = 'Status';
+      display.innerHTML = `🚴 In progress <span class="sep">·</span> ${fmtTimeSince(Date.now() - ev.start)}`;
+    } else if (s === 'beers') {
+      label.textContent = 'Status';
+      display.innerHTML = `🍺 Beers being consumed`;
+    }
+    const chip = slot.querySelector('.status-chip');
+    if (chip && chip.dataset.status !== s) {
+      chip.dataset.status = s;
+      chip.querySelector('span:last-child').textContent = STATUS_LABEL[s];
+    }
+  }
+  tick();
+  countdownTimer = setInterval(tick, 1000);
+
+  document.getElementById('ics-btn').addEventListener('click',   () => openCalSheet(ev));
+  document.getElementById('share-btn').addEventListener('click', () => shareEvent(ev));
+  document.getElementById('kudos-btn').addEventListener('click', (e) => onKudosClick(e.currentTarget, ev));
+  enterIdleState(document.getElementById('kudos-btn'));
+
+  // start idle text rotation for the hot dog CTA
+  startHdIdleRotation();
+}
+
+/* ─── Add-to-calendar sheet wiring ─── */
+function openCalSheet(ev) {
+  const sheet = document.getElementById('cal-sheet');
+  document.getElementById('cal-google').href = googleCalUrl(ev);
+  document.getElementById('cal-outlook').href = outlookCalUrl(ev);
+  const appleBtn = document.getElementById('cal-apple');
+  appleBtn.onclick = () => { downloadIcs(ev); closeCalSheet(); };
+  // Auto-close Google/Outlook after click (they open in new tab)
+  document.getElementById('cal-google').onclick  = () => setTimeout(closeCalSheet, 100);
+  document.getElementById('cal-outlook').onclick = () => setTimeout(closeCalSheet, 100);
+  sheet.removeAttribute('hidden');
+}
+function closeCalSheet() {
+  document.getElementById('cal-sheet').setAttribute('hidden', '');
+}
+document.getElementById('cal-cancel').addEventListener('click',   closeCalSheet);
+document.getElementById('cal-backdrop').addEventListener('click', closeCalSheet);
+document.addEventListener('keydown', (e) => { if (e.key === 'Escape') closeCalSheet(); });
+
+const INITIAL_COMING = 4;
+let comingExpanded = false;
+
+function renderComing() {
+  const slot = document.getElementById('coming-slot');
+  const upcoming = events.slice(1).filter(e => getStatus(e) === 'upcoming');
+
+  if (upcoming.length === 0) {
+    slot.innerHTML = `
+      <div class="empty">
+        <div class="em">📅</div>
+        <div class="head">Nothing else on the books</div>
+        <div class="sub">Once the next ride drops, you'll see it here.</div>
+      </div>`;
+    return;
+  }
+
+  const visible = comingExpanded ? upcoming : upcoming.slice(0, INITIAL_COMING);
+  slot.innerHTML = `
+    <div class="coming-list">
+      ${visible.map((ev, i) => {
+        const isUnlocked = !!ev.unlocked;
+        return `
+        <div class="coming-card${isUnlocked ? ' is-unlocked' : ''}"
+             data-evt-idx="${i}"
+             ${isUnlocked
+                ? 'role="button" tabindex="0"'
+                : 'title="Unlocks when it&#39;s the next ride."'}>
+          ${isUnlocked
+            ? `<div class="unlock-icon" aria-label="Unlocked — tap to open">🔓</div>`
+            : `<div class="lock">${ICONS.lock}</div>`}
+          <div class="date-stamp">
+            <div class="month">${fmtMonth(ev.start)}</div>
+            <div class="day">${fmtDayNum(ev.start)}</div>
+            <div class="weekday">${fmtWeekday(ev.start)}</div>
+          </div>
+          <div class="info">
+            <div class="name">${ev.name}</div>
+            <div class="meta">
+              <span>${fmtTime(ev.start)}</span>
+              <span>${ev.startLoc.label}</span>
+            </div>
+          </div>
+        </div>
+        `;
+      }).join('')}
+    </div>
+    ${upcoming.length > INITIAL_COMING && !comingExpanded
+      ? `<button class="show-more" id="show-more-btn">Show ${upcoming.length - INITIAL_COMING} more</button>`
+      : ''}
+  `;
+  // Wire up tap handlers — unlocked → modal, locked → toast
+  slot.querySelectorAll('.coming-card').forEach((card) => {
+    const idx = Number(card.dataset.evtIdx);
+    const ev = visible[idx];
+    if (!ev) return;
+    const handler = () => {
+      if (ev.unlocked) openEventByRoute(ev.id);
+      else showLockToast();
+    };
+    card.addEventListener('click', handler);
+    if (ev.unlocked) {
+      card.addEventListener('keydown', (e) => {
+        if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); handler(); }
+      });
+    }
+  });
+  const btn = document.getElementById('show-more-btn');
+  if (btn) btn.addEventListener('click', () => { comingExpanded = true; renderComing(); });
+}
+
+/* ─── Lock toast (transient bottom snackbar) ─── */
+let lockToastTimer = null;
+function showLockToast(message = "Unlocks when it's the next ride.") {
+  const el = document.getElementById('lock-toast');
+  if (!el) return;
+  el.innerHTML = `${ICONS.lock}<span>${message}</span>`;
+  el.classList.add('is-visible');
+  if (lockToastTimer) clearTimeout(lockToastTimer);
+  lockToastTimer = setTimeout(() => el.classList.remove('is-visible'), 2500);
+}
+
+/* ─── Event detail sheet (full bottom sheet for unlocked future events) ───
+   Mirrors the Up Next card layout but: no countdown, no status chip, and
+   the weather panel is hidden when the event is >10 days out. Kudos works
+   the same — increments + flying hot dogs + saving debounce. */
+let evtSheetMap = null;
+function openEventSheet(ev) {
+  const sheet = document.getElementById('evt-sheet');
+  const slot  = document.getElementById('evt-sheet-slot');
+  const showWx = weatherInRange(ev.start);
+  // Signal to CSS that the sheet is open so all mash-mode fixed effects
+  // (vignette, flying emojis, phrase chars) jump above the sheet z-index.
+  document.body.dataset.sheetOpen = '1';
+
+  const headerVisual = ev.banner
+    ? `<div class="featured-banner" style="background-image: url('${ev.banner}')"></div>`
+    : `<div class="featured-map" id="evt-sheet-map"></div>`;
+
+  const rideLeaderBlock = ev.rideLeader ? `
+    <div class="rl-overlay">
+      <div class="rl-avatar">
+        <img class="rl-photo" src="${ev.rideLeader.photo}" alt="${ev.rideLeader.name}" />
+        <div class="rl-crown-orbit"><span class="rl-crown">👑</span></div>
+      </div>
+      <div class="rl-meta">
+        <span class="rl-label">Ride Leader</span>
+        <span class="rl-name">${ev.rideLeader.name}</span>
+      </div>
+    </div>` : '';
+
+  slot.innerHTML = `
+    <div class="featured">
+      ${headerVisual}
+      ${showWx ? `
+      <div class="weather-chip" title="Forecast for trailhead">
+        <span>${ev.weather.icon}</span>
+        <span>${ev.weather.temp}°</span>
+      </div>` : ''}
+      ${rideLeaderBlock}
+      <div class="featured-body${ev.rideLeader ? ' has-rl' : ''}">
+        <div class="event-name">${ev.name}</div>
+        <div class="event-meta">
+          <span>${ICONS.cal}${fmtDateLong(ev.start)}</span>
+          <span>${ICONS.clock}${fmtTime(ev.start)}</span>
+          <span>${ICONS.pin}${ev.startLoc.label}</span>
+        </div>
+        <div class="tags">
+          <span class="tag diff-${ev.difficulty}">${ev.difficultyLabel}</span>
+          <span class="tag">${ev.distance}</span>
+          <span class="tag">${ev.elevation}</span>
+        </div>
+        <div class="event-desc">${ev.description}</div>
+
+        ${showWx ? `
+        <div class="weather-panel is-loading" id="evt-weather-panel">
+          <span class="weather-icon-big" id="evt-wx-icon">${ev.weather.icon}</span>
+          <div>
+            <span class="weather-temp-big" id="evt-wx-temp">${ev.weather.temp}°</span>
+          </div>
+          <div class="weather-details">
+            <span class="weather-desc" id="evt-wx-desc">${ev.weather.desc}</span>
+            <span class="weather-extra" id="evt-wx-extra"><span>—</span></span>
+          </div>
+          <span class="weather-source" id="evt-wx-source">forecast loading…</span>
+        </div>` : `
+        <div class="evt-weather-fallback">Forecast available 10 days before the ride</div>`}
+
+        <div class="actions-grid">
+          <a class="action-btn" href="${directionsUrl(ev)}" target="_blank" rel="noopener noreferrer">
+            ${ICONS.nav}<span>Directions</span>
+          </a>
+          ${ev.routeUrl ? `
+          <a class="action-btn" href="${ev.routeUrl}" target="_blank" rel="noopener noreferrer" title="${routeSource(ev.routeUrl) ? 'Opens in ' + routeSource(ev.routeUrl) : 'Opens in a new tab'}">
+            ${ICONS.route}<span>Route</span>
+          </a>` : ''}
+          <button class="action-btn" id="evt-ics-btn">${ICONS.cal}<span>Calendar</span></button>
+          <button class="action-btn" id="evt-share-btn">${ICONS.share}<span>Share</span></button>
+        </div>
+
+        <div class="kudos-row">
+          <button class="hd-cta" id="evt-kudos-btn" data-intensity="0" title="Mash for hot doggy dog love">
+            <div class="hd-cta-top">
+              <span class="hd-cta-emoji">🌭</span>
+              <span class="hd-cta-count" id="evt-kudos-count">${fmtCount(ev.hotdogs)}</span>
+            </div>
+            <span class="hd-cta-text" id="evt-kudos-text">Mash me</span>
+          </button>
+          <div class="hd-cta-mash" id="evt-kudos-mash">
+            <span class="mash-num">+1</span>
+            <span class="mash-sub"></span>
+          </div>
+        </div>
+      </div>
+    </div>
+  `;
+
+  sheet.removeAttribute('hidden');
+  // Reset scroll position to top each open
+  document.getElementById('evt-sheet-body').scrollTop = 0;
+
+  // Live weather (only if showing)
+  if (showWx) {
+    fetchWeather(ev.startLoc.lat, ev.startLoc.lng, ev.start).then(w => {
+      const panel = document.getElementById('evt-weather-panel');
+      if (!panel) return;
+      panel.classList.remove('is-loading');
+      if (w) {
+        document.getElementById('evt-wx-icon').textContent = w.icon;
+        document.getElementById('evt-wx-temp').textContent = `${w.temp}°`;
+        document.getElementById('evt-wx-desc').textContent = w.desc;
+        const parts = [];
+        parts.push(`<span>💨 ${w.wind} mph</span>`);
+        parts.push(`<span class="${w.precip >= 50 ? 'warn' : ''}">💧 ${w.precip}% rain</span>`);
+        if (w.sunset) {
+          const sunsetTime = new Intl.DateTimeFormat(undefined, { hour: 'numeric', minute: '2-digit' }).format(new Date(w.sunset));
+          parts.push(`<span>🌅 ${sunsetTime}</span>`);
+        }
+        document.getElementById('evt-wx-extra').innerHTML = parts.join('');
+        document.getElementById('evt-wx-source').textContent = 'open-meteo';
+      } else {
+        document.getElementById('evt-wx-source').textContent = 'forecast unavailable';
+        document.getElementById('evt-wx-extra').innerHTML = `<span>${ev.weather.desc}</span>`;
+      }
+    });
+  }
+
+  // Map (if no banner)
+  if (!ev.banner) {
+    setTimeout(() => {
+      if (evtSheetMap) { evtSheetMap.remove(); evtSheetMap = null; }
+      evtSheetMap = L.map('evt-sheet-map', {
+        zoomControl: false, attributionControl: false, scrollWheelZoom: false, dragging: false, tap: false
+      }).setView([ev.startLoc.lat, ev.startLoc.lng], 13);
+      L.tileLayer('https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png', { subdomains:'abcd', maxZoom:19 }).addTo(evtSheetMap);
+      const yolkIcon = L.divIcon({ className: 'pin-yolk', iconSize: [18,18], iconAnchor: [9,9] });
+      L.marker([ev.startLoc.lat, ev.startLoc.lng], { icon: yolkIcon }).addTo(evtSheetMap);
+      if (ev.startLoc.lat !== ev.endLoc.lat || ev.startLoc.lng !== ev.endLoc.lng) {
+        L.marker([ev.endLoc.lat, ev.endLoc.lng], { icon: yolkIcon }).addTo(evtSheetMap);
+        L.polyline([[ev.startLoc.lat, ev.startLoc.lng], [ev.endLoc.lat, ev.endLoc.lng]],
+          { color: '#FFC72C', weight: 3, opacity: 0.7, dashArray: '6 8' }).addTo(evtSheetMap);
+        evtSheetMap.fitBounds([[ev.startLoc.lat, ev.startLoc.lng], [ev.endLoc.lat, ev.endLoc.lng]], { padding: [40,40] });
+      }
+    }, 30);
+  }
+
+  // Wire actions
+  document.getElementById('evt-ics-btn').addEventListener('click',   () => openCalSheet(ev));
+  document.getElementById('evt-share-btn').addEventListener('click', () => shareEvent(ev));
+  document.getElementById('evt-kudos-btn').addEventListener('click', (e) => onKudosClick(e.currentTarget, ev));
+  enterIdleState(document.getElementById('evt-kudos-btn'));
+}
+
+function closeEventSheet(opts = {}) {
+  const sheet = document.getElementById('evt-sheet');
+  if (!sheet || sheet.hasAttribute('hidden')) return;
+  sheet.setAttribute('hidden', '');
+  if (evtSheetMap) { evtSheetMap.remove(); evtSheetMap = null; }
+  // Clear the sheet-open signal so mash effects return to normal z-indexes.
+  // Also terminate any active mash session — clean up the kudos button state
+  // so the burst doesn't outlive the sheet.
+  delete document.body.dataset.sheetOpen;
+  const evtBtn = document.getElementById('evt-kudos-btn');
+  if (evtBtn && hdPressCount > 0) enterIdleState(evtBtn);
+  // Pop the /events/{id} URL back to home unless triggered by popstate.
+  if (!opts.fromPopState && location.hash.startsWith('#/events/')) {
+    history.pushState({}, '', location.pathname + location.search);
+  }
+}
+document.getElementById('evt-close').addEventListener('click', () => closeEventSheet());
+document.getElementById('evt-backdrop').addEventListener('click', () => closeEventSheet());
+document.addEventListener('keydown', (e) => { if (e.key === 'Escape') closeEventSheet(); });
+
+/* ════════════════════════════════════════════════════════════════
+   EVENT URL ROUTING
+   ────────────────────────────────────────────────────────────────
+   Any event is shareable via /events/{id}. Visiting that URL auto-opens
+   the event detail sheet on top of the home page. Works for locked,
+   unlocked, featured, and past events alike — sharing implies intent
+   to expose the event regardless of its public lock state.
+
+   Mockup uses a hash route (#/events/{id}) since this is a static file.
+   In production with React Router:
+
+     <Route path="/events/:eventId" element={<EventDetail />} />
+
+   …where <EventDetail /> mounts on Home, finds the event in the live
+   /events Firebase subscription, and calls the same openEventSheet()
+   logic. The 404.html SPA-redirect fallback (already in /public) makes
+   /events/abc123 deep links work on GitHub Pages page-refresh.
+
+   Share button URLs (`https://thescrambledlegs.com/events/{id}`) hit
+   that route on the production site; on the mockup we encode the same
+   info as a hash for shareability without a server.
+   ════════════════════════════════════════════════════════════════ */
+function findEventById(id) {
+  return [...events, ...pastEvents].find(e => e.id === id) || null;
+}
+function openEventByRoute(id, opts = {}) {
+  const ev = findEventById(id);
+  if (!ev) return false;
+  openEventSheet(ev);
+  if (!opts.fromPopState) {
+    history.pushState({ eventId: id }, '', `#/events/${id}`);
+  }
+  return true;
+}
+function syncFromHash(opts = {}) {
+  const m = location.hash.match(/^#\/events\/([^/?&]+)/);
+  if (m) {
+    openEventByRoute(decodeURIComponent(m[1]), opts);
+  } else {
+    closeEventSheet({ fromPopState: !!opts.fromPopState });
+  }
+}
+window.addEventListener('popstate', () => syncFromHash({ fromPopState: true }));
+
+function renderArchive() {
+  const slot = document.getElementById('archive-slot');
+  if (!pastEvents.length) {
+    slot.innerHTML = `
+      <div class="empty" style="margin-top:8px">
+        <div class="head" style="font-size:14px">Nothing in the archive yet</div>
+      </div>`;
+    return;
+  }
+  // Cap the archive at the previous 10 events
+  slot.innerHTML = pastEvents.slice(0, 10).map(p => `
+    <div class="archive-card">
+      <div class="arch-date">${fmtMonth(p.start)} ${fmtDayNum(p.start)}</div>
+      <div class="arch-name">${p.name}</div>
+      <div class="arch-kudos">${fmtCount(p.finalKudos)} 🌭</div>
+    </div>
+  `).join('');
+}
+
+document.getElementById('archive-toggle').addEventListener('click', (e) => {
+  const open = e.currentTarget.getAttribute('aria-expanded') === 'true';
+  e.currentTarget.setAttribute('aria-expanded', !open);
+  document.getElementById('archive-slot').classList.toggle('is-open', !open);
+});
+
+/* ════════════════════════════════════════════════════════════════
+   KUDOS HOT DOG CTA
+   ────────────────────────────────────────────────────────────────
+   Idle: STATIC "Mash me" — no rotation when not being pressed.
+   On press:
+     - Big "+N" overlays the center of the button (N = presses in this
+       burst). N grows as user keeps mashing.
+     - Right-side text rotates through bike-themed challenge phrases.
+     - Button intensity (0–6) ramps up each band: scale grows beyond its
+       layout bounds (overflow:visible), shadow + pulse speed + gradient
+       all intensify.
+   On stop (5s no presses):
+     - Text flips to "saving…" briefly while the debounced batch flushes
+     - Button shrinks back to base size (intensity 0)
+     - Layout reflows back to normal.
+   ════════════════════════════════════════════════════════════════ */
+const KUDOS_SAVE_DELAY_MS = 2500;   // half of the prior 5s — "saving" kicks in here
+const KUDOS_SAVE_ANIM_MS  = 1300;   // how long "saving N…" sits before the burn flash
+const KUDOS_BURN_MS       = 4000;   // post-save taunt — 4 seconds, with multi-pulse animation
+const DEEP_MASH_THRESHOLD = 10;     // at this press count, hide top+right and surface mash-sub
+
+/* Post-save burn taunts — flash centered for 2s after save lands. Tone:
+   challenging humility with light innuendo. The goal is to make the user
+   want to come back and prove themselves. */
+const HD_BURN_MESSAGES = [
+  // original (still good)
+  "Better luck next time",
+  "That was weak",
+  "Are you a bad egg?",
+  "You must be scrambled",
+  "Soft. Try again.",
+  "Cracked under pressure",
+  "Need more yolk",
+  "Pedaler in training",
+  "C'mon, hammer harder",
+  "Was that all? Really?",
+  "The bun is disappointed",
+  "Even the dog is bored",
+  // new — humility / innuendo / racing-DNF
+  "Wow, I'm stoked on that",
+  "That was good for me too",
+  "But you can do better",
+  "That's the best I've had… lately",
+  "Come on, do better",
+  "DNF again",
+  "DNS again",
+  "Hey, at least you tried",
+  "Cute effort",
+  "Was that supposed to impress me?",
+  "I've felt more",
+  "I've seen eggs work harder",
+];
+let hdLastBurn = '';
+/* Dynamic font sizing for mash-sub — shrinks proportionally so every
+   phrase always fits on a single line regardless of length. */
+function setSub(el, text) {
+  if (!el) return;
+  el.textContent = text;
+  if (!text) { el.style.fontSize = ''; return; }
+  const maxW = Math.min(window.innerWidth * 0.86, 480);
+  const maxPx = 26, minPx = 12;
+  const estPx = Math.floor(maxW / Math.max(text.length * 0.63, 1));
+  el.style.fontSize = `${Math.max(minPx, Math.min(maxPx, estPx))}px`;
+}
+
+function pickBurn() {
+  let msg;
+  do { msg = HD_BURN_MESSAGES[Math.floor(Math.random() * HD_BURN_MESSAGES.length)]; }
+  while (msg === hdLastBurn && HD_BURN_MESSAGES.length > 1);
+  hdLastBurn = msg;
+  return msg;
+}
+const HD_IDLE_TEXT = "Mash me";
+const HD_CHALLENGE_BANDS = [
+  /* band 0 — first press */
+  ["Press for more stoke",       "That's a start",         "Keep mashing"          ],
+  /* band 1 — light mashing (3-5) */
+  ["Mash me if you're ready",    "Mash pedals next",       "Drop the hammer",      "Pace yourself"         ],
+  /* band 2 — getting going (6-9) */
+  ["Crank it harder",            "More watts",             "All gas no brakes",
+   "Brake for nobody",           "Hammer down",            "Turn yourself inside out"                       ],
+  /* band 3 — committed (10-14) */
+  ["Pin it",                     "Send it",                "Dig deeper",
+   "Big watts only",             "Climbing mode",          "Drop them",            "You're a machine"      ],
+  /* band 4 — feral (15-24) */
+  ["Absolutely shredding",       "You're cooking now",     "Feral mode unlocked",
+   "Send it sender",             "PR pace",                "King of the trail",
+   "Dirty dog energy",           "Egg-cellent form",       "Tunnel vision unlocked"                         ],
+  /* band 5 — UNIFIED long-haul pool (26+ all picks from here). After the
+     hand-tuned first 25, message refreshes every 2.5s. Old band 5 + band 6
+     merged into one larger pool so taunts at any 26+ press level mix all
+     levels of unhinged. */
+  ["Beast mode",                 "The dog approves",       "Scrambled glory",
+   "Pro-level dog work",         "Coach Lyle is impressed","Yolked beyond mortal",
+   "Trail crew legend",          "You broke the buns",     "Cooked, smoked, served",
+   "Is that all you got?",       "You're in it for the long haul",
+   "Keep pedaling",              "Keep cranking",          "Someone's ahead of you",
+   "Catch that person",          "More watts",             "Don't stop now",
+   "Bad eggs, scrambled",        "Go, go, go",             "No mercy",
+   "Eyes on the wheel ahead",
+   "GOATed",                     "Actually unhinged",      "You ARE the dog",
+   "Actually godlike",           "The trail bows to you",  "Hot dog Hall of Fame",
+   "You ARE Scrambled Legs",     "Beyond the bun veil",    "The yolk is real",
+   "You took a wrong turn",      "Almost to 1000",         "Pure scrambled",
+   "Drop the dog",               "Yolk supremacy",         "The bun has fallen",
+   // GM Zimm watching
+   "GM Zimm is watching 👀",
+   "Zimm didn't build this for quitters",
+   // Coach Lyall — half motivating, half judging
+   "Coach Lyall says dig deeper",
+   "Lyall's seen better effort from his couch",
+   "Coach Lyall is NOT impressed",
+   "Lyall's giving you THE look",
+   "Coach Lyall expected more",
+   // Scrambled Legs / bad egg puns
+   "You call that scrambled?",
+   "Eggs-cuse me?! That's it?",
+   "Over-easy isn't a training plan",
+   "Bad egg energy right here",
+   "Runny. Very runny.",
+   // General crew pressure
+   "The crew has seen better",
+   "Soft boiled at best",
+   "The yolk's on you",
+];
+function bandForPress(c) {
+  if (c <= 0)  return 0;
+  if (c <= 2)  return 0;
+  if (c <= 5)  return 1;
+  if (c <= 9)  return 2;
+  if (c <= 14) return 3;
+  if (c <= 24) return 4;
+  return 5;          // 25+ all draws from the unified long-haul pool
+}
+/* Hand-tuned ladder for the first 25 presses — these are the critical
+   moments to hook the user into mashing. Each slot is a deliberate
+   call-to-action that escalates from urgent shouts → social pressure →
+   recognition. After press 25 we fall back to the random band system. */
+const HD_FIRST_25 = [
+  "MASH!",                 //  1
+  "MASH! MASH!",           //  2
+  "GO GO GO!",             //  3
+  "KEEP GOING!",           //  4
+  "DON'T STOP!",           //  5
+  "CRACK THAT SHELL!",     //  6
+  "HARDER!",               //  7
+  "PROVE IT!",             //  8
+  "YOU CAN DO THIS!",      //  9
+  "CRANK IT!",             // 10
+  "OTHERS DID BETTER",     // 11
+  "DON'T QUIT NOW",        // 12
+  "HAMMER DOWN!",          // 13
+  "SEND IT!",              // 14
+  "THEY'RE BEATING YOU",   // 15
+  "ALMOST THERE",          // 16
+  "BEAST MODE",            // 17
+  "UNHINGED YET?",         // 18
+  "YOU GOT THIS",          // 19
+  "MORE WATTS!",           // 20
+  "FEEL THE BURN",         // 21
+  "PROVE THEM WRONG",      // 22
+  "CHAMPION ENERGY",       // 23
+  "ALL IN!",               // 24
+  "DOG MODE: ACTIVE",      // 25
+];
+
+function pickChallenge(pressCount) {
+  if (pressCount >= 1 && pressCount <= HD_FIRST_25.length) {
+    return HD_FIRST_25[pressCount - 1];
+  }
+  const band = HD_CHALLENGE_BANDS[bandForPress(pressCount)];
+  return band[Math.floor(Math.random() * band.length)];
+}
+
+const KUDOS_CHALLENGE_DWELL_MS = 2500;   // after press 25, leave each message up this long
+
+let kudosPendingDelta = 0;
+let kudosDebounceTimer = null;
+let hdPressCount = 0;
+let hdResetTimer = null;
+let hdLastChallenge = '';
+let hdLastChallengeAt = 0;        // timestamp of last text refresh (for the 2.5s dwell)
+
+function setHdText(text, modifier, el) {
+  // Allow caller to pass the target text element; fall back to legacy
+  // featured-card ID lookup if omitted.
+  el = el || document.getElementById('kudos-text');
+  if (!el) return;
+  el.classList.add('is-fading');
+  setTimeout(() => {
+    el.textContent = text;
+    el.classList.remove('is-fading');
+    el.classList.toggle('is-saving', modifier === 'saving');
+  }, 180);
+}
+/* No-op placeholders kept so renderFeatured() can still call startHdIdleRotation
+   without changes; idle is now static. */
+function startHdIdleRotation() { /* static idle now */ }
+function stopHdIdleRotation()  { /* no-op */ }
+
+/* Drive the global ambient mash-mode effects — vignette, page-header bounce,
+   section-label fade, and the shockwave text dislodging. Two ramps:
+   - --mash-energy: 0 → 1 over presses 1–25 (doubled from prior 1–50).
+     By press 25 the vignette is already fully closed in.
+   - --mash-overdrive: 0 → 1 over presses 50–100. Drives the additional
+     "page is broken" displacement past the energy cap. */
+function setMashEnergy(pressCount) {
+  const energy    = Math.min(Math.max(pressCount / 25, 0), 1);
+  const overdrive = Math.min(Math.max((pressCount - 50) / 50, 0), 1);
+  document.body.style.setProperty('--mash-energy',    energy.toFixed(3));
+  document.body.style.setProperty('--mash-overdrive', overdrive.toFixed(3));
+  // Toggle data flags that gate the layered cinematic effects
+  if (pressCount > 0)  document.body.dataset.mashing = '1';
+  else                 delete document.body.dataset.mashing;
+  if (pressCount >= 50) document.body.dataset.eggsRainbow = '1';
+  else                  delete document.body.dataset.eggsRainbow;
+}
+
+/* Rainbow probability for hot dogs / eggs — none until press 25, full at
+   press 100, linear ramp in between. */
+function rainbowChance(pressCount) {
+  if (pressCount < 25)  return 0;
+  if (pressCount >= 100) return 1;
+  return (pressCount - 25) / 75;
+}
+
+/* Random rainbow egg spawn — fires at 25+ on a per-click chance. Same
+   physics as hot dogs but uses the 🥚 emoji and is always rainbow. */
+function spawnRainbowEgg(originBtn) {
+  if (activeHotDogs >= MAX_ACTIVE_HOTDOGS) return;
+  activeHotDogs++;
+  const rect = originBtn.getBoundingClientRect();
+  const cx = rect.left + rect.width  / 2;
+  const cy = rect.top  + rect.height / 2;
+  const angle = Math.random() * Math.PI * 2;
+  const dx = Math.cos(angle);
+  const dy = Math.sin(angle);
+  const halfW = Math.max(rect.width  / 2, 1);
+  const halfH = Math.max(rect.height / 2, 1);
+  const t = Math.min(halfW / Math.abs(dx || 1e-6), halfH / Math.abs(dy || 1e-6));
+  const startX = cx + dx * t;
+  const startY = cy + dy * t;
+  const dist = 220 + Math.random() * 280;
+  const endDx = dx * dist;
+  const endDy = dy * dist;
+  const rot   = (Math.random() - 0.5) * 720;
+  const dur   = 1900 + Math.random() * 1300;
+
+  const eg = document.createElement('div');
+  eg.className = 'flying-egg is-rainbow';
+  eg.textContent = '🥚';
+  eg.style.left = startX + 'px';
+  eg.style.top  = startY + 'px';
+  document.body.appendChild(eg);
+
+  eg.animate(
+    [
+      { transform: 'translate(-50%,-50%) scale(0.2) rotate(0deg)',                                                  opacity: 0,    offset: 0    },
+      { transform: `translate(calc(-50% + ${dx*8}px), calc(-50% + ${dy*8}px)) scale(1) rotate(${rot*0.1}deg)`,        opacity: 1,    offset: 0.12 },
+      { transform: `translate(calc(-50% + ${endDx*0.6}px), calc(-50% + ${endDy*0.6}px)) scale(1) rotate(${rot*0.6}deg)`, opacity: 0.85, offset: 0.6  },
+      { transform: `translate(calc(-50% + ${endDx}px), calc(-50% + ${endDy}px)) scale(1) rotate(${rot}deg)`,         opacity: 0,    offset: 1    },
+    ],
+    { duration: dur, easing: 'cubic-bezier(.22,.61,.36,1)', fill: 'forwards' }
+  ).onfinish = () => { eg.remove(); activeHotDogs--; };
+}
+
+/* Background flash — starts at press 10 (barely a flicker) and ramps to
+   full intensity by press 50. Very apparent by 50, dramatic by 100. */
+function flashBackground(pressCount) {
+  if (pressCount < 10) return;
+  const flash = document.getElementById('mash-flash');
+  if (!flash) return;
+  const hue = (pressCount * 47) % 360;
+  const intensity = Math.min((pressCount - 10) / 40, 1);   // 0 at press 10 → 1 at press 50+
+  flash.animate(
+    [
+      { backgroundColor: `hsl(${hue}, 95%, 55%)`, opacity: 0.05 + intensity * 0.50 },
+      { opacity: 0 }
+    ],
+    { duration: 220, easing: 'ease-out' }
+  );
+}
+
+/* FIRE — mixes in at press 25+, separate pool so it always has representation */
+const FIRE_EMOJIS = ['🔥','🔥','🔥','💥','🌋','⚡'];   // weighted toward 🔥
+
+/* FARM CHAOS POOL — starts at press 25, ramps to 65% of spawns by 100+. */
+const FARM_EMOJIS = [
+  '🐄','🐔','🐷','🐑','🐓','🦆','🐰','🐎','🦃','🌽',
+  '🥕','🚜','🌾','🐸','🦉',
+];
+
+/* FULL CHAOS — random slice of the emoji spectrum, introduced at press 50+. */
+const CHAOS_EMOJIS = [
+  '🎉','🎊','🎈','🌈','⭐','🌟','💥','✨','💫','🎯',
+  '🏆','🥇','🎪','🎭','🎨','🎬','🎮','🎲','🃏','🍕',
+  '🍔','🌮','🍜','🍣','🍦','🍩','🎂','🚀','✈️','🚂',
+  '🏎️','🌊','💨','🌪️','🌩️','🦄','🐉','🦋','🐬','🦁',
+  '🐯','🦊','🦅','💎','🔮','🗝️','⚔️','🛡️','🏰','🌋',
+  '🌸','🌺','🌻','🌹','🍀','🍄','🌙','☀️','🎸','🥁',
+  '🏄','🧗','🤿','🪂','⛷️','🏇','🥊','🎳','🎯','🎰',
+];
+
+/* DIVERSE PEOPLE POOL — at 100+ presses, 25% of spawns become diverse
+   human emojis (cyclists, athletes, celebrants across skin tones). */
+const DIVERSE_EMOJIS = [
+  '🚴🏿','🚴🏾','🚴🏽','🚴🏼',   // cyclists — on brand
+  '🏃🏿','🏃🏾','🏃🏽',           // runners
+  '🤸🏿','🤸🏾','🤸🏽',           // acrobatics
+  '💪🏿','💪🏾','💪🏽',           // muscle flex
+  '🙌🏿','🙌🏾','🙌🏽',           // celebrating
+  '🧑🏿','👩🏿','👨🏿',           // people, dark skin
+  '🧑🏽','👩🏽','👨🏽',           // people, medium skin
+];
+
+/* How much of each spawn should be farm chaos at this press count.
+   Starts at press 25, ramps to 65% by press 100+. */
+function farmMixRatio(pressCount) {
+  if (pressCount < 25) return 0;
+  return Math.min((pressCount - 25) / 75 * 0.65, 0.65);
+}
+
+function pickSpawnEmoji(pressCount) {
+  // 100+: 25% diverse people emojis
+  if (pressCount >= 100 && Math.random() < 0.25)
+    return DIVERSE_EMOJIS[Math.floor(Math.random() * DIVERSE_EMOJIS.length)];
+  // 50+: 20% full-chaos random emoji
+  if (pressCount >= 50 && Math.random() < 0.20)
+    return CHAOS_EMOJIS[Math.floor(Math.random() * CHAOS_EMOJIS.length)];
+  // 25+: ~15% fire
+  if (pressCount >= 25 && Math.random() < 0.15)
+    return FIRE_EMOJIS[Math.floor(Math.random() * FIRE_EMOJIS.length)];
+  // Farm chaos ramps from press 25
+  if (Math.random() < farmMixRatio(pressCount))
+    return FARM_EMOJIS[Math.floor(Math.random() * FARM_EMOJIS.length)];
+  return '🌭';
+}
+
+/* Shockwave — on every click, re-roll random per-element offsets so each
+   tap visibly jolts the page. Same CSS variables get scaled by the global
+   energy + overdrive for the magnitude. */
+const SHOCKWAVE_SELECTOR = [
+  '.page-header h1', '.page-header p',
+  '.section-label',
+  '.event-name', '.event-meta span',
+  '.event-desc', '.tags .tag',
+  '.coming-card', '.coming-card .name', '.coming-card .meta',
+  '.coming-card .date-stamp .day',
+  '.coming-card .date-stamp .month',
+  '.coming-card .date-stamp .weekday',
+  '.archive-toggle',
+  '.archive-card .arch-name',
+  '.archive-card .arch-date',
+  '.archive-card .arch-kudos',
+  '.weather-desc', '.weather-extra', '.countdown-display', '.countdown-label',
+].join(',');
+
+function applyShockwave() {
+  const els = document.querySelectorAll(SHOCKWAVE_SELECTOR);
+  els.forEach(el => {
+    // Only set transform variables — never letter-spacing, which causes
+    // layout reflow and pushes the kudos row out of position.
+    el.style.setProperty('--jx', ((Math.random() - 0.5) * 2).toFixed(2));
+    el.style.setProperty('--jy', ((Math.random() - 0.5) * 2).toFixed(2));
+    el.style.setProperty('--jr', ((Math.random() - 0.5) * 2).toFixed(2));
+  });
+}
+
+function clearShockwave() {
+  const els = document.querySelectorAll(SHOCKWAVE_SELECTOR);
+  els.forEach(el => {
+    el.style.removeProperty('--jx');
+    el.style.removeProperty('--jy');
+    el.style.removeProperty('--jr');
+  });
+}
+
+/* Set the button to its emergency-button idle state — big centered "MASH ME"
+   in the overlay, top + right hidden, glowing pulse. Called on render and
+   after a save/burn cycle resets. */
+function enterIdleState(btn) {
+  if (!btn) return;
+  const row = btn.closest('.kudos-row');
+  if (!row) return;
+  btn.classList.remove('is-mashing', 'is-deep-mashing', 'is-saving', 'is-burning');
+  btn.classList.add('is-idle');
+  btn.dataset.intensity = '0';
+  btn.style.setProperty('--hd-rest', '1');
+  btn.style.removeProperty('--hd-hue');
+  const numEl = row.querySelector('.mash-num');
+  const subEl = row.querySelector('.mash-sub');
+  if (numEl) {
+    numEl.style.fontSize = '';   // let the .is-idle CSS rule drive the size
+    numEl.textContent = 'MASH ME';
+  }
+  if (subEl) setSub(subEl, '');
+  setMashEnergy(0);              // clear any lingering vignette / bounce
+  clearShockwave();              // un-dislodge any displaced text
+}
+
+function onKudosClick(btn, ev) {
+  // While the save/burn animation is playing, the button is locked — clicks
+  // are ignored. CSS also sets pointer-events: none on those classes for
+  // belt-and-suspenders. This prevents the "saving 0" edge case where a
+  // mid-flight reset would zero the press counter underneath a fresh click.
+  if (btn.classList.contains('is-saving') || btn.classList.contains('is-burning')) return;
+
+  // Leave idle on the very first press so "MASH ME" can transition out.
+  btn.classList.remove('is-idle');
+
+  // 1. counts + element lookups relative to this button so the same
+  //    handler works for the featured card AND the unlocked-event modal.
+  ev.hotdogs += 1;
+  hdPressCount += 1;            // increment first so every visual ramp downstream uses the new count
+  kudosPendingDelta += 1;
+  // mash + sub are now SIBLINGS of the button inside .kudos-row, so they're
+  // not affected by the button's scale transform — they stay anchored to
+  // the row (= inside the event card) while the button grows beyond bounds.
+  const row     = btn.closest('.kudos-row');
+  const countEl = btn.querySelector('.hd-cta-count');
+  const textEl  = btn.querySelector('.hd-cta-text');
+  const mashEl  = row.querySelector('.hd-cta-mash');
+  const numEl   = mashEl.querySelector('.mash-num');
+  const subEl   = row.querySelector('.mash-sub');
+  countEl.textContent = fmtCount(ev.hotdogs);
+
+  // 2. ping ripple
+  const ping = document.createElement('span');
+  ping.className = 'ping';
+  btn.appendChild(ping);
+  setTimeout(() => ping.remove(), 500);
+
+  // 3. flying hot dogs — count = current burst press count, capped at 25
+  //    for rendering performance. Each spawn rolls independently for the
+  //    rainbow treatment based on rainbowChance(pressCount).
+  const dogCount = Math.min(hdPressCount, 25);
+  const stagger  = Math.max(12, Math.floor(800 / dogCount));
+  const pRainbow = rainbowChance(hdPressCount);
+  for (let i = 0; i < dogCount; i++) {
+    const rainbow = Math.random() < pRainbow;
+    setTimeout(() => spawnHotDog(btn, { rainbow }), i * stagger);
+  }
+  spawnPhrase(btn);
+
+  // 3b. Rainbow eggs — at press 25+, ~30% chance per click to spit out
+  //     1-2 rainbow 🥚 alongside the dogs.
+  if (hdPressCount >= 25 && Math.random() < 0.30) {
+    const eggCount = Math.random() < 0.4 ? 2 : 1;
+    for (let i = 0; i < eggCount; i++) {
+      setTimeout(() => spawnRainbowEgg(btn), i * 60);
+    }
+  }
+
+  // 3c. Background flash — at press 100+, every click strobes a color
+  //     burst behind the vignette. Bleeds through the clear center.
+  flashBackground(hdPressCount);
+
+  // 4. unhinged continuous growth via transforms only (no padding ramp so
+  //    the layout box stays put and overlays stay anchored).
+  //    --hd-rest: uniform scale ramps with every press
+  //    --hd-rest-y: extra vertical-only stretch so the button takes over
+  //                 the screen vertically inside the vignette tunnel.
+  const restScale  = 1 + hdPressCount * 0.022;
+  const restScaleY = 1 + hdPressCount * 0.014;
+  btn.style.setProperty('--hd-rest',   restScale.toFixed(3));
+  btn.style.setProperty('--hd-rest-y', restScaleY.toFixed(3));
+  btn.style.setProperty('--hd-pad-y', '14px');
+
+  // 5. PRISM COLOR CYCLE — hue advances ~14° per press, full cycle every ~26
+  //    presses. CSS gradient is driven by the --hd-hue var.
+  const hue = (hdPressCount * 14) % 360;
+  btn.style.setProperty('--hd-hue', String(hue));
+
+  // 5b. AMBIENT MASH ENERGY — vignette closes in (energy 0 → 1 over 25
+  //     presses, doubled), page header bounces, sections fade.
+  //     OVERDRIVE — text displacement keeps growing 50 → 100 presses.
+  setMashEnergy(hdPressCount);
+
+  // 5c. SHOCKWAVE — re-roll random per-element offsets so every click
+  //     visibly jolts the page. Magnitude scales with energy + overdrive
+  //     so press 1 is barely a wiggle and press 100 looks broken.
+  applyShockwave();
+
+  // 6. STROBE — quick brightness/saturation flash on every click; intensity
+  //    grows with the press count.
+  const strobeBoost = 1.5 + Math.min(hdPressCount * 0.04, 1.5);   // 1.5 → 3.0
+  btn.animate(
+    [
+      { filter: `brightness(${strobeBoost.toFixed(2)}) saturate(${strobeBoost.toFixed(2)})` },
+      { filter: 'brightness(1) saturate(1)' }
+    ],
+    { duration: 160, easing: 'ease-out' }
+  );
+
+  // 7. center +N — scales up with press count, capped so the text stays
+  //    within bounds. Visible from press 1 (no deep-mash gate). No click
+  //    bump — the +N stays rock-solid stable; the chaos happens around it.
+  btn.classList.remove('is-saving', 'is-burning');
+  btn.classList.add('is-mashing');
+  numEl.style.removeProperty('font-size');
+  numEl.textContent = `+${fmtCount(hdPressCount)}`;
+  const numSize = 30 + Math.min(hdPressCount * 1.3, 40);   // 30 → 70px (capped)
+  numEl.style.fontSize = `${numSize}px`;
+  mashEl.style.setProperty('--mash-scale', '1');           // permanently disable spring
+
+  // 8. challenge text — gated update strategy:
+  //    Press 1-25: refresh every press (deterministic hand-tuned ladder).
+  //    Press 26+:  refresh every KUDOS_CHALLENGE_DWELL_MS (2.5s) so the user
+  //                has time to actually read each long-haul taunt before it
+  //                changes. The +N counter and visual intensity still update
+  //                on every press regardless.
+  btn.dataset.intensity = String(bandForPress(hdPressCount));
+
+  const now = Date.now();
+  const isHandTuned = hdPressCount <= HD_FIRST_25.length;
+  const shouldRefreshChallenge =
+    isHandTuned || (now - hdLastChallengeAt >= KUDOS_CHALLENGE_DWELL_MS);
+
+  if (shouldRefreshChallenge) {
+    let challenge;
+    if (isHandTuned) {
+      // Deterministic — never re-roll (would infinite-loop)
+      challenge = pickChallenge(hdPressCount);
+    } else {
+      let attempts = 0;
+      do {
+        challenge = pickChallenge(hdPressCount);
+        attempts++;
+      } while (
+        challenge === hdLastChallenge
+        && HD_CHALLENGE_BANDS[bandForPress(hdPressCount)].length > 1
+        && attempts < 10                       // hard cap so we can NEVER loop forever
+      );
+    }
+    hdLastChallenge = challenge;
+    hdLastChallengeAt = now;
+
+    // 9. From press 1, the challenge phrase always lives in the mash-sub
+    //    slot anchored to the bottom of the row (rock-solid, fixed size,
+    //    not affected by button growth or shockwave). The right-side
+    //    in-button text stays empty during any mashing state.
+    setSub(subEl, challenge);
+    setHdText('', null, textEl);
+  }
+  // is-deep-mashing class still toggles for any band-styling that uses it
+  // (none currently, but kept for forward-compat).
+  if (hdPressCount >= DEEP_MASH_THRESHOLD) {
+    btn.classList.add('is-deep-mashing');
+  } else {
+    btn.classList.remove('is-deep-mashing');
+  }
+
+  // 10. saving → burn → reset sequence
+  if (hdResetTimer) clearTimeout(hdResetTimer);
+  hdResetTimer = setTimeout(() => {
+    // Defensive guard — should never happen now that clicks are locked
+    // during saving/burning, but if hdPressCount is somehow 0 here, skip
+    // straight back to idle without rendering "saving 0".
+    if (hdPressCount <= 0) {
+      btn.classList.remove('is-mashing', 'is-deep-mashing', 'is-saving', 'is-burning');
+      btn.dataset.intensity = '0';
+      btn.style.setProperty('--hd-rest', '1');
+      btn.style.setProperty('--hd-pad-y', '14px');
+      btn.style.removeProperty('--hd-hue');
+      numEl.style.fontSize = '';
+      numEl.textContent = '+1';
+      subEl.textContent = '';
+      setHdText(HD_IDLE_TEXT, undefined, textEl);
+      return;
+    }
+
+    // PHASE A — saving (2.5s after last press)
+    btn.classList.remove('is-mashing', 'is-deep-mashing');
+    btn.classList.add('is-saving');
+    numEl.textContent = `saving ${fmtCount(hdPressCount)}`;
+    numEl.style.fontSize = '28px';
+    subEl.textContent = '';
+
+    setTimeout(() => {
+      // PHASE B — 2-second burn flash with a taunt. All ambient mash effects
+      // clear here (vignette fades, header stops bouncing) so the user is
+      // left with just the centered taunt — clean, focused, intentional.
+      btn.classList.remove('is-saving');
+      btn.classList.add('is-burning');
+      // Effects (vignette, shockwave, rainbow eggs) stay at full strength
+      // through the burn message so the user sees the taunt surrounded by
+      // darkness. Everything resets in PHASE C when enterIdleState fires.
+      numEl.textContent = pickBurn();
+      numEl.style.fontSize = '';      // class-driven sizing for burn
+
+      setTimeout(() => {
+        // PHASE C — burn message just finished. NOW snap everything back:
+      // vignette clears, shockwave text resets, eggs return to normal,
+      // button shrinks back to idle. All clears happen in enterIdleState.
+        hdPressCount = 0;
+        hdLastChallenge = '';
+        hdLastChallengeAt = 0;
+        btn.style.setProperty('--hd-rest-y', '1');
+        enterIdleState(btn);
+        setHdText(HD_IDLE_TEXT, undefined, textEl);
+      }, KUDOS_BURN_MS);
+    }, KUDOS_SAVE_ANIM_MS);
+  }, KUDOS_SAVE_DELAY_MS);
+
+  // 11. debounced flush of pending kudos delta (production: Firebase txn)
+  if (kudosDebounceTimer) clearTimeout(kudosDebounceTimer);
+  kudosDebounceTimer = setTimeout(() => {
+    kudosPendingDelta = 0;
+  }, KUDOS_SAVE_DELAY_MS + KUDOS_SAVE_ANIM_MS + KUDOS_BURN_MS);
+}
+
+/* Cooldown ring removed — the saving text is sufficient feedback for the
+   5-second debounce window now that the kudos UI is a pill instead of a
+   circle (a conic-gradient ring around a non-circular shape is awkward). */
+
+/* Global cap on simultaneously-airborne hot dogs. Each spawn registers,
+   each completion deregisters. If we hit the cap we silently skip — better
+   than locking the browser when the user is mashing very fast. */
+let activeHotDogs = 0;
+const MAX_ACTIVE_HOTDOGS = 80;
+
+/* Hot dogs spray out from the BUTTON'S PERIMETER in all 360° directions.
+   They start at scale(0) on the edge so they appear to emerge from behind
+   the button itself, then expand and fly outward. Keeps the button text
+   readable in the middle while still feeling like a chaotic dog explosion. */
+function spawnHotDog(originBtn, opts = {}) {
+  if (activeHotDogs >= MAX_ACTIVE_HOTDOGS) return;
+  activeHotDogs++;
+  // Override emoji with a farm/chaos pick if the mix ratio calls for it
+  if (!opts.emoji) opts.emoji = pickSpawnEmoji(hdPressCount);
+  const rect = originBtn.getBoundingClientRect();
+  const cx = rect.left + rect.width  / 2;
+  const cy = rect.top  + rect.height / 2;
+
+  // Random angle across the full circle
+  const angle = Math.random() * Math.PI * 2;
+  const dx = Math.cos(angle);
+  const dy = Math.sin(angle);
+
+  // Project onto the button's bounding rectangle to find the spawn point
+  // exactly on the perimeter at this angle (stretches with button growth).
+  const halfW = Math.max(rect.width  / 2, 1);
+  const halfH = Math.max(rect.height / 2, 1);
+  const t = Math.min(halfW / Math.abs(dx || 1e-6), halfH / Math.abs(dy || 1e-6));
+  const startX = cx + dx * t;
+  const startY = cy + dy * t;
+
+  // Fly outward by a healthy distance so they clear the button entirely
+  const dist = 280 + Math.random() * 320;       // 280 → 600px
+  const endDx = dx * dist;
+  const endDy = dy * dist;
+  const rot   = (Math.random() - 0.5) * 720;
+  const dur   = 1700 + Math.random() * 1200;    // 1.7 → 2.9s
+
+  const hd = document.createElement('div');
+  hd.className = 'flying-hot-dog' + (opts.rainbow ? ' is-rainbow' : '');
+  hd.textContent = opts.emoji || '🌭';
+  hd.style.left = startX + 'px';
+  hd.style.top  = startY + 'px';
+  document.body.appendChild(hd);
+
+  hd.animate(
+    [
+      // Start tiny + invisible at the edge — looks like emerging from behind the button
+      { transform: 'translate(-50%,-50%) scale(0.2) rotate(0deg)',                                                   opacity: 0,    offset: 0    },
+      // Pop into full size right at the edge
+      { transform: `translate(calc(-50% + ${dx*8}px), calc(-50% + ${dy*8}px)) scale(1) rotate(${rot*0.1}deg)`,        opacity: 1,    offset: 0.12 },
+      // Mid-flight — already mostly faded
+      { transform: `translate(calc(-50% + ${endDx*0.6}px), calc(-50% + ${endDy*0.6}px)) scale(1) rotate(${rot*0.6}deg)`, opacity: 0.85, offset: 0.6  },
+      // Drift to final position, fade out
+      { transform: `translate(calc(-50% + ${endDx}px), calc(-50% + ${endDy}px)) scale(1) rotate(${rot}deg)`,          opacity: 0,    offset: 1    },
+    ],
+    { duration: dur, easing: 'cubic-bezier(.22,.61,.36,1)', fill: 'forwards' }
+  ).onfinish = () => { hd.remove(); activeHotDogs--; };
+}
+
+/* Phrases — egg-related + motivational. Tap = "I'm coming" so the tone
+   should land somewhere between "you're in!" and "send it!". 25 total. */
+const PHRASES = [
+  "Get crackin'!", "Egg-cellent!", "Sunny side up!", "You rock!",
+  "Send it!", "Grease lightning!", "Mustard moves!", "Wheels up!",
+  "Yolks on you!", "Hot dog hero!", "Crank it!", "Sender alert!",
+  "Scrambled glory!", "Pedal punisher!", "Bun voyage!",
+  "You're in! 🥚",     "Roll call answered!", "See you Wednesday!",
+  "Yolked + stoked!",  "Eggs-traordinary!",   "Cracked it!",
+  "On the roster!",    "Whisk on!",           "Wednesday loading…",
+  "Locked and loaded!"
+];
+const PHRASE_COOLDOWN_MS = 5000;
+let lastPhraseIndex = -1;
+let phraseCooldownUntil = 0;
+
+function pickPhrase() {
+  let i;
+  do { i = Math.floor(Math.random() * PHRASES.length); }
+  while (i === lastPhraseIndex && PHRASES.length > 1);
+  lastPhraseIndex = i;
+  return PHRASES[i];
+}
+
+function spawnPhrase(btn) {
+  const now = Date.now();
+  if (now < phraseCooldownUntil) return;
+  phraseCooldownUntil = now + PHRASE_COOLDOWN_MS;
+
+  const phrase = pickPhrase();
+  const rect = btn.getBoundingClientRect();
+  const baseX = rect.left + rect.width/2;
+  const baseY = rect.top - 8;
+  const charWidth = 16;
+  const totalWidth = phrase.length * charWidth;
+  const startX = baseX - totalWidth/2;
+
+  [...phrase].forEach((ch, i) => {
+    const span = document.createElement('span');
+    span.className = 'phrase-char';
+    span.textContent = ch === ' ' ? ' ' : ch;
+    span.style.left = (startX + i*charWidth)+'px';
+    span.style.top  = baseY+'px';
+    document.body.appendChild(span);
+
+    const drift   = (Math.random() - 0.5) * 70;
+    const wiggleA = 18 + Math.random()*22;
+    const rotA    = (Math.random() - 0.5) * 36;
+    /* Total duration ~8.5s. The animation has a deliberate ~3s "read pause"
+       early on (offsets 0.05 → 0.40, ≈ 3000ms at 8500ms total) where the
+       letters appear and barely move so the user can read the phrase before
+       the wiggly explosion takes off. */
+    const dur     = 8500 + Math.random()*900 + i*45;
+    const delay   = i * 60;
+
+    span.animate(
+      [
+        { transform: `translate(0, 0) rotate(0deg)`,                                                opacity: 0,    offset: 0    },
+        { transform: `translate(0, -34px) rotate(0deg)`,                                            opacity: 1,    offset: 0.05 },
+        { transform: `translate(${(Math.random()-0.5)*3}px, -50px) rotate(${(Math.random()-0.5)*3}deg)`, opacity: 1, offset: 0.40 },
+        { transform: `translate(${drift*0.25 - wiggleA*0.3}px, -110px) rotate(${rotA*0.4}deg)`,     opacity: 1,    offset: 0.55 },
+        { transform: `translate(${drift*0.55 + wiggleA*0.6}px, -220px) rotate(${rotA*0.7}deg)`,     opacity: 1,    offset: 0.72 },
+        { transform: `translate(${drift*0.82 - wiggleA*0.4}px, -340px) rotate(${rotA*0.9}deg)`,     opacity: 0.85, offset: 0.88 },
+        { transform: `translate(${drift}px, -460px) rotate(${rotA}deg)`,                            opacity: 0,    offset: 1    }
+      ],
+      { duration: dur, delay, easing: 'cubic-bezier(.22,.61,.36,1)', fill: 'forwards' }
+    ).onfinish = () => span.remove();
+  });
+}
+
+function boot() {
+  buildEvents(currentMode);
+  renderFeatured();
+  renderComing();
+  renderArchive();
+}
+boot();
+
+// If the page loads with /events/{id} in the URL hash, auto-open the sheet
+// for that event. Runs after boot() so events are populated.
+syncFromHash();
+</script>
+</body>
+</html>

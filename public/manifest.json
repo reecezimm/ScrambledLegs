@@ -2,6 +2,9 @@
   "short_name": "Scrambled Legs",
   "name": "Scrambled Legs",
   "description": "Home of the Twin Ports premier mountain bike team",
+  "id": "/",
+  "start_url": "/",
+  "scope": "/",
   "icons": [
     {
       "src": "favicon.ico",
@@ -36,5 +39,5 @@
   ],
   "theme_color": "#FFE66D",
   "background_color": "#FF8800",
-  "display": "browser"
+  "display": "standalone"
 }
