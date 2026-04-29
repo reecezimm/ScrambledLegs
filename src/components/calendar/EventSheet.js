@@ -97,6 +97,11 @@ const Handle = styled.button`
   }
 `;
 
+const MediaWrap = styled.div`
+  position: relative;
+  width: 100%;
+`;
+
 const BannerImg = styled.div`
   position: relative;
   height: 200px;
@@ -315,23 +320,25 @@ function SheetContent({ event, onClose }) {
         <CloseBtn type="button" aria-label="Close" onClick={onClose}>×</CloseBtn>
         <Handle type="button" onClick={onClose} aria-label="Close panel" />
 
-        {event.bannerUrl
-          ? <BannerImg style={{ backgroundImage: `url('${event.bannerUrl}')` }} />
-          : event.startLoc && (
-            <EventMap startLoc={event.startLoc} endLoc={event.endLoc} />
-          )
-        }
+        <MediaWrap>
+          {event.bannerUrl
+            ? <BannerImg style={{ backgroundImage: `url('${event.bannerUrl}')` }} />
+            : event.startLoc && (
+              <EventMap startLoc={event.startLoc} endLoc={event.endLoc} />
+            )
+          }
 
-        <MapHeaderOverlay>
-          <WeatherPills weather={liveWeather} />
-        </MapHeaderOverlay>
+          <MapHeaderOverlay>
+            <WeatherPills weather={liveWeather} />
+          </MapHeaderOverlay>
 
-        <MapBottomOverlay>
-          <SheetStatusChip data-status={getStatus(event)}>
-            <SheetDot />
-            <span>{sheetStatusText(event, getStatus(event))}</span>
-          </SheetStatusChip>
-        </MapBottomOverlay>
+          <MapBottomOverlay>
+            <SheetStatusChip data-status={getStatus(event)}>
+              <SheetDot />
+              <span>{sheetStatusText(event, getStatus(event))}</span>
+            </SheetStatusChip>
+          </MapBottomOverlay>
+        </MediaWrap>
 
         <RideLeaderBadge rideLeader={event.rideLeader} />
 

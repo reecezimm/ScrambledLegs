@@ -85,6 +85,17 @@ const HD_CHALLENGE_BANDS = [
    "Over-easy isn't a training plan",
    "Bad egg energy right here",
    "Runny. Very runny.",
+   // PEDAL MASHING — bike cranks, big watts, drop riders
+   "Mash those pedals like you mean it",
+   "Drop the hammer — mash 'em flat",
+   "Big-ring mash mode engaged",
+   "Pedal-mash with prejudice",
+   "Mash pedals, drop riders, repeat",
+   "Out-mash 'em on the next climb",
+   "Pedal harder. Make their legs cry.",
+   "Crush the cranks — they're free",
+   "Mash 'em into next Tuesday",
+   "Big-watt mash. No chamois cream is saving them.",
    // General crew pressure
    "The crew has seen better",
    "Soft boiled at best",
@@ -312,6 +323,16 @@ const CREW_CHALLENGES = new Set([
   "Predictable as paint drying — Coach is faster",
   "Coach is mowing his lawn. He's still ahead.",
   "Lyall left the cabin for this. Don't waste it.",
+  "Mash those pedals like you mean it",
+  "Drop the hammer — mash 'em flat",
+  "Big-ring mash mode engaged",
+  "Pedal-mash with prejudice",
+  "Mash pedals, drop riders, repeat",
+  "Out-mash 'em on the next climb",
+  "Pedal harder. Make their legs cry.",
+  "Crush the cranks — they're free",
+  "Mash 'em into next Tuesday",
+  "Big-watt mash. No chamois cream is saving them.",
 ]);
 
 const HD_HYPE_POOL = [
@@ -779,11 +800,28 @@ export default function KudosCta({ event, isSheetContext }) {
     if (pressCount === 1) {
       sessionStartRef.current = Date.now();
       sessionUidRef.current = user ? user.uid : null;
+      // First press in the session — if signed in, mark this event as
+      // interacted-with so they qualify for the Bad Eggs list if they
+      // never RSVP. Fire-and-forget; safe if rules reject.
+      if (user && event && event.id) {
+        try {
+          dbSet(
+            dbRef(database, `eventInteractions/${event.id}/${user.uid}/lastAt`),
+            Date.now()
+          ).catch(() => {});
+          dbSet(
+            dbRef(database, `eventInteractions/${event.id}/${user.uid}/mashed`),
+            true
+          ).catch(() => {});
+        } catch (_) {}
+      }
     }
     try {
       logEvent('mash_button_clicked', {
         eventId: event && event.id,
         pressCount,
+        uid: user ? user.uid : null,
+        signedIn: !!user,
       });
     } catch (_) {}
     const row = btn.parentElement;

@@ -24,6 +24,11 @@ const Card = styled.div`
   backdrop-filter: blur(10px);
 `;
 
+const MediaWrap = styled.div`
+  position: relative;
+  width: 100%;
+`;
+
 const BannerImg = styled.div`
   position: relative;
   height: 200px;
@@ -236,23 +241,25 @@ export default function EventFeatured({ event }) {
 
   return (
     <Card>
-      {event.bannerUrl
-        ? <BannerImg style={{ backgroundImage: `url('${event.bannerUrl}')` }} />
-        : event.startLoc && (
-          <EventMap startLoc={event.startLoc} endLoc={event.endLoc} />
-        )
-      }
+      <MediaWrap>
+        {event.bannerUrl
+          ? <BannerImg style={{ backgroundImage: `url('${event.bannerUrl}')` }} />
+          : event.startLoc && (
+            <EventMap startLoc={event.startLoc} endLoc={event.endLoc} />
+          )
+        }
 
-      <MapHeaderOverlay>
-        <WeatherPills weather={liveWeather} />
-      </MapHeaderOverlay>
+        <MapHeaderOverlay>
+          <WeatherPills weather={liveWeather} />
+        </MapHeaderOverlay>
 
-      <MapBottomOverlay>
-        <StatusChip className="event-status-chip" data-status={status}>
-          <Dot />
-          <span>{statusText(event, status)}</span>
-        </StatusChip>
-      </MapBottomOverlay>
+        <MapBottomOverlay>
+          <StatusChip className="event-status-chip" data-status={status}>
+            <Dot />
+            <span>{statusText(event, status)}</span>
+          </StatusChip>
+        </MapBottomOverlay>
+      </MediaWrap>
 
       <RideLeaderBadge rideLeader={event.rideLeader} />
 

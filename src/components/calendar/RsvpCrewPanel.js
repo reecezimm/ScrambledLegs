@@ -7,7 +7,10 @@ import { logEvent } from '../../services/analytics';
 import { teaserCountFor } from './RsvpToggle';
 
 const PENDING_KEY = 'sl_pending_rsvp_event_id';
-const BAD_EGG_THRESHOLD = 10;
+// Lowered to 1: any signed-in interaction (mash press OR Eggman read-more)
+// without an RSVP qualifies as a Bad Egg. Combined with the eventInteractions
+// path below, this covers users who engage but flake on committing.
+const BAD_EGG_THRESHOLD = 1;
 
 // ─── Unified panel shell ─────────────────────────────────────────────────────
 // One card. Top half = RSVP action. Bottom half = Crew header (expandable).
@@ -26,7 +29,20 @@ const Panel = styled.div`
 `;
 
 // RSVP action sits flush at the top, full-bleed inside the panel.
+const rsvpBreathe = keyframes`
+  0%, 100% { box-shadow: inset 0 0 0 rgba(255,255,255,0); }
+  50%      { box-shadow: inset 0 0 18px rgba(255,255,255,0.18); }
+`;
+
+const rsvpShimmer = keyframes`
+  0%   { transform: translateX(-120%); }
+  60%  { transform: translateX(120%); }
+  100% { transform: translateX(120%); }
+`;
+
 const RsvpAction = styled.button`
+  position: relative;
+  overflow: hidden;
   display: flex;
   width: 100%;
   align-items: center;
@@ -46,9 +62,45 @@ const RsvpAction = styled.button`
   text-transform: uppercase;
   cursor: pointer;
   transition: filter 0.15s, transform 0.15s;
+  animation: ${rsvpBreathe} 3.4s ease-in-out infinite;
+
+  /* Subtle slow shine sweep — only on the not-yet-RSVP state to draw eye. */
+  &::before {
+    content: '';
+    position: absolute;
+    inset: 0;
+    background: linear-gradient(
+      100deg,
+      transparent 0%,
+      transparent 35%,
+      rgba(255,255,255,0.35) 50%,
+      transparent 65%,
+      transparent 100%
+    );
+    pointer-events: none;
+    transform: translateX(-120%);
+    animation: ${rsvpShimmer} 5.5s ease-in-out infinite;
+    animation-delay: 1.2s;
+  }
+
+  /* Once RSVP'd, kill the shimmer (commitment achieved, no more nagging). */
+  ${(p) => p.$rsvped && `
+    &::before { animation: none; opacity: 0; }
+  `}
+
   &:hover { filter: brightness(1.05); }
   &:active { transform: scale(0.995); }
   &:disabled { opacity: 0.7; cursor: not-allowed; }
+
+  span, ${'' /* keep the count pill above the shine */} > * {
+    position: relative;
+    z-index: 1;
+  }
+
+  @media (prefers-reduced-motion: reduce) {
+    animation: none;
+    &::before { animation: none; }
+  }
 `;
 
 const InlineCount = styled.span`
@@ -219,13 +271,20 @@ const RankBadge = styled.span`
 
 const LaurelSvg = styled.svg`
   position: absolute;
-  inset: -8px -16px -8px -16px;
-  width: 64px;
-  height: 48px;
+  /* Doubled in size and shifted down so the leaves cradle the avatar from
+     the sides + bottom rather than sitting up high. The top floret pokes
+     above the avatar like an Olympic victory wreath. */
+  top: -10px;
+  left: -32px;
+  right: -32px;
+  bottom: -8px;
+  width: 96px;
+  height: 50px;
+  margin: 0 auto;
   pointer-events: none;
-  opacity: 0.85;
+  opacity: 0.92;
   z-index: 0;
-  filter: drop-shadow(0 0 4px rgba(120,200,80,0.45));
+  filter: drop-shadow(0 0 6px rgba(120,200,80,0.55));
 `;
 
 const NameWrap = styled.div`
@@ -416,6 +475,19 @@ export default function RsvpCrewPanel({ event }) {
     return () => unsub();
   }, [event, user]);
 
+  // Subscribe to event interactions (mash-clicked, read-more clicked) for the
+  // Bad Eggs derivation. Public read so anonymous viewers also see who flaked.
+  const [interactions, setInteractions] = useState({});
+  useEffect(() => {
+    if (!event || !event.id) {
+      setInteractions({});
+      return undefined;
+    }
+    const rInt = ref(database, `eventInteractions/${event.id}`);
+    const unsub = onValue(rInt, (s) => setInteractions(s.val() || {}));
+    return () => unsub();
+  }, [event]);
+
   // Track current user's RSVP state.
   useEffect(() => {
     if (!event || !event.id || !user) {
@@ -498,13 +570,19 @@ export default function RsvpCrewPanel({ event }) {
     window.dispatchEvent(new Event('auth:nudge'));
   };
 
-  // Derive crew + bad eggs.
+  // Derive crew + bad eggs. Bad eggs = any signed-in user who interacted
+  // (mashed OR clicked read-more) without RSVPing.
   const { crew, badEggs } = useMemo(() => {
-    const allUids = new Set([...Object.keys(rsvps), ...Object.keys(totals)]);
+    const allUids = new Set([
+      ...Object.keys(rsvps),
+      ...Object.keys(totals),
+      ...Object.keys(interactions),
+    ]);
     const rows = [];
     allUids.forEach((uid) => {
       const r = rsvps[uid];
       const mashes = totals[uid] || 0;
+      const interacted = !!interactions[uid];
       rows.push({
         uid,
         rsvped: !!r,
@@ -512,14 +590,16 @@ export default function RsvpCrewPanel({ event }) {
         displayName: (r && r.displayName) || 'Anonymous masher',
         photoURL: (r && r.photoURL) || null,
         mashes,
+        interacted,
       });
     });
     const crewRows = rows.filter((r) => r.rsvped)
       .sort((a, b) => (b.mashes - a.mashes) || (a.rsvpedAt - b.rsvpedAt));
-    const eggRows = rows.filter((r) => !r.rsvped && r.mashes >= BAD_EGG_THRESHOLD)
+    const eggRows = rows
+      .filter((r) => !r.rsvped && (r.mashes >= BAD_EGG_THRESHOLD || r.interacted))
       .sort((a, b) => b.mashes - a.mashes);
     return { crew: crewRows, badEggs: eggRows };
-  }, [rsvps, totals]);
+  }, [rsvps, totals, interactions]);
 
   // Hydrate Bad Egg profiles (their displayName isn't on the rsvp record).
   useEffect(() => {
@@ -599,23 +679,45 @@ export default function RsvpCrewPanel({ event }) {
                   <Row key={row.uid}>
                     <AvatarWrap>
                       {i === 0 && (
-                        <LaurelSvg viewBox="0 0 48 44" aria-hidden="true">
-                          <g fill="none" stroke="#7DBE7D" strokeWidth="1.6" strokeLinecap="round">
-                            <path d="M8 22 C 6 14, 8 8, 14 5" />
-                            <path d="M9 26 C 5 22, 4 16, 7 10" />
-                            <path d="M11 30 C 6 26, 4 20, 6 14" />
-                            <path d="M40 22 C 42 14, 40 8, 34 5" />
-                            <path d="M39 26 C 43 22, 44 16, 41 10" />
-                            <path d="M37 30 C 42 26, 44 20, 42 14" />
+                        <LaurelSvg viewBox="0 0 96 50" aria-hidden="true">
+                          {/* Left laurel branch */}
+                          <g fill="none" stroke="#7DBE7D" strokeWidth="2" strokeLinecap="round">
+                            <path d="M14 38 C 8 32, 6 24, 12 16" />
+                            <path d="M16 42 C 10 38, 8 30, 14 22" />
+                            <path d="M19 45 C 13 42, 11 35, 16 28" />
                           </g>
-                          <g fill="#7DBE7D" opacity="0.85">
-                            <ellipse cx="9" cy="11" rx="2.4" ry="1.2" transform="rotate(-30 9 11)" />
-                            <ellipse cx="7" cy="17" rx="2.4" ry="1.2" transform="rotate(-15 7 17)" />
-                            <ellipse cx="7" cy="23" rx="2.4" ry="1.2" transform="rotate(0 7 23)" />
-                            <ellipse cx="39" cy="11" rx="2.4" ry="1.2" transform="rotate(30 39 11)" />
-                            <ellipse cx="41" cy="17" rx="2.4" ry="1.2" transform="rotate(15 41 17)" />
-                            <ellipse cx="41" cy="23" rx="2.4" ry="1.2" transform="rotate(0 41 23)" />
+                          {/* Right laurel branch */}
+                          <g fill="none" stroke="#7DBE7D" strokeWidth="2" strokeLinecap="round">
+                            <path d="M82 38 C 88 32, 90 24, 84 16" />
+                            <path d="M80 42 C 86 38, 88 30, 82 22" />
+                            <path d="M77 45 C 83 42, 85 35, 80 28" />
                           </g>
+                          {/* Left leaves */}
+                          <g fill="#7DBE7D">
+                            <ellipse cx="11" cy="20" rx="3.6" ry="1.8" transform="rotate(-55 11 20)" />
+                            <ellipse cx="10" cy="27" rx="3.6" ry="1.8" transform="rotate(-35 10 27)" />
+                            <ellipse cx="11" cy="34" rx="3.6" ry="1.8" transform="rotate(-15 11 34)" />
+                            <ellipse cx="14" cy="40" rx="3.4" ry="1.7" transform="rotate(5 14 40)" />
+                            <ellipse cx="19" cy="44" rx="3.2" ry="1.6" transform="rotate(20 19 44)" />
+                          </g>
+                          {/* Right leaves */}
+                          <g fill="#7DBE7D">
+                            <ellipse cx="85" cy="20" rx="3.6" ry="1.8" transform="rotate(55 85 20)" />
+                            <ellipse cx="86" cy="27" rx="3.6" ry="1.8" transform="rotate(35 86 27)" />
+                            <ellipse cx="85" cy="34" rx="3.6" ry="1.8" transform="rotate(15 85 34)" />
+                            <ellipse cx="82" cy="40" rx="3.4" ry="1.7" transform="rotate(-5 82 40)" />
+                            <ellipse cx="77" cy="44" rx="3.2" ry="1.6" transform="rotate(-20 77 44)" />
+                          </g>
+                          {/* Top floret/victory ornament — golden flower poking above the avatar */}
+                          <g>
+                            <circle cx="48" cy="6" r="3.2" fill="#FFD24A" stroke="#B6852A" strokeWidth="0.6" />
+                            <circle cx="44" cy="9" r="2.2" fill="#FFE066" />
+                            <circle cx="52" cy="9" r="2.2" fill="#FFE066" />
+                            <circle cx="48" cy="11" r="2" fill="#FFE066" />
+                            <circle cx="48" cy="6" r="1.2" fill="#C99417" />
+                          </g>
+                          {/* Tiny stem connecting floret to the wreath */}
+                          <path d="M48 12 L 48 16" stroke="#7DBE7D" strokeWidth="1.2" strokeLinecap="round" />
                         </LaurelSvg>
                       )}
                       <Avatar $photo={row.photoURL} data-medal={i < 3 ? String(i + 1) : undefined}>

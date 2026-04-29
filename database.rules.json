@@ -87,6 +87,14 @@
         }
       }
     },
+    "eventInteractions": {
+      ".read": true,
+      "$eventId": {
+        "$uid": {
+          ".write": "auth != null && auth.uid == $uid"
+        }
+      }
+    },
     "rsvps": {
       ".read": true,
       "$eventId": {

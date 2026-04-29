@@ -1,9 +1,10 @@
 import React, { useEffect, useState } from 'react';
 import styled, { keyframes } from 'styled-components';
-import { ref, onValue } from 'firebase/database';
-import { database } from '../../services/firebase';
+import { ref, onValue, update, serverTimestamp } from 'firebase/database';
+import { database, auth } from '../../services/firebase';
 import { getEggMansTake } from '../../services/eggMansTake';
 import { logError } from '../../services/errorLogger';
+import { logEvent } from '../../services/analytics';
 
 const pulse = keyframes`
   0%,100% { opacity: 0.55; }
@@ -110,8 +111,8 @@ const ToggleBtn = styled.button`
 
 function splitFirstTwoSentences(text) {
   if (!text) return { preview: '', rest: '' };
-  // Match end of first 2 sentences. Look for ". " or "! " or "? " endings.
-  const re = /([^.!?]+[.!?]+\s+){2}/;
+  // Show only the FIRST sentence by default. Rest hidden behind "Read more".
+  const re = /([^.!?]+[.!?]+\s+){1}/;
   const m = text.match(re);
   if (!m) return { preview: text, rest: '' };
   const preview = m[0].trim();
@@ -190,7 +191,24 @@ export default function EggMansTake({ event, weather }) {
             {expanded || !hasMore ? text : `${preview}…`}
           </Quote>
           {hasMore && (
-            <ToggleBtn type="button" onClick={() => setExpanded((e) => !e)}>
+            <ToggleBtn type="button" onClick={() => {
+              const next = !expanded;
+              setExpanded(next);
+              if (next) {
+                try { logEvent('eggman_read_more', { eventId: event && event.id }); } catch (_) {}
+                // Mark this signed-in user as having interacted with the event
+                // (used by the Bad Eggs derivation if they don't RSVP).
+                try {
+                  const u = auth.currentUser;
+                  if (u && event && event.id) {
+                    update(ref(database, `eventInteractions/${event.id}/${u.uid}`), {
+                      lastAt: serverTimestamp(),
+                      readMore: true,
+                    }).catch(() => {});
+                  }
+                } catch (_) {}
+              }
+            }}>
               {expanded ? '▴ Show less' : '▾ Read more'}
             </ToggleBtn>
           )}

@@ -71,9 +71,9 @@ const Info = styled.div`
   align-items: stretch;
   text-align: left;
   min-width: 0;
+  gap: 4px;
 
   .name {
-    flex: 1;
     text-align: left;
     font-family: 'Fredoka', sans-serif;
     font-size: 15px;
@@ -88,11 +88,32 @@ const Info = styled.div`
     text-align: left;
     font-size: 12px;
     color: rgba(255,255,255,0.55);
-    margin-top: 3px;
     display: flex;
     gap: 10px;
     flex-wrap: wrap;
   }
+  .tags {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 4px;
+    margin-top: 2px;
+  }
+`;
+
+const MiniTag = styled.span`
+  font-family: 'Inter', sans-serif;
+  font-size: 10px;
+  font-weight: 600;
+  padding: 2px 7px;
+  border-radius: 999px;
+  background: rgba(255,199,44,0.10);
+  border: 1px solid rgba(255,199,44,0.25);
+  color: #FFE66D;
+  white-space: nowrap;
+
+  &.diff-race  { background: rgba(255,107,107,0.12); border-color: rgba(255,107,107,0.30); color: #ffb3b3; }
+  &.diff-chill { background: rgba(111,207,151,0.10); border-color: rgba(111,207,151,0.30); color: #b6e9cb; }
+  &.diff-work  { background: rgba(255,177,85,0.10); border-color: rgba(255,177,85,0.30); color: #ffd2a3; }
 `;
 
 const LockIcon = styled.div`
@@ -208,6 +229,16 @@ export default function EventComingUp({ events, onOpen }) {
                   <span>{fmtTime(ev.start)}</span>
                   {ev.startLoc && <span>{ev.startLoc.label}</span>}
                 </div>
+                {(ev.difficultyLabel || ev.distance || ev.elevation || (ev.tags && ev.tags.length)) && (
+                  <div className="tags">
+                    {ev.difficultyLabel && (
+                      <MiniTag className={`diff-${ev.difficulty || ''}`}>{ev.difficultyLabel}</MiniTag>
+                    )}
+                    {ev.distance && <MiniTag>{ev.distance}</MiniTag>}
+                    {ev.elevation && <MiniTag>{ev.elevation}</MiniTag>}
+                    {ev.tags && ev.tags.map((t, i) => <MiniTag key={i}>{t}</MiniTag>)}
+                  </div>
+                )}
               </Info>
             </Card>
           );
