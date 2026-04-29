@@ -36,8 +36,17 @@ export default function EventMap({ startLoc, endLoc }) {
   const containerRef = useRef(null);
   const mapRef = useRef(null);
 
+  // Use lat/lng primitives in deps so the effect only fires when coordinates
+  // actually change — not on every parent re-render that hands us a new
+  // startLoc object reference. This prevents the map blink when the
+  // surrounding card re-renders (countdown ticker, weather pill data, etc.).
+  const sLat = startLoc?.lat;
+  const sLng = startLoc?.lng;
+  const eLat = endLoc?.lat;
+  const eLng = endLoc?.lng;
+
   useEffect(() => {
-    if (!containerRef.current || !startLoc || !window.L) return;
+    if (!containerRef.current || sLat == null || sLng == null || !window.L) return;
 
     const timer = setTimeout(() => {
       if (!containerRef.current) return;
@@ -50,7 +59,7 @@ export default function EventMap({ startLoc, endLoc }) {
         scrollWheelZoom: false,
         dragging: false,
         tap: false,
-      }).setView([startLoc.lat, startLoc.lng], 13);
+      }).setView([sLat, sLng], 13);
 
       L.tileLayer('https://{s}.basemaps.cartocdn.com/rastertiles/voyager/{z}/{x}/{y}{r}.png', {
         subdomains: 'abcd',
@@ -63,19 +72,19 @@ export default function EventMap({ startLoc, endLoc }) {
         iconAnchor: [9, 9],
       });
 
-      L.marker([startLoc.lat, startLoc.lng], { icon: yolkIcon }).addTo(map);
+      L.marker([sLat, sLng], { icon: yolkIcon }).addTo(map);
 
-      const hasDiffEnd = endLoc &&
-        (endLoc.lat !== startLoc.lat || endLoc.lng !== startLoc.lng);
+      const hasDiffEnd = eLat != null && eLng != null &&
+        (eLat !== sLat || eLng !== sLng);
 
       if (hasDiffEnd) {
-        L.marker([endLoc.lat, endLoc.lng], { icon: yolkIcon }).addTo(map);
+        L.marker([eLat, eLng], { icon: yolkIcon }).addTo(map);
         L.polyline(
-          [[startLoc.lat, startLoc.lng], [endLoc.lat, endLoc.lng]],
+          [[sLat, sLng], [eLat, eLng]],
           { color: '#FFC72C', weight: 3, opacity: 0.7, dashArray: '6 8' }
         ).addTo(map);
         map.fitBounds(
-          [[startLoc.lat, startLoc.lng], [endLoc.lat, endLoc.lng]],
+          [[sLat, sLng], [eLat, eLng]],
           { padding: [40, 40] }
         );
       }
@@ -90,7 +99,7 @@ export default function EventMap({ startLoc, endLoc }) {
         mapRef.current = null;
       }
     };
-  }, [startLoc, endLoc]);
+  }, [sLat, sLng, eLat, eLng]);
 
   return (
     <MapContainer>

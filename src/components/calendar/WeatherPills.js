@@ -17,20 +17,21 @@ const Overlay = styled.div`
 const Pill = styled.span`
   display: inline-flex;
   align-items: center;
-  gap: 5px;
-  padding: 7px 12px;
+  gap: 6px;
+  padding: 7px 14px;
   border-radius: 999px;
   background: rgba(20,20,20,0.78);
-  border: 1px solid rgba(255,255,255,0.22);
+  border: 1px solid rgba(255,199,44,0.55);
   backdrop-filter: blur(10px);
   box-shadow: 0 4px 14px rgba(0,0,0,0.45);
   text-shadow: 0 1px 2px rgba(0,0,0,0.55);
-  font-family: 'Inter', sans-serif;
-  font-size: 11px;
+  font-family: 'Montserrat', sans-serif;
+  font-size: 10px;
   font-weight: 700;
-  color: #f4f4f4;
+  color: #FFE66D;
   white-space: nowrap;
-  letter-spacing: 0.02em;
+  letter-spacing: 0.10em;
+  text-transform: uppercase;
   font-variant-numeric: tabular-nums;
 
   &.warn { color: #FFB155; border-color: rgba(255,177,85,0.55); }

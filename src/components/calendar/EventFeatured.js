@@ -251,7 +251,7 @@ export default function EventFeatured({ event }) {
 
         {event.description && <EventDesc className="event-desc">{event.description}</EventDesc>}
 
-        <WeatherPanel event={event} onData={handleWeatherData} showEggMansTake={false} />
+        <WeatherPanel event={event} onData={handleWeatherData} />
 
         <EventActions event={event} />
 

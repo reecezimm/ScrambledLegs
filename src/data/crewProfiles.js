@@ -19,9 +19,9 @@ export const CREW_PROFILES = [
   },
   {
     name: 'Derek VanSlyke',
-    aliases: ['Spandex Warrior'],
+    aliases: ['Spandex Warrior', 'Roddy', 'Roddie', 'RODDIE'],
     emails: [],
-    blurb: "Derek traded trails for Spandex. Pray for him. He's no longer a cool biker — full road traitor energy.",
+    blurb: "Derek 'Roddy' VanSlyke — full-blown Zwift roadie now. Spandex Warrior. Pure road. Pure indoor watts. He doesn't even pretend to mountain bike anymore. Pray for him.",
   },
   {
     name: 'Will Markes',
@@ -97,9 +97,15 @@ export const CREW_PROFILES = [
   },
   {
     name: 'Reece Zimm',
-    aliases: ['REECEZIMM', 'Reece Hickman', 'reecezimm'],
-    emails: ['zimm.reece@gmail.com'],
-    blurb: "GM Reece runs the show. Coach reports to him. Be on time.",
+    aliases: ['REECEZIMM', 'reecezimm', 'Calf Daddy'],
+    emails: ['zimm.reece@gmail.com', 'gm@thescrambledlegs.com'],
+    blurb: "GM Reece Zimm — aka Calf Daddy. No fun, no talking, no laughing. All business. Just hammers. Tried-and-true navigator. Coach Lyall reports to him. Be on time.",
+  },
+  {
+    name: 'Reece Hickman',
+    aliases: [],
+    emails: [],
+    blurb: "Reece Hickman is a separate Reece — not the GM, not Calf Daddy. Just here to ride.",
   },
 ];
 
