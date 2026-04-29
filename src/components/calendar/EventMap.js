@@ -34,32 +34,35 @@ const MapInner = styled.div`
 
 const Overlay = styled.div`
   position: absolute;
-  top: 8px;
-  right: 8px;
-  z-index: 3;
+  top: 10px;
+  right: 10px;
+  z-index: 15;
   display: flex;
   flex-wrap: wrap;
   justify-content: flex-end;
   gap: 6px;
-  max-width: calc(100% - 16px);
+  max-width: calc(100% - 100px);
   pointer-events: none;
 `;
 
 const Pill = styled.span`
   display: inline-flex;
   align-items: center;
-  gap: 4px;
-  padding: 4px 9px;
+  gap: 5px;
+  padding: 7px 12px;
   border-radius: 999px;
-  background: rgba(0,0,0,0.55);
-  border: 1px solid rgba(255,199,44,0.35);
-  backdrop-filter: blur(6px);
+  background: rgba(20,20,20,0.78);
+  border: 1px solid rgba(255,255,255,0.22);
+  backdrop-filter: blur(10px);
+  box-shadow: 0 4px 14px rgba(0,0,0,0.45);
+  text-shadow: 0 1px 2px rgba(0,0,0,0.55);
   font-family: 'Inter', sans-serif;
   font-size: 11px;
-  font-weight: 600;
+  font-weight: 700;
   color: #f4f4f4;
   white-space: nowrap;
   letter-spacing: 0.02em;
+  font-variant-numeric: tabular-nums;
 
   &.warn { color: #FFB155; border-color: rgba(255,177,85,0.55); }
 `;

@@ -199,7 +199,7 @@ export default function RsvpToggle({ event }) {
   return (
     <>
       <Btn type="button" $rsvped={rsvped} disabled={busy} onClick={handleClick}>
-        {rsvped ? "✓ You're in — tap to remove" : "I'm coming"}
+        {rsvped ? "✓ You're in" : "I'm coming"}
       </Btn>
       {!user && !loading && (
         <Hint>Sign in to lock in your RSVP and join the leaderboard.</Hint>
