@@ -261,7 +261,7 @@ const GlobalStyle = createGlobalStyle`
     border: 3px solid #1a1a1a;
     box-shadow: 0 0 0 2px #FFC72C, 0 0 18px rgba(255,199,44,0.8);
   }
-  .leaflet-tile-pane { filter: brightness(1.0) saturate(0.85) contrast(1.05); }
+  .leaflet-tile-pane { filter: saturate(1.10) contrast(1.10) brightness(1.02); }
   .leaflet-control-attribution { font-size: 9px !important; opacity: 0.5; }
 `;
 

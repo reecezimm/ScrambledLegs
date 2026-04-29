@@ -2,15 +2,11 @@ import React from 'react';
 import styled from 'styled-components';
 
 const Overlay = styled.div`
-  position: absolute;
-  top: 10px;
-  right: 10px;
-  z-index: 25;
+  position: relative;
   display: flex;
   flex-wrap: wrap;
   justify-content: flex-end;
   gap: 6px;
-  max-width: calc(100% - 110px);
   pointer-events: none;
 `;
 

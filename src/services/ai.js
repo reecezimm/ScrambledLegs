@@ -18,6 +18,7 @@
 
 import { app, database } from './firebase';
 import { ref, get, set, remove, serverTimestamp } from 'firebase/database';
+import { BUILD_SHA } from './buildInfo';
 
 const DEFAULT_MODEL = 'gemini-2.5-flash';
 const LOCK_TTL_MS = 30000;
@@ -60,12 +61,19 @@ function _buildRequest(prompt, options = {}) {
   return req;
 }
 
+// Build SHA gets prefixed onto every cache key so each deploy automatically
+// invalidates all prior AI responses. Old entries become orphaned in RTDB
+// (storage cost is trivially small) and the next user past deploy regenerates.
+// No manual clearCache() needed when shipping prompt/code changes.
+const CACHE_VERSION = (BUILD_SHA && BUILD_SHA !== 'local') ? BUILD_SHA : 'dev';
+
 function _sanitizeCacheKey(key) {
   if (typeof key !== 'string' || !key) {
     throw new Error('cacheKey must be a non-empty string');
   }
   // RTDB path segments cannot contain . # $ [ ] /
-  return key.replace(/[.#$[\]/]/g, '_').slice(0, 200);
+  const versioned = `v_${CACHE_VERSION}_${key}`;
+  return versioned.replace(/[.#$[\]/]/g, '_').slice(0, 200);
 }
 
 function _cacheRef(sanitizedKey) {
@@ -95,6 +103,13 @@ async function _generate(prompt, options) {
   return result.response.text();
 }
 
+function _isUsableCachedValue(v) {
+  // Empty / whitespace-only strings are NOT usable. Earlier failures (safety
+  // blocks, partial responses) could have cached "" — treat as miss so we
+  // regenerate rather than render nothing forever.
+  return typeof v === 'string' && v.trim().length > 0;
+}
+
 async function _runCached(prompt, options) {
   const { cacheKey, ttlMs, forceRefresh } = options;
   if (typeof ttlMs !== 'number' || ttlMs <= 0) {
@@ -105,7 +120,7 @@ async function _runCached(prompt, options) {
 
   // 1. Read existing
   let entry = await _readCache(sanitized);
-  if (!forceRefresh && _isFresh(entry, ttlMs) && typeof entry.value === 'string') {
+  if (!forceRefresh && _isFresh(entry, ttlMs) && _isUsableCachedValue(entry && entry.value)) {
     return entry.value;
   }
 
@@ -115,7 +130,12 @@ async function _runCached(prompt, options) {
     while (Date.now() - start < POLL_MAX_MS) {
       await new Promise((r) => setTimeout(r, POLL_INTERVAL_MS));
       const polled = await _readCache(sanitized);
-      if (polled && _isFresh(polled, ttlMs) && typeof polled.value === 'string' && !polled.lock) {
+      if (
+        polled &&
+        _isFresh(polled, ttlMs) &&
+        _isUsableCachedValue(polled.value) &&
+        !polled.lock
+      ) {
         return polled.value;
       }
       if (!_isLocked(polled)) {
@@ -137,7 +157,49 @@ async function _runCached(prompt, options) {
     // Lock write failed (e.g. unauthenticated) — proceed without locking.
   }
 
-  const value = await _generate(prompt, options);
+  let value;
+  try {
+    value = await _generate(prompt, options);
+  } catch (err) {
+    // Clear the lock so the next call can retry quickly. Preserve any prior
+    // good value if present.
+    try {
+      if (entry && _isUsableCachedValue(entry.value)) {
+        await set(cRef, {
+          value: entry.value,
+          prompt: entry.prompt || '',
+          generatedAt: entry.generatedAt || Date.now(),
+          ttlMs: entry.ttlMs || ttlMs,
+        });
+      } else {
+        await remove(cRef);
+      }
+    } catch (_) {}
+    if (typeof console !== 'undefined' && console.warn) {
+      console.warn('[ai.runPrompt] generateContent failed:', err && (err.message || err));
+    }
+    throw err;
+  }
+
+  // Empty result (safety block, model returned nothing) — do NOT cache it.
+  if (!_isUsableCachedValue(value)) {
+    try {
+      if (entry && _isUsableCachedValue(entry.value)) {
+        await set(cRef, {
+          value: entry.value,
+          prompt: entry.prompt || '',
+          generatedAt: entry.generatedAt || Date.now(),
+          ttlMs: entry.ttlMs || ttlMs,
+        });
+      } else {
+        await remove(cRef);
+      }
+    } catch (_) {}
+    if (typeof console !== 'undefined' && console.warn) {
+      console.warn('[ai.runPrompt] empty response — not caching. cacheKey=', sanitized);
+    }
+    return value;
+  }
 
   // 4. Persist result.
   await set(cRef, {
@@ -174,8 +236,19 @@ export async function getCachedPrompt(cacheKey) {
   if (!cacheKey) return null;
   const sanitized = _sanitizeCacheKey(cacheKey);
   const entry = await _readCache(sanitized);
-  if (entry && typeof entry.value === 'string') return entry.value;
+  if (entry && _isUsableCachedValue(entry.value)) return entry.value;
   return null;
+}
+
+export function sanitizeCacheKey(cacheKey) {
+  return _sanitizeCacheKey(cacheKey);
+}
+
+export async function _readCacheRaw(cacheKey) {
+  // Diagnostic helper: returns the raw RTDB entry (lock, generatedAt, value, etc.)
+  if (!cacheKey) return null;
+  const sanitized = _sanitizeCacheKey(cacheKey);
+  return _readCache(sanitized);
 }
 
 export async function clearCache(cacheKey) {
@@ -190,7 +263,14 @@ export async function clearCache(cacheKey) {
 // Exposed in production too — the AI calls are auth-bound via Firebase App
 // config (apiKey is public anyway), and console access lets admins debug.
 if (typeof window !== 'undefined') {
-  window.__sl_ai = { runPrompt, streamPrompt, getCachedPrompt, clearCache };
+  window.__sl_ai = {
+    runPrompt,
+    streamPrompt,
+    getCachedPrompt,
+    clearCache,
+    _readCacheRaw,
+    _sanitizeCacheKey,
+  };
 }
 
 export { app };

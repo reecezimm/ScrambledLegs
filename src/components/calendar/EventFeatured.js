@@ -41,11 +41,23 @@ const BannerImg = styled.div`
   }
 `;
 
-const StatusChip = styled.div`
+const MapHeaderOverlay = styled.div`
   position: absolute;
-  top: 14px;
-  left: 14px;
-  z-index: 20;
+  top: 8px;
+  left: 8px;
+  right: 8px;
+  z-index: 30;
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  gap: 10px;
+  pointer-events: none;
+
+  & > * { pointer-events: auto; }
+`;
+
+const StatusChip = styled.div`
+  position: relative;
   display: inline-flex;
   align-items: center;
   gap: 6px;
@@ -221,12 +233,13 @@ export default function EventFeatured({ event }) {
         )
       }
 
-      <WeatherPills weather={liveWeather} />
-
-      <StatusChip className="event-status-chip" data-status={status}>
-        <Dot />
-        <span>{statusText(event, status)}</span>
-      </StatusChip>
+      <MapHeaderOverlay>
+        <StatusChip className="event-status-chip" data-status={status}>
+          <Dot />
+          <span>{statusText(event, status)}</span>
+        </StatusChip>
+        <WeatherPills weather={liveWeather} />
+      </MapHeaderOverlay>
 
       <RideLeaderBadge rideLeader={event.rideLeader} />
 
@@ -253,13 +266,13 @@ export default function EventFeatured({ event }) {
 
         <WeatherPanel event={event} onData={handleWeatherData} />
 
-        <EventActions event={event} />
-
         <KudosCta event={event} isSheetContext={false} />
 
         <RsvpToggle event={event} />
 
         <EventLeaderboard event={event} />
+
+        <EventActions event={event} isSheetContext={false} />
       </Body>
     </Card>
   );

@@ -10,7 +10,7 @@ import KudosCta from './KudosCta';
 import RsvpToggle from './RsvpToggle';
 import EventLeaderboard from './EventLeaderboard';
 import { logEvent } from '../../services/analytics';
-import { fmtDateLong, fmtTime } from '../../hooks/useEventLifecycle';
+import { fmtDateLong, fmtTime, getStatus, STATUS_LABEL, fmtCountdown, fmtTimeSince } from '../../hooks/useEventLifecycle';
 
 const fadeIn = keyframes`from { opacity: 0; } to { opacity: 1; }`;
 const sheetSlide = keyframes`from { transform: translateY(100%); } to { transform: translateY(0); }`;
@@ -114,6 +114,73 @@ const BannerImg = styled.div`
   }
 `;
 
+const MapHeaderOverlay = styled.div`
+  position: absolute;
+  top: 8px;
+  left: 8px;
+  right: 8px;
+  z-index: 30;
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  gap: 10px;
+  pointer-events: none;
+
+  & > * { pointer-events: auto; }
+`;
+
+const chipPulse = keyframes`
+  0%,100% { transform: scale(1); opacity: 1; }
+  50%      { transform: scale(1.4); opacity: 0.55; }
+`;
+
+const SheetStatusChip = styled.div`
+  position: relative;
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 7px 14px;
+  border-radius: 999px;
+  font-family: 'Montserrat', sans-serif;
+  font-size: 10px;
+  font-weight: 700;
+  letter-spacing: 0.10em;
+  text-transform: uppercase;
+  backdrop-filter: blur(10px);
+  background: rgba(20,20,20,0.78);
+  border: 1px solid rgba(255,255,255,0.22);
+  box-shadow: 0 4px 14px rgba(0,0,0,0.45);
+  text-shadow: 0 1px 2px rgba(0,0,0,0.55);
+  font-variant-numeric: tabular-nums;
+
+  &[data-status="upcoming"]   { color: #FFE66D; border-color: rgba(255,199,44,0.55); }
+  &[data-status="in_progress"]{ color: #8DEBA9; border-color: rgba(111,207,151,0.55); }
+  &[data-status="beers"]      { color: #FFC58A; border-color: rgba(255,177,85,0.55); }
+`;
+
+const SheetDot = styled.span`
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+  animation: ${chipPulse} 1.6s infinite;
+
+  [data-status="upcoming"] &   { background: #FFC72C; box-shadow: 0 0 8px #FFC72C; }
+  [data-status="in_progress"] &{ background: #6FCF97; box-shadow: 0 0 8px #6FCF97; animation-duration: 1.2s; }
+  [data-status="beers"] &      { background: #FFB155; box-shadow: 0 0 8px #FFB155; animation-duration: 2s; }
+`;
+
+function sheetStatusText(event, status) {
+  if (status === 'upcoming') {
+    const ms = (event.start || 0) - Date.now();
+    return fmtCountdown(ms) || STATUS_LABEL.upcoming;
+  }
+  if (status === 'in_progress') {
+    return `Riding · ${fmtTimeSince(Date.now() - event.start)}`;
+  }
+  if (status === 'beers') return 'Beers being consumed';
+  return STATUS_LABEL[status] || status;
+}
+
 const Body = styled.div`
   padding: 18px 18px 14px;
 
@@ -203,6 +270,12 @@ function SheetContent({ event, onClose }) {
   const hasRl = !!event.rideLeader;
   const [liveWeather, setLiveWeather] = useState(null);
   const handleWeatherData = useCallback((wx) => setLiveWeather(wx), []);
+  const [, setTick] = useState(0);
+
+  useEffect(() => {
+    const id = setInterval(() => setTick((t) => t + 1), 1000);
+    return () => clearInterval(id);
+  }, []);
 
   useEffect(() => {
     document.body.dataset.sheetOpen = '1';
@@ -240,7 +313,13 @@ function SheetContent({ event, onClose }) {
           )
         }
 
-        <WeatherPills weather={liveWeather} />
+        <MapHeaderOverlay>
+          <SheetStatusChip data-status={getStatus(event)}>
+            <SheetDot />
+            <span>{sheetStatusText(event, getStatus(event))}</span>
+          </SheetStatusChip>
+          <WeatherPills weather={liveWeather} />
+        </MapHeaderOverlay>
 
         <RideLeaderBadge rideLeader={event.rideLeader} />
 
@@ -267,13 +346,13 @@ function SheetContent({ event, onClose }) {
 
           <WeatherPanel event={event} onData={handleWeatherData} />
 
-          <EventActions event={event} />
-
           <KudosCta event={event} isSheetContext={true} />
 
           <RsvpToggle event={event} />
 
           <EventLeaderboard event={event} />
+
+          <EventActions event={event} isSheetContext={true} />
         </Body>
       </SheetBody>
     </SheetWrap>

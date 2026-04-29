@@ -1,4 +1,4 @@
-import { runPrompt } from './ai';
+import { runPrompt, clearCache, _readCacheRaw, sanitizeCacheKey } from './ai';
 import { FALLBACK_BLURB, findProfile } from '../data/crewProfiles';
 
 // Static voice/instruction shell. The full system prompt is built per-call
@@ -211,46 +211,98 @@ export function buildSystemPrompt({ event, rsvpedUsers, weather }) {
 // Back-compat alias.
 export const buildPrompt = buildSystemPrompt;
 
-export async function getEggMansTake({ event, rsvpedUsers, weather }) {
+function _buildCacheKey({ event, rsvpedUsers, weather }) {
+  const uids = (rsvpedUsers || []).map((u) => u.uid || u.email || u.displayName || '').sort().join(',');
+  const wxKey = weatherBucket(weather);
+  const contentFp = [
+    event.name || '',
+    event.description || '',
+    (event.tags || []).join('|'),
+    event.startLoc?.label || '',
+    event.start || '',
+    event.difficultyLabel || '',
+    event.distance || '',
+    event.elevation || '',
+    event.rideLeader?.name || '',
+  ].join('::');
+  const proxBucket = proximityBucket(event.start);
+  const archived = isArchived(event.start);
+  return archived
+    ? `eggManTake_${event.id}_${shortHash(uids + '|' + contentFp + '|archived')}`.slice(0, 200)
+    : `eggManTake_${event.id}_${shortHash(uids + '|' + wxKey + '|' + contentFp + '|' + proxBucket)}`.slice(0, 200);
+}
+
+// User-side trigger. The full instruction is in the system prompt; this is the
+// turn-taking message that asks the model to produce its response. Kept short
+// but substantive so providers that require non-trivial user content accept it.
+const USER_TRIGGER = 'Generate Eggman\'s take for this ride right now. Follow the system instructions exactly.';
+
+export async function getEggMansTake({ event, rsvpedUsers, weather, forceRefresh = false } = {}) {
   if (!event || !event.id) return null;
   try {
     const systemPrompt = buildSystemPrompt({ event, rsvpedUsers, weather });
-    const uids = (rsvpedUsers || []).map((u) => u.uid || u.email || u.displayName || '').sort().join(',');
-    const wxKey = weatherBucket(weather);
-    // Fingerprint the event's content so any admin edit (description, tags,
-    // location, time, etc.) produces a new cache key → fresh generation.
-    const contentFp = [
-      event.name || '',
-      event.description || '',
-      (event.tags || []).join('|'),
-      event.startLoc?.label || '',
-      event.start || '',
-      event.difficultyLabel || '',
-      event.distance || '',
-      event.elevation || '',
-      event.rideLeader?.name || '',
-    ].join('::');
-    const proxBucket = proximityBucket(event.start);
-    const archived = isArchived(event.start);
-    // For archived events, drop weather from the key (irrelevant in retrospect)
-    // and lock the bucket so the take is permanent.
-    const cacheKey = archived
-      ? `eggManTake_${event.id}_${shortHash(uids + '|' + contentFp + '|archived')}`.slice(0, 200)
-      : `eggManTake_${event.id}_${shortHash(uids + '|' + wxKey + '|' + contentFp + '|' + proxBucket)}`.slice(0, 200);
-    // TTL scales with proximity — far away is relaxed, imminent is fresh.
+    const cacheKey = _buildCacheKey({ event, rsvpedUsers, weather });
     const ttlMs = ttlForProximity(event.start);
-    // All context is in the system prompt; user message is a tiny trigger.
-    const text = await runPrompt('Go.', {
+    const text = await runPrompt(USER_TRIGGER, {
       system: systemPrompt,
       cacheKey,
       ttlMs,
       maxTokens: 400,
       temperature: 1.0,
       model: 'gemini-2.5-flash-lite',
+      forceRefresh,
     });
-    if (!text || typeof text !== 'string') return null;
+    if (!text || typeof text !== 'string' || !text.trim()) {
+      if (typeof console !== 'undefined' && console.warn) {
+        console.warn('[eggMansTake] empty/non-string result for', event.id, 'cacheKey=', cacheKey);
+      }
+      return null;
+    }
     return text.trim();
-  } catch (_) {
+  } catch (err) {
+    if (typeof console !== 'undefined' && console.warn) {
+      console.warn('[eggMansTake] generation failed for', event && event.id, ':', err && (err.message || err));
+    }
     return null;
   }
+}
+
+// Diagnostic helper exposed on window for production debugging.
+//   await __sl_egg_debug({ event, rsvpedUsers, weather })
+//     → returns { cacheKey, sanitized, raw, regenerated, error }
+//   await __sl_egg_debug.byEventId('evt_123')
+//     → looks up any cache entries that mention the event id (best effort).
+async function __sl_egg_debug(args = {}) {
+  const { event, rsvpedUsers, weather } = args;
+  const out = { event: event && event.id, steps: [] };
+  if (!event || !event.id) {
+    out.error = 'event with .id is required';
+    return out;
+  }
+  try {
+    const cacheKey = _buildCacheKey({ event, rsvpedUsers, weather });
+    out.cacheKey = cacheKey;
+    out.sanitized = sanitizeCacheKey(cacheKey);
+    out.steps.push('built cacheKey');
+    const raw = await _readCacheRaw(cacheKey);
+    out.raw = raw;
+    out.steps.push(`read cache: ${raw ? 'hit' : 'miss'}`);
+    out.systemPromptPreview = buildSystemPrompt({ event, rsvpedUsers, weather }).slice(0, 400);
+    out.ttlMs = ttlForProximity(event.start);
+    out.proximity = proximityBucket(event.start);
+    out.archived = isArchived(event.start);
+    out.steps.push('attempting forceRefresh regeneration');
+    out.regenerated = await getEggMansTake({ event, rsvpedUsers, weather, forceRefresh: true });
+    out.steps.push(`regen result: ${out.regenerated ? 'OK (' + out.regenerated.length + ' chars)' : 'NULL'}`);
+  } catch (err) {
+    out.error = (err && err.message) || String(err);
+  }
+  return out;
+}
+
+if (typeof window !== 'undefined') {
+  window.__sl_egg_debug = __sl_egg_debug;
+  window.__sl_egg_debug.clearCache = clearCache;
+  window.__sl_egg_debug.buildCacheKey = _buildCacheKey;
+  window.__sl_egg_debug.readRaw = _readCacheRaw;
 }

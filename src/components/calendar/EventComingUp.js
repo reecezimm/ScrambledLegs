@@ -68,9 +68,13 @@ const Info = styled.div`
   display: flex;
   flex-direction: column;
   justify-content: center;
+  align-items: stretch;
+  text-align: left;
   min-width: 0;
 
   .name {
+    flex: 1;
+    text-align: left;
     font-family: 'Fredoka', sans-serif;
     font-size: 15px;
     font-weight: 600;
@@ -78,8 +82,10 @@ const Info = styled.div`
     white-space: nowrap;
     overflow: hidden;
     text-overflow: ellipsis;
+    width: 100%;
   }
   .meta {
+    text-align: left;
     font-size: 12px;
     color: rgba(255,255,255,0.55);
     margin-top: 3px;

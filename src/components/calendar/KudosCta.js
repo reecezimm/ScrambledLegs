@@ -323,8 +323,19 @@ const HD_HYPE_POOL = [
 ];
 
 const HD_FIRST_25 = [
-  "MASH!", "MASH! MASH!", "GO GO GO!", "KEEP GOING!", "DON'T STOP!",
-  "CRACK THAT SHELL!", "HARDER!", "PROVE IT!", "YOU CAN DO THIS!", "CRANK IT!",
+  // 1-5: SUPER CLEAR instructions — make sure first-time users know to keep tapping.
+  "PRESS AGAIN!",
+  "KEEP PRESSING!",
+  "DON'T STOP — TAP!",
+  "TAP FASTER!",
+  "NOW MASH!",
+  // 6-10: crescendo — they're committed, ramp the urgency.
+  "MASH HARDER!",
+  "KEEP MASHING!",
+  "BEAT THE HIGH SCORE!",
+  "DON'T LET UP!",
+  "GO GO GO!",
+  // 11-25: same as before — challenge / hype.
   "OTHERS DID BETTER", "DON'T QUIT NOW", "HAMMER DOWN!", "SEND IT!", "THEY'RE BEATING YOU",
   "ALMOST THERE", "BEAST MODE", "UNHINGED YET?", "YOU GOT THIS", "MORE WATTS!",
   "FEEL THE BURN", "PROVE THEM WRONG", "CHAMPION ENERGY", "ALL IN!", "__HYPE__",
@@ -490,13 +501,13 @@ const CtaEmoji = styled.span`
 `;
 
 const CtaCount = styled.span`
-  font-size: 26px;
+  font-size: 22px;
   font-weight: 700;
   line-height: 1;
   font-variant-numeric: tabular-nums;
   transition: font-size 0.2s;
 
-  ${HdCta}.is-idle & { font-size: 13px; font-weight: 600; }
+  ${HdCta}.is-idle & { font-size: 12px; font-weight: 600; }
 `;
 
 const CtaText = styled.span`

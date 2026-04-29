@@ -36,15 +36,27 @@ const SectionLabel = styled.div`
 const Row = styled.div`
   display: flex;
   align-items: center;
-  gap: 12px;
-  padding: 8px 4px;
+  gap: 10px;
+  padding: 6px 4px;
   border-bottom: 1px solid rgba(255,255,255,0.05);
   &:last-child { border-bottom: none; }
 `;
 
+const AvatarWrap = styled.div`
+  position: relative;
+  width: 32px;
+  height: 32px;
+  flex-shrink: 0;
+`;
+
+const goldRingShine = keyframes`
+  0%,100% { box-shadow: 0 0 0 2px #FFD24A, 0 0 8px rgba(255,210,74,0.55); }
+  50%      { box-shadow: 0 0 0 2px #FFE066, 0 0 14px rgba(255,210,74,0.85); }
+`;
+
 const Avatar = styled.div`
-  width: 30px;
-  height: 30px;
+  width: 32px;
+  height: 32px;
   border-radius: 50%;
   background: ${(p) => p.$photo
     ? `center/cover no-repeat url('${p.$photo}')`
@@ -57,7 +69,47 @@ const Avatar = styled.div`
   align-items: center;
   justify-content: center;
   text-transform: uppercase;
-  flex-shrink: 0;
+  position: relative;
+  z-index: 1;
+
+  &[data-medal="1"] { animation: ${goldRingShine} 2.4s ease-in-out infinite; }
+  &[data-medal="2"] { box-shadow: 0 0 0 2px #D8D9DD, 0 0 8px rgba(216,217,221,0.45); }
+  &[data-medal="3"] { box-shadow: 0 0 0 2px #C98A55, 0 0 8px rgba(201,138,85,0.45); }
+`;
+
+const RankBadge = styled.span`
+  position: absolute;
+  bottom: -2px;
+  right: -2px;
+  width: 14px;
+  height: 14px;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-family: 'Fredoka', sans-serif;
+  font-weight: 700;
+  font-size: 9px;
+  color: #1a1a1a;
+  border: 1.5px solid #1a1a1a;
+  font-variant-numeric: tabular-nums;
+  z-index: 2;
+  background: rgba(255,255,255,0.55);
+
+  &[data-medal="1"] { background: linear-gradient(135deg, #FFE066, #FFD24A 60%, #C99417); }
+  &[data-medal="2"] { background: linear-gradient(135deg, #F2F2F4, #B5B6BA 60%, #8B8C90); }
+  &[data-medal="3"] { background: linear-gradient(135deg, #E0A47A, #B5713E 60%, #7A4920); }
+  &[data-medal="other"] { background: #2a2a2a; color: rgba(255,255,255,0.65); border-color: #1a1a1a; }
+`;
+
+const LaurelSvg = styled.svg`
+  position: absolute;
+  inset: -6px -8px -6px -8px;
+  width: 48px;
+  height: 44px;
+  pointer-events: none;
+  opacity: 0.4;
+  z-index: 0;
 `;
 
 const HeaderBtn = styled.button`
@@ -97,9 +149,22 @@ const Chevron = styled.span`
   ${(p) => p.$open && 'transform: rotate(90deg);'}
 `;
 
-const Name = styled.div`
+const NameWrap = styled.div`
   flex: 1;
   min-width: 0;
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 4px 6px;
+
+  @media (max-width: 480px) {
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 2px;
+  }
+`;
+
+const Name = styled.div`
   font-family: 'Inter', sans-serif;
   font-size: 13px;
   color: #f4f4f4;
@@ -107,6 +172,9 @@ const Name = styled.div`
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
+  max-width: 100%;
+
+  @media (max-width: 480px) { font-size: 12px; }
 `;
 
 const Stat = styled.div`
@@ -115,6 +183,8 @@ const Stat = styled.div`
   color: rgba(255,255,255,0.65);
   font-variant-numeric: tabular-nums;
   white-space: nowrap;
+
+  @media (max-width: 480px) { font-size: 11px; }
 `;
 
 const Crown = styled.span`
@@ -209,18 +279,46 @@ const SignInPrompt = styled.button`
 `;
 
 const Toggle = styled.button`
-  background: none;
-  border: none;
-  color: rgba(255,255,255,0.55);
-  font-family: 'Montserrat', sans-serif;
-  font-size: 10px;
+  display: flex;
+  width: 100%;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  background: linear-gradient(140deg, rgba(60,40,20,0.55), rgba(40,30,20,0.55));
+  border: 1px dashed rgba(180,120,70,0.40);
+  color: #C68B5A;
+  font-family: 'Courier New', monospace;
+  font-size: 12px;
   font-weight: 700;
-  letter-spacing: 0.14em;
+  letter-spacing: 0.10em;
   text-transform: uppercase;
+  font-style: italic;
   cursor: pointer;
-  padding: 8px 4px;
+  padding: 10px 12px;
+  margin-top: 10px;
+  border-radius: 10px;
+  box-shadow:
+    inset 0 2px 6px rgba(0,0,0,0.45),
+    inset 0 -1px 0 rgba(255,255,255,0.04);
+  transition: background 0.15s, color 0.15s;
+
+  &:hover {
+    background: linear-gradient(140deg, rgba(80,55,30,0.65), rgba(55,40,25,0.65));
+    color: #E0A47A;
+  }
+
+  .chev {
+    display: inline-block;
+    transition: transform 0.18s ease;
+    font-size: 11px;
+    color: #A66;
+  }
+  &[data-open="true"] .chev { transform: rotate(90deg); }
+`;
+
+const RottenList = styled.div`
+  filter: hue-rotate(-15deg) saturate(0.7);
   margin-top: 4px;
-  &:hover { color: #FFE66D; }
 `;
 
 const RottenAvatar = styled.div`
@@ -393,46 +491,77 @@ export default function EventLeaderboard({ event }) {
           {crew.length === 0 ? (
             <Empty>No RSVPs yet — be the first to lock it in.</Empty>
           ) : (
-            crew.map((row, i) => (
-              <Row key={row.uid}>
-                <Rank className="crew-rank" data-medal={i < 3 ? String(i + 1) : undefined}>{i + 1}</Rank>
-                <Avatar $photo={row.photoURL}>
-                  {!row.photoURL && initialFor(row.displayName)}
-                </Avatar>
-                <Name className="crew-name">
-                  {row.displayName} {i === 0 && row.mashes > 0 && (
-                    <>
-                      <Crown>👑</Crown>
-                      <TopMasherTag>Top Masher</TopMasherTag>
-                    </>
-                  )}
-                </Name>
-                <Stat>🌭 {row.mashes}</Stat>
-                <Stat style={{ color: '#6FCF97', fontSize: 18, fontWeight: 700 }}>✓</Stat>
-              </Row>
-            ))
+            crew.map((row, i) => {
+              const medal = i < 3 ? String(i + 1) : 'other';
+              return (
+                <Row key={row.uid}>
+                  <AvatarWrap>
+                    {i === 0 && (
+                      <LaurelSvg viewBox="0 0 48 44" aria-hidden="true">
+                        <g fill="none" stroke="#7DBE7D" strokeWidth="1.6" strokeLinecap="round">
+                          <path d="M8 22 C 6 14, 8 8, 14 5" />
+                          <path d="M9 26 C 5 22, 4 16, 7 10" />
+                          <path d="M11 30 C 6 26, 4 20, 6 14" />
+                          <path d="M40 22 C 42 14, 40 8, 34 5" />
+                          <path d="M39 26 C 43 22, 44 16, 41 10" />
+                          <path d="M37 30 C 42 26, 44 20, 42 14" />
+                        </g>
+                        <g fill="#7DBE7D" opacity="0.85">
+                          <ellipse cx="9" cy="11" rx="2.4" ry="1.2" transform="rotate(-30 9 11)" />
+                          <ellipse cx="7" cy="17" rx="2.4" ry="1.2" transform="rotate(-15 7 17)" />
+                          <ellipse cx="7" cy="23" rx="2.4" ry="1.2" transform="rotate(0 7 23)" />
+                          <ellipse cx="39" cy="11" rx="2.4" ry="1.2" transform="rotate(30 39 11)" />
+                          <ellipse cx="41" cy="17" rx="2.4" ry="1.2" transform="rotate(15 41 17)" />
+                          <ellipse cx="41" cy="23" rx="2.4" ry="1.2" transform="rotate(0 41 23)" />
+                        </g>
+                      </LaurelSvg>
+                    )}
+                    <Avatar $photo={row.photoURL} data-medal={i < 3 ? String(i + 1) : undefined}>
+                      {!row.photoURL && initialFor(row.displayName)}
+                    </Avatar>
+                    <RankBadge data-medal={medal}>{i + 1}</RankBadge>
+                  </AvatarWrap>
+                  <NameWrap className="crew-name">
+                    <Name>{row.displayName}</Name>
+                    {i === 0 && row.mashes > 0 && (
+                      <>
+                        <Crown>👑</Crown>
+                        <TopMasherTag>Top Masher</TopMasherTag>
+                      </>
+                    )}
+                  </NameWrap>
+                  <Stat>🌭 {row.mashes}</Stat>
+                  <Stat style={{ color: '#6FCF97', fontSize: 18, fontWeight: 700 }}>✓</Stat>
+                </Row>
+              );
+            })
           )}
 
           {badEggs.length > 0 && (
             <>
-              <Toggle type="button" onClick={() => setShowBadEggs((s) => !s)}>
-                {showBadEggs ? '▾' : '▸'} Bad Eggs · {badEggs.length}
+              <Toggle type="button" data-open={showBadEggs} onClick={() => setShowBadEggs((s) => !s)}>
+                <span><span className="chev">{showBadEggs ? '▼' : '▶'}</span> Bad Eggs · {badEggs.length}</span>
+                <span style={{ opacity: 0.7 }}>🥚</span>
               </Toggle>
-              {showBadEggs && badEggs.map((row) => {
-                const prof = profiles[row.uid] || {};
-                const dn = prof.displayName || row.displayName || 'Anonymous masher';
-                const photo = prof.photoURL || row.photoURL || null;
-                return (
-                  <Row key={`bad-${row.uid}`}>
-                    <RottenAvatar $photo={photo}>
-                      {!photo && initialFor(dn)}
-                    </RottenAvatar>
-                    <RottenName>{dn}</RottenName>
-                    <RottenStat>🌭 {row.mashes}</RottenStat>
-                    <RottenEmoji>🤢</RottenEmoji>
-                  </Row>
-                );
-              })}
+              {showBadEggs && (
+                <RottenList>
+                  {badEggs.map((row) => {
+                    const prof = profiles[row.uid] || {};
+                    const dn = prof.displayName || row.displayName || 'Anonymous masher';
+                    const photo = prof.photoURL || row.photoURL || null;
+                    return (
+                      <Row key={`bad-${row.uid}`}>
+                        <RottenAvatar $photo={photo}>
+                          {!photo && initialFor(dn)}
+                        </RottenAvatar>
+                        <RottenName>{dn}</RottenName>
+                        <RottenStat>🌭 {row.mashes}</RottenStat>
+                        <RottenEmoji>🤢</RottenEmoji>
+                      </Row>
+                    );
+                  })}
+                </RottenList>
+              )}
             </>
           )}
 

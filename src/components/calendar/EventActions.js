@@ -8,11 +8,27 @@ import {
 const fadeIn = keyframes`from { opacity: 0; } to { opacity: 1; }`;
 const sheetSlide = keyframes`from { transform: translateY(100%); } to { transform: translateY(0); }`;
 
+const ActionBar = styled.div`
+  margin-top: 16px;
+  padding: 10px 0 4px;
+  border-top: 1px solid rgba(255,255,255,0.08);
+
+  &.is-sheet {
+    position: sticky;
+    bottom: 0;
+    background: linear-gradient(180deg, rgba(26,26,26,0.85), #1a1a1a 60%);
+    backdrop-filter: blur(8px);
+    z-index: 5;
+    margin-left: -18px;
+    margin-right: -18px;
+    padding: 10px 18px 6px;
+  }
+`;
+
 const Grid = styled.div`
   display: grid;
   grid-template-columns: repeat(${p => p.$cols || 4}, minmax(0, 1fr));
-  gap: 8px;
-  margin-top: 14px;
+  gap: 6px;
 `;
 
 const ActionBtn = styled.a`
@@ -20,14 +36,15 @@ const ActionBtn = styled.a`
   flex-direction: column;
   align-items: center;
   justify-content: center;
-  gap: 4px;
-  padding: 10px 6px 9px;
+  gap: 3px;
+  padding: 8px 4px 7px;
+  min-height: 52px;
   background: rgba(255,255,255,0.04);
   border: 1px solid rgba(255,255,255,0.10);
-  border-radius: 11px;
+  border-radius: 10px;
   color: #f4f4f4;
   font-family: 'Inter', sans-serif;
-  font-size: 11px;
+  font-size: 10px;
   font-weight: 600;
   cursor: pointer;
   text-decoration: none;
@@ -218,36 +235,39 @@ const ShareIcon = () => (
   </svg>
 );
 
-export default function EventActions({ event }) {
+export default function EventActions({ event, isSheetContext }) {
   const [calOpen, setCalOpen] = useState(false);
 
   return (
     <>
-      <Grid $cols={event.routeUrl ? 4 : 3}>
-        <ActionBtn href={directionsUrl(event)} target="_blank" rel="noopener noreferrer">
-          <NavIcon />
-          <span>Directions</span>
-        </ActionBtn>
-        {event.routeUrl && (
-          <ActionBtn
-            href={event.routeUrl}
-            target="_blank"
-            rel="noopener noreferrer"
-            title={routeSource(event.routeUrl) ? `Opens in ${routeSource(event.routeUrl)}` : 'Opens in a new tab'}
-          >
-            <RouteIcon />
-            <span>Route</span>
+      <ActionBar className={isSheetContext ? 'is-sheet' : ''}>
+        <Grid $cols={event.routeUrl ? 4 : 3}>
+          <ActionBtn href={directionsUrl(event)} target="_blank" rel="noopener noreferrer" aria-label="Directions">
+            <NavIcon />
+            <span>Directions</span>
           </ActionBtn>
-        )}
-        <ActionBtnButton type="button" onClick={() => setCalOpen(true)}>
-          <CalIcon />
-          <span>Calendar</span>
-        </ActionBtnButton>
-        <ActionBtnButton type="button" onClick={() => shareEvent(event)}>
-          <ShareIcon />
-          <span>Share</span>
-        </ActionBtnButton>
-      </Grid>
+          {event.routeUrl && (
+            <ActionBtn
+              href={event.routeUrl}
+              target="_blank"
+              rel="noopener noreferrer"
+              aria-label="Route"
+              title={routeSource(event.routeUrl) ? `Opens in ${routeSource(event.routeUrl)}` : 'Opens in a new tab'}
+            >
+              <RouteIcon />
+              <span>Route</span>
+            </ActionBtn>
+          )}
+          <ActionBtnButton type="button" onClick={() => setCalOpen(true)} aria-label="Add to calendar">
+            <CalIcon />
+            <span>Calendar</span>
+          </ActionBtnButton>
+          <ActionBtnButton type="button" onClick={() => shareEvent(event)} aria-label="Share">
+            <ShareIcon />
+            <span>Share</span>
+          </ActionBtnButton>
+        </Grid>
+      </ActionBar>
       {calOpen && <CalSheet event={event} onClose={() => setCalOpen(false)} />}
     </>
   );
