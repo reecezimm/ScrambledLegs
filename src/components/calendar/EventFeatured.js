@@ -1,6 +1,7 @@
 import React, { useState, useCallback, useEffect } from 'react';
 import styled, { keyframes } from 'styled-components';
 import EventMap from './EventMap';
+import WeatherPills from './WeatherPills';
 import RideLeaderBadge from './RideLeaderBadge';
 import WeatherPanel from './WeatherPanel';
 import EventActions from './EventActions';
@@ -216,9 +217,11 @@ export default function EventFeatured({ event }) {
       {event.bannerUrl
         ? <BannerImg style={{ backgroundImage: `url('${event.bannerUrl}')` }} />
         : event.startLoc && (
-          <EventMap startLoc={event.startLoc} endLoc={event.endLoc} weather={liveWeather} />
+          <EventMap startLoc={event.startLoc} endLoc={event.endLoc} />
         )
       }
+
+      <WeatherPills weather={liveWeather} />
 
       <StatusChip data-status={status}>
         <Dot />
