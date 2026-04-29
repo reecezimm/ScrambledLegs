@@ -26,13 +26,15 @@ const pigDodge = {
     const config = {
       pigSize:        (ctx.config && ctx.config.pigSize)        || 40,
       gravity:        (ctx.config && ctx.config.gravity)        || 800,
-      thrust:         (ctx.config && ctx.config.thrust)         || 200,
-      maxSpeed:       (ctx.config && ctx.config.maxSpeed)       || 600,
-      spawnEveryMs:   (ctx.config && ctx.config.spawnEveryMs)   || 900,
+      thrust:         (ctx.config && ctx.config.thrust)         || 480,    // higher = pigs blow past faster
+      maxSpeed:       (ctx.config && ctx.config.maxSpeed)       || 850,    // raised so the higher thrust isn't speed-capped immediately
+      spawnEveryMs:   (ctx.config && ctx.config.spawnEveryMs)   || 1200,
+      maxConcurrent:  (ctx.config && ctx.config.maxConcurrent)  || 2,      // cap on screen at any time
       initialDownVy:  (ctx.config && ctx.config.initialDownVy)  || [120, 240],
       initialSideVx:  (ctx.config && ctx.config.initialSideVx)  || 320,
       hitboxShrink:   (ctx.config && ctx.config.hitboxShrink)   || 8,
       statusText:     (ctx.config && ctx.config.statusText)     || 'DODGE THE PIGS',
+      avatar:         (ctx.config && ctx.config.avatar)         || null,   // {emoji, sizePx, pulse}
     };
 
     console.log(
@@ -44,8 +46,33 @@ const pigDodge = {
     ctx.setStatus(config.statusText);
     ctx.setSubStatus('HOLD AND DRAG');
 
+    // ── Avatar overlay (optional) ────────────────────────────────────────
+    // When config.avatar is present, render an emoji visual that follows the
+    // mash button's center each frame. The button remains the actual hit
+    // target (drag captures pointerdown on .hd-cta), but visually the
+    // avatar takes over. body[data-pig-avatar="1"] hides the button's
+    // normal mash-num/mash-sub visuals so they don't peek through.
+    let avatarEl = null;
+    if (config.avatar && config.avatar.emoji) {
+      avatarEl = document.createElement('div');
+      avatarEl.className = 'pig-target-avatar';
+      avatarEl.textContent = config.avatar.emoji;
+      avatarEl.style.cssText = [
+        'position:fixed', 'pointer-events:none', 'z-index:9101',
+        `font-size:${config.avatar.sizePx || 160}px`,
+        'left:0', 'top:0',
+        'will-change:transform',
+        'filter:drop-shadow(0 4px 12px rgba(0,0,0,0.55))',
+      ].join(';') + ';';
+      if (config.avatar.pulse) avatarEl.classList.add('is-pulsing');
+      document.body.appendChild(avatarEl);
+      document.body.dataset.pigAvatar = '1';
+    }
+
     function spawnPig() {
       if (cancelled || ended) return;
+      // Concurrent cap — only spawn if we're under it.
+      if (pigs.size >= config.maxConcurrent) return;
       const vw = window.innerWidth;
       const vh = window.innerHeight;
       // Spawn primarily from top third, with random x across the viewport.
@@ -102,6 +129,12 @@ const pigDodge = {
       const btnRect = btn.getBoundingClientRect();
       const btnCx = btnRect.left + btnRect.width / 2;
       const btnCy = btnRect.top + btnRect.height / 2;
+
+      // Reposition the avatar to track the button center each frame.
+      if (avatarEl && config.avatar) {
+        const av = config.avatar.sizePx || 160;
+        avatarEl.style.transform = `translate(${btnCx - av / 2}px, ${btnCy - av / 2}px)`;
+      }
 
       // Slightly shrunk hitbox so visual edges can graze without triggering.
       const shrink = config.hitboxShrink;
@@ -190,6 +223,8 @@ const pigDodge = {
       const finalCount = pigs.size;
       pigs.forEach((pig) => pig.el.remove());
       pigs.clear();
+      if (avatarEl) avatarEl.remove();
+      delete document.body.dataset.pigAvatar;
       ctx.setStatus(null);
       ctx.setSubStatus(null);
       console.log(`[mg] pigDodge cleanup | despawned ${finalCount} pigs in flight`);

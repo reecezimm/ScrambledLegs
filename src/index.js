@@ -409,6 +409,34 @@ const GlobalStyle = createGlobalStyle`
     cursor: grabbing;
   }
 
+  /* Pig Boy Attack avatar: when active, the mode renders a large emoji
+     that tracks the button center. Hide the button's interior visuals so
+     they don't peek through underneath, and shrink the button itself to
+     a small disc-shaped hit target so the avatar dominates visually. */
+  body[data-pig-avatar="1"] .hd-cta {
+    width: 90px !important;
+    min-width: 90px;
+    padding: 0 !important;
+    border-radius: 50%;
+    background: radial-gradient(circle, rgba(255,179,217,0.25), rgba(0,0,0,0.0)) !important;
+    box-shadow: 0 0 18px rgba(255,179,217,0.35) !important;
+  }
+  body[data-pig-avatar="1"] .hd-cta-mash,
+  body[data-pig-avatar="1"] .hd-cta-top,
+  body[data-pig-avatar="1"] .hd-cta-text,
+  body[data-pig-avatar="1"] .hd-cta.hd-heartbeat::before,
+  body[data-pig-avatar="1"] .hd-cta.hd-heartbeat::after {
+    display: none !important;
+  }
+  /* Avatar pulse — slow, subtle, signals "she's still the target." */
+  @keyframes pigAvatarPulse {
+    0%, 100% { filter: drop-shadow(0 4px 12px rgba(0,0,0,0.55)) brightness(1.0); }
+    50%      { filter: drop-shadow(0 6px 16px rgba(255,179,217,0.85)) brightness(1.10); }
+  }
+  .pig-target-avatar.is-pulsing {
+    animation: pigAvatarPulse 1.4s ease-in-out infinite;
+  }
+
   /* Button reshape during migration:
      - Width shrinks 25% (1.0 → 0.75) over presses 1→25
      - Vertical padding grows so button gets ~25% taller

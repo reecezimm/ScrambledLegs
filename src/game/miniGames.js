@@ -207,11 +207,16 @@ export const PIG_BOY_ATTACK = {
       config: {
         pigSize: 40,
         gravity: 800,
-        thrust: 200,
-        maxSpeed: 600,
-        spawnEveryMs: 900,
+        thrust: 480,         // pigs blow past faster
+        maxSpeed: 850,
+        spawnEveryMs: 1200,
+        maxConcurrent: 2,    // never more than 2 pigs on screen at once
         showTimer: true,
         statusText: 'DODGE THE PIGS',
+        // Button visually transforms into a pulsing pretty-blonde emoji
+        // (pigs are chasing the cute girl). She's ~4× pig size. The mode
+        // tracks the button center every frame and re-positions her there.
+        avatar: { emoji: '👱‍♀️', sizePx: 160, pulse: true },
       },
     },
     // Branched outcome: win → "+250 SURVIVED. START MASHING.";
@@ -225,7 +230,27 @@ export const PIG_BOY_ATTACK = {
   ],
 };
 
+// ── Preamble ─ shows BEFORE the first real mini-game ──────────────────────
+// Not part of the random pool — only ever used as the strategy's first
+// yield. Just a status phase that hands the user a heads-up, then the
+// queue advances to the first real (random) mini-game. By design its
+// `presses: 9` ends right at press 10 so the first mini-game starts there.
+export const PREAMBLE = {
+  id: 'preamble',
+  label: 'Preamble',
+  startAtPress: 1,
+  rules: { canLose: false, onWin: { bonus: 0 }, onLose: { bonus: 0 } },
+  ambient: { challengeText: 'frozen' },
+  phases: [
+    { kind: 'status',
+      text: 'MINI GAMES APPROACHING\nDON\'T FORGET TO MASH',
+      presses: 9,
+    },
+  ],
+};
+
 // ── Registry + canonical schedule ──────────────────────────────────────────
+// PREAMBLE is intentionally NOT in this list — it's strategy-only.
 export const ALL_MINI_GAMES = [GOLDEN_EGG, MASH_GAUNTLET, FREEZE, TWILIGHT, PIG_BOY_ATTACK];
 
 export function findById(id) {
@@ -241,32 +266,39 @@ export function findById(id) {
 // its declared startAtPress and runs it. When the mini-game completes, the
 // queue empties, the store calls .next() again, and the cycle continues.
 //
-// For "infinite scheduler" behavior: pool includes all mini-games; first
-// yield is forced to `initial`; subsequent yields are random from the pool
-// excluding the just-played mini-game (no repeats in a row).
+// Yield order:
+//   1. PREAMBLE — status warning, starts at press 1, runs through press 9.
+//   2. First real mini-game — RANDOM from pool, starts at press 10
+//      (zero-gap right after the preamble exits).
+//   3+ Subsequent — random from pool excluding the just-played one
+//      (no two in a row), each with a `gapPresses` gap from the prior end.
 export function createInfiniteSchedule({
-  initial = GOLDEN_EGG,
+  preamble = PREAMBLE,
   pool = ALL_MINI_GAMES,
-  gapPresses = 15,
-  startAtPress = 40,
+  gapPresses = 10,
+  preambleStartAt = 1,
+  firstGameGap = 0,         // gap between preamble end and first real game
 } = {}) {
   let yieldedCount = 0;
   let lastId = null;
   return {
     next(currentPressCount) {
       let pick;
+      let startAt;
       if (yieldedCount === 0) {
-        pick = initial;
+        pick = preamble;
+        startAt = preambleStartAt;
       } else {
         const candidates = pool.filter((mg) => mg.id !== lastId);
         pick = candidates.length > 0
           ? candidates[Math.floor(Math.random() * candidates.length)]
           : pool[0];
+        // First real game: zero-gap so it kicks off right when preamble ends.
+        // Subsequent: gapPresses (default 10) of normal mashing between games.
+        const gap = yieldedCount === 1 ? firstGameGap : gapPresses;
+        startAt = currentPressCount + gap;
       }
       lastId = pick.id;
-      const startAt = yieldedCount === 0
-        ? startAtPress
-        : currentPressCount + gapPresses;
       yieldedCount++;
       return { ...pick, startAtPress: startAt };
     },
@@ -277,13 +309,14 @@ export function createInfiniteSchedule({
   };
 }
 
-// Canonical default schedule: Golden Egg first at press 40, then random
-// rotation through all 3 with 15-press gaps. No two in a row.
+// Canonical default: preamble runs presses 1–9, first random mini-game at
+// press 10, 10-press gap between subsequent games. No two in a row.
 export function createDefaultInfiniteStrategy() {
   return createInfiniteSchedule({
-    initial: GOLDEN_EGG,
+    preamble: PREAMBLE,
     pool: ALL_MINI_GAMES,
-    gapPresses: 15,
-    startAtPress: 40,
+    gapPresses: 10,
+    preambleStartAt: 1,
+    firstGameGap: 0,
   });
 }

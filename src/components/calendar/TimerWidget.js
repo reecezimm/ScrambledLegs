@@ -20,15 +20,17 @@ const Wrap = styled.div`
   font-family: 'Fredoka', sans-serif;
   font-weight: 700;
   font-variant-numeric: tabular-nums;
-  font-size: clamp(20px, 4.5vw, 32px);
+  /* Doubled (was clamp(20, 4.5vw, 32)) per design pass — readable on mobile
+     and dominant on desktop without crowding the status zone. */
+  font-size: clamp(40px, 9vw, 64px);
   line-height: 1;
   letter-spacing: 0.04em;
   color: #fff;
   text-shadow:
-    0 0 12px rgba(0, 0, 0, 0.85),
-    0 0 24px rgba(0, 0, 0, 0.7),
-    0 2px 8px rgba(0, 0, 0, 0.95);
-  padding: 8px 12px;
+    0 0 16px rgba(0, 0, 0, 0.9),
+    0 0 32px rgba(0, 0, 0, 0.75),
+    0 3px 12px rgba(0, 0, 0, 0.95);
+  padding: 12px 18px;
   background: rgba(0, 0, 0, 0.35);
   border-radius: 10px;
   backdrop-filter: blur(4px);
