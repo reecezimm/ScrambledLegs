@@ -24,18 +24,17 @@ export function setMashEnergy(pressCount) {
   else delete document.body.dataset.eggsRainbow;
 
   // ── Mash Game state ──
-  // Canvas grows on an ease-in curve across presses 1→50: slow at first,
-  // accelerating as press count climbs. pow(t, 2.4) ≈ ~10% radius at press 25,
-  // ~50% at press 38, full at press 50.
-  const tCanvas = Math.min(pressCount / 50, 1);
+  // Canvas grows on an ease-in curve across presses 1→25: slow at first,
+  // accelerating to full takeover by press 25.
+  const tCanvas = Math.min(pressCount / 25, 1);
   const canvasRadius = Math.pow(tCanvas, 2.4);
   document.body.style.setProperty('--canvas-radius', canvasRadius.toFixed(3));
   // Button migration toward the bottom-third anchor across presses 1→25.
   const migration = Math.min(pressCount / 25, 1);
   document.body.style.setProperty('--migration-progress', migration.toFixed(3));
-  // Sub-text lift — challenge text floats above button starting press 40,
-  // fully out of button by press 50 (canvas takeover complete).
-  const subOut = Math.max(0, Math.min(1, (pressCount - 40) / 10));
+  // Sub-text lift — challenge text starts floating up at press 15, fully out
+  // by press 25 (canvas takeover complete, count alone in centered button).
+  const subOut = Math.max(0, Math.min(1, (pressCount - 15) / 10));
   document.body.style.setProperty('--sub-out', subOut.toFixed(3));
   // Level — Math.floor(pressCount / 100), capped at 10. Surfaces level paint
   // hooks for body[data-mash-level="N"] CSS rules later.
@@ -47,9 +46,8 @@ export function setMashEnergy(pressCount) {
     console.log('[mash-game] LEVEL', level, '— pressCount', pressCount);
   }
   // Stage transition logs at key thresholds
-  if (pressCount === 1 || pressCount === 25 || pressCount === 50) {
-    if (pressCount === 25) console.log('[mash-game] migration complete (button anchored)');
-    if (pressCount === 50) console.log('[mash-game] canvas full — UI takeover');
+  if (pressCount === 1 || pressCount === 25) {
+    if (pressCount === 25) console.log('[mash-game] canvas full — UI takeover (game mode)');
     dumpMashLayers(`press ${pressCount}`);
   }
 }

@@ -150,11 +150,45 @@ const GlobalStyle = createGlobalStyle`
     will-change: clip-path, opacity;
   }
   body[data-mash-locked="1"] .mash-canvas {
-    /* Pointer-events stay none so clicks pass through to the button.
-       Body[position:fixed] handles the actual page lock — the canvas is
-       purely visual. */
+    /* Canvas stays purely visual — input isolation is done by body::before
+       below, which is full-viewport regardless of the canvas clip-path. */
     pointer-events: none;
     z-index: 9000;
+  }
+
+  /* ── Input isolation layer ────────────────────────────────────────────────
+     During the mash game the page underneath must be fully inert: no link
+     activation, no native selection, no map/share button taps, no double-tap
+     editor pop-ups. The visible canvas can't do this on its own because its
+     clip-path also clips hit-testing — so during the intro (presses 1–24)
+     anything outside the growing circle would still receive events.
+
+     Solution: a transparent full-viewport ::before pseudo on body, sitting
+     just below the canvas (z 8999) but above all page UI. It absorbs every
+     pointer/touch event the moment lock engages.
+
+     What still receives input:
+       - kudos-row (z 9001) — the mash button stays clickable
+       - flying spawns (z 9100+) — future clickable game elements
+     Everything else: dead. */
+  body[data-mash-locked="1"]::before {
+    content: '';
+    position: fixed;
+    inset: 0;
+    z-index: 8999;
+    background: transparent;
+    pointer-events: auto;
+    touch-action: none;
+    user-select: none;
+    -webkit-user-select: none;
+    -webkit-touch-callout: none;
+  }
+  /* Kill page-wide text selection / iOS callout while locked so a long-press
+     or double-click anywhere can't pop the OS text editor. */
+  body[data-mash-locked="1"] {
+    user-select: none;
+    -webkit-user-select: none;
+    -webkit-touch-callout: none;
   }
 
   /* Lift all spawn effects above the canvas during the mash game so the
@@ -240,14 +274,29 @@ const GlobalStyle = createGlobalStyle`
   .hd-cta.hd-heartbeat::before { animation: hdRipple1 2500ms ease-in forwards; }
   .hd-cta.hd-heartbeat::after  { animation: hdRipple2 2500ms ease-in forwards; }
 
-  /* Challenge text (MashSub) lifts OUT of the button at press 50 — when
-     the canvas takeover is complete. The count (MashNum) stays in the
-     button always. --sub-out 0→1 across presses 40→50 (sharp transition
-     right at takeover). Lifts ~180px so it sits ~10-15px ABOVE the button
-     top edge (vs over the button bounds before). */
+  /* Challenge text (MashSub) lifts OUT of the button across presses 15→25
+     (canvas takeover threshold = 25). Lifts ~130px so it sits a comfortable
+     distance above the button top — closer than -180 (which felt too far on
+     mobile) but still well clear of button bounds. */
   body[data-mash-locked="1"] .mash-sub {
-    transform: translateY(calc(-180px * var(--sub-out, 0)));
+    transform: translateY(calc(-130px * var(--sub-out, 0)));
     transition: transform 0.5s cubic-bezier(.22,.61,.36,1);
+  }
+
+  /* After the sub lifts out, the count (MashNum) stays permanently centered
+     in the button — both vertically and horizontally. We absolute-position
+     the num to the center of the overlay (overlay covers the button), so it
+     doesn't shift when the sub leaves the flex column. */
+  body[data-mash-locked="1"] .hd-cta-mash {
+    top: 50% !important;
+    bottom: auto !important;
+    justify-content: center !important;
+  }
+  body[data-mash-locked="1"] .mash-num {
+    position: absolute;
+    left: 50%;
+    top: 50%;
+    transform: translate(-50%, -50%);
   }
 
   /* Killing backdrop-filter on the event shell during lock destroys its
