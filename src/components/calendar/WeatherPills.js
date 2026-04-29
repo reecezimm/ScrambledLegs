@@ -50,15 +50,15 @@ export default function WeatherPills({ weather }) {
 
   return (
     <Overlay>
-      <Pill>
+      <Pill className="weather-pill">
         <span>{weather.icon || '🌤'}</span>
         <span>{weather.temp != null ? `${weather.temp}°` : '—°'}</span>
       </Pill>
-      {weather.wind != null && <Pill>💨 {weather.wind} mph</Pill>}
+      {weather.wind != null && <Pill className="weather-pill">💨 {weather.wind} mph</Pill>}
       {weather.precip != null && (
-        <Pill className={weather.precip >= 50 ? 'warn' : ''}>💧 {weather.precip}%</Pill>
+        <Pill className={`weather-pill${weather.precip >= 50 ? ' warn' : ''}`}>💧 {weather.precip}%</Pill>
       )}
-      {sunsetFmt && <Pill>🌅 {sunsetFmt}</Pill>}
+      {sunsetFmt && <Pill className="weather-pill">🌅 {sunsetFmt}</Pill>}
     </Overlay>
   );
 }

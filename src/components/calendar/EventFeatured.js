@@ -223,7 +223,7 @@ export default function EventFeatured({ event }) {
 
       <WeatherPills weather={liveWeather} />
 
-      <StatusChip data-status={status}>
+      <StatusChip className="event-status-chip" data-status={status}>
         <Dot />
         <span>{statusText(event, status)}</span>
       </StatusChip>

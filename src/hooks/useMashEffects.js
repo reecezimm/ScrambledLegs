@@ -45,6 +45,13 @@ const SHOCKWAVE_SELECTOR = [
   '.archive-card .arch-date',
   '.archive-card .arch-kudos',
   '.weather-desc', '.weather-extra', '.countdown-display', '.countdown-label',
+  // Newer event-card elements that should also shake during mashing.
+  '.event-status-chip',
+  '.weather-pill',
+  '.eggman-take',
+  '.eggman-take-label',
+  '.crew-name',
+  '.crew-rank',
 ].join(',');
 
 export function applyShockwave() {

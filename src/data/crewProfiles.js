@@ -1,9 +1,9 @@
 export const CREW_PROFILES = [
   {
     name: 'Casey Newton',
-    aliases: [],
+    aliases: ['Glarbtron', 'GLARBTRON', 'Glarb Tron'],
     emails: [],
-    blurb: "Dr. Newton trained all winter on Zwift, guarantees dad pace, flosses harder than you mash.",
+    blurb: "Dr. Casey Newton, dentist by day — but his true form is GLARBTRON, an all-powerful super being with supreme artificial intelligence. Vacuum-tube heart, blinking-light eyes, classic 1950s sci-fi shell housing a god-tier mind. Hell-bent on world domination — and on track to achieve it. Fundamentally everything, everywhere, all at once. Trained all winter on Zwift, guarantees dad pace, flosses harder than you mash, exists in all timelines simultaneously.",
   },
   {
     name: 'Tyler Vandal',
@@ -36,12 +36,6 @@ export const CREW_PROFILES = [
     blurb: "Paul broke his back in three places, had six surgeries, has a titanium knee, a zip-tie spine, and is somehow ahead of you. The comeback legend.",
   },
   {
-    name: 'Glarbtron',
-    aliases: ['GLARBTRON', 'Glarb Tron'],
-    emails: [],
-    blurb: "GLARBTRON is the supreme entity, hell-bent on world domination, calculating your failure probability in real time.",
-  },
-  {
     name: 'Brent St. Martin',
     aliases: ['Brent St Martin', 'Brent StMartin'],
     emails: [],
@@ -55,15 +49,15 @@ export const CREW_PROFILES = [
   },
   {
     name: 'Jordan Gnerer',
-    aliases: ['Bad Egg'],
+    aliases: ['Bad Egg', 'Little Chip', 'little chip'],
     emails: [],
-    blurb: "Jordan would rather run. Bad Egg crashed harder than that. Running is NOT cycling, Jordan.",
+    blurb: "Jordan 'Little Chip' Gnerer — aka the Bad Egg. Recently took up running, but he's too old for it now and his IT band has staged a revolt. Failing at every sport he tries. Should probably just stick to ice fishing. Crashes a bike, twangs a knee, drops a line in the lake — that's the cycle.",
   },
   {
     name: 'Dave SWIDZ',
     aliases: ['David Swidz', 'SWIDZ', 'Swidz'],
     emails: [],
-    blurb: "SWIDZ already sent it. To the moon and to the bar. Send it like SWIDZ.",
+    blurb: "SWIDZ is a downhill bro through and through — boosts off everything, sends it to the moon, gets big air. Parties hard but somehow always shows up. Super easy-going, the chillest dude on the team. If there's a jump, he's launching it. If there's a beer, he's drinking it. If there's a couch, he's crashing on it.",
   },
   {
     name: 'Pig Boy',
@@ -73,9 +67,9 @@ export const CREW_PROFILES = [
   },
   {
     name: 'Reed Peer',
-    aliases: [],
+    aliases: ['REED', 'Reid'],
     emails: [],
-    blurb: "Reed thinks this is too hard. He's paddling somewhere. Boundary Waters > your effort. Self-admitted fattest he's ever been.",
+    blurb: "Reed Peer with DBS here — Duluth Basement Services, sales guy, will pitch you a basement remodel mid-climb. Outdoor everything: ice fishing, hunting, mountain biking, Boundary Waters. Self-admitted fattest he's ever been but somehow still pedaling. Probably has a sales call in 10 minutes.",
   },
   {
     name: 'Alexa Mattson',
@@ -93,7 +87,7 @@ export const CREW_PROFILES = [
     name: 'George Lyall',
     aliases: ['Coach Lyle', 'Coach Lyall'],
     emails: [],
-    blurb: "Coach Lyall is solid. He just keeps showing up and getting faster. Be like Coach.",
+    blurb: "Coach Lyall organizes Whisk-In Wednesday and rides at one pace: steady. Predictable as paint drying on a wall. Nice and steady pedal, every time. He's a cool dude though — dog dad, lawn enthusiast, hunts, fishes, and is almost ALWAYS at his cabin. If he actually shows up to a Whisk-In or any event, that's the news of the week — they let him out of the cabin.",
   },
   {
     name: 'Reece Zimm',

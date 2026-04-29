@@ -1,5 +1,5 @@
 import React, { useEffect, useMemo, useState } from 'react';
-import styled from 'styled-components';
+import styled, { keyframes } from 'styled-components';
 import { ref, onValue, get, child } from 'firebase/database';
 import { database } from '../../services/firebase';
 import { useCurrentUser } from '../../services/auth';
@@ -9,10 +9,15 @@ const BAD_EGG_THRESHOLD = 10;
 
 const Wrap = styled.div`
   margin-top: 18px;
-  background: rgba(255,255,255,0.04);
-  border: 1px solid rgba(255,255,255,0.10);
-  border-radius: 14px;
+  background:
+    radial-gradient(circle at 20% 0%, rgba(255,199,44,0.07), transparent 55%),
+    linear-gradient(160deg, rgba(35,35,37,0.85), rgba(20,20,20,0.85));
+  border: 1px solid rgba(255,199,44,0.18);
+  border-radius: 16px;
   padding: 14px 14px 12px;
+  box-shadow:
+    0 6px 24px rgba(0,0,0,0.35),
+    inset 0 1px 0 rgba(255,255,255,0.05);
 `;
 
 const SectionLabel = styled.div`
@@ -127,39 +132,55 @@ const TopMasherTag = styled.span`
   white-space: nowrap;
 `;
 
+const goldShine = keyframes`
+  0%, 100% { box-shadow: 0 0 8px rgba(255,210,74,0.50), 0 0 18px rgba(255,210,74,0.25), inset 0 1px 0 rgba(255,255,255,0.45); }
+  50%      { box-shadow: 0 0 14px rgba(255,210,74,0.85), 0 0 28px rgba(255,210,74,0.40), inset 0 1px 0 rgba(255,255,255,0.55); }
+`;
+
 const Rank = styled.div`
-  width: 26px;
-  height: 26px;
+  width: 18px;
+  height: 18px;
   border-radius: 50%;
   display: flex;
   align-items: center;
   justify-content: center;
   font-family: 'Fredoka', sans-serif;
   font-weight: 700;
-  font-size: 12px;
+  font-size: 9px;
   flex-shrink: 0;
   background: rgba(255,255,255,0.06);
   border: 1px solid rgba(255,255,255,0.10);
-  color: rgba(255,255,255,0.65);
+  color: rgba(255,255,255,0.55);
   font-variant-numeric: tabular-nums;
+  transition: transform 0.15s;
 
   &[data-medal="1"] {
-    background: linear-gradient(135deg, #FFD24A, #C99417);
-    border-color: rgba(255,210,74,0.85);
+    width: 30px;
+    height: 30px;
+    font-size: 13px;
+    background: linear-gradient(135deg, #FFE066 0%, #FFD24A 35%, #C99417 100%);
+    border: 1.5px solid #FFE066;
     color: #1a1a1a;
-    box-shadow: 0 0 10px rgba(255,210,74,0.45);
+    text-shadow: 0 1px 0 rgba(255,255,255,0.35);
+    animation: ${goldShine} 2.4s ease-in-out infinite;
   }
   &[data-medal="2"] {
-    background: linear-gradient(135deg, #E0E0E5, #9FA0A4);
-    border-color: rgba(224,224,229,0.85);
+    width: 22px;
+    height: 22px;
+    font-size: 10px;
+    background: linear-gradient(135deg, #F2F2F4, #B5B6BA 60%, #8B8C90);
+    border: 1px solid #F2F2F4;
     color: #1a1a1a;
-    box-shadow: 0 0 8px rgba(224,224,229,0.35);
+    box-shadow: 0 0 8px rgba(224,224,229,0.40), inset 0 1px 0 rgba(255,255,255,0.45);
   }
   &[data-medal="3"] {
-    background: linear-gradient(135deg, #D89060, #8B5A2B);
-    border-color: rgba(216,144,96,0.85);
+    width: 21px;
+    height: 21px;
+    font-size: 10px;
+    background: linear-gradient(135deg, #E0A47A, #B5713E 60%, #7A4920);
+    border: 1px solid #E0A47A;
     color: #1a1a1a;
-    box-shadow: 0 0 8px rgba(216,144,96,0.35);
+    box-shadow: 0 0 7px rgba(216,144,96,0.40), inset 0 1px 0 rgba(255,255,255,0.30);
   }
 `;
 
@@ -374,11 +395,11 @@ export default function EventLeaderboard({ event }) {
           ) : (
             crew.map((row, i) => (
               <Row key={row.uid}>
-                <Rank data-medal={i < 3 ? String(i + 1) : undefined}>{i + 1}</Rank>
+                <Rank className="crew-rank" data-medal={i < 3 ? String(i + 1) : undefined}>{i + 1}</Rank>
                 <Avatar $photo={row.photoURL}>
                   {!row.photoURL && initialFor(row.displayName)}
                 </Avatar>
-                <Name>
+                <Name className="crew-name">
                   {row.displayName} {i === 0 && row.mashes > 0 && (
                     <>
                       <Crown>👑</Crown>

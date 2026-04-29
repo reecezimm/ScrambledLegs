@@ -180,13 +180,13 @@ export default function EggMansTake({ event, weather }) {
     <Box>
       <Header>
         <Egg>🥚</Egg>
-        <Label>Eggman's Take</Label>
+        <Label className="eggman-take-label">Eggman's Take</Label>
       </Header>
       {loading && !text ? (
         <Loading>Eggman is thinking…</Loading>
       ) : (
         <>
-          <Quote>
+          <Quote className="eggman-take">
             {expanded || !hasMore ? text : `${preview}…`}
           </Quote>
           {hasMore && (

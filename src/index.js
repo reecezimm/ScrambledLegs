@@ -214,7 +214,13 @@ const GlobalStyle = createGlobalStyle`
   .archive-card .arch-name,
   .archive-card .arch-date,
   .archive-card .arch-kudos,
-  .weather-desc, .weather-extra, .countdown-display, .countdown-label {
+  .weather-desc, .weather-extra, .countdown-display, .countdown-label,
+  .event-status-chip,
+  .weather-pill,
+  .eggman-take,
+  .eggman-take-label,
+  .crew-name,
+  .crew-rank {
     transition: transform 0.20s cubic-bezier(.34,1.56,.64,1);
     transform:
       translateX(calc(var(--jx, 0) * (var(--mash-energy, 0) * 14px + var(--mash-overdrive, 0) * 24px)))
