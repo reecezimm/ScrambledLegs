@@ -104,6 +104,7 @@ const Subtitle = styled.h2`
   }
 `;
 
+// eslint-disable-next-line no-unused-vars
 const Trademark = styled.p`
   position: fixed;
   bottom: 15px;

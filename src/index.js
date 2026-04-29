@@ -14,6 +14,7 @@ import './services/sessionTracker';
 
 // Create unique IDs for the application
 const BUILD_ID = `${process.env.NODE_ENV}-${new Date().toISOString().replace(/[:.]/g, '')}`;
+// eslint-disable-next-line no-unused-vars
 const BUILD_TIMESTAMP = new Date().getTime();
 
 // Log startup information
@@ -274,29 +275,77 @@ const GlobalStyle = createGlobalStyle`
   .hd-cta.hd-heartbeat::before { animation: hdRipple1 2500ms ease-in forwards; }
   .hd-cta.hd-heartbeat::after  { animation: hdRipple2 2500ms ease-in forwards; }
 
-  /* Challenge text (MashSub) lifts OUT of the button across presses 15→25
-     (canvas takeover threshold = 25). Lifts ~130px so it sits a comfortable
-     distance above the button top — closer than -180 (which felt too far on
-     mobile) but still well clear of button bounds. */
-  body[data-mash-locked="1"] .mash-sub {
-    transform: translateY(calc(-130px * var(--sub-out, 0)));
-    transition: transform 0.5s cubic-bezier(.22,.61,.36,1);
-  }
-
-  /* After the sub lifts out, the count (MashNum) stays permanently centered
-     in the button — both vertically and horizontally. We absolute-position
-     the num to the center of the overlay (overlay covers the button), so it
-     doesn't shift when the sub leaves the flex column. */
+  /* During the locked game (presses 1–25) the count and challenge sub-text
+     coexist inside the button:
+       - .mash-num pinned dead-center (vertical + horizontal)
+       - .mash-sub pinned to the button's bottom edge (8px above bottom),
+         centered horizontally, so it never overlaps the count.
+     On press 26 (--sub-out flips 0→1 instantly) the sub JUMPS to a position
+     just above the button (anchored to the actual button height --btn-h, so
+     it always lands the same visual gap above the box regardless of padding
+     or scale). No transition — the user wants a hard cut, not a slide. */
+  /* Locked overlay: takes the full button height so flex-stacked children
+     (num + sub during 1–25) actually have room to lay out without
+     overlapping. transform restores the Y translate that .is-mashing drops. */
   body[data-mash-locked="1"] .hd-cta-mash {
     top: 50% !important;
     bottom: auto !important;
+    height: 100% !important;
+    transform: translate(-50%, -50%) scale(var(--mash-scale, 1)) !important;
+    align-items: center !important;
     justify-content: center !important;
+    gap: 2px !important;
+    padding: 4px 8px !important;
   }
   body[data-mash-locked="1"] .mash-num {
+    /* Flex child — natural width, centered text, line-height tight so it
+       doesn't claim more vertical space than its glyph height. */
+    position: static;
+    left: auto;
+    top: auto;
+    transform: none;
+    width: 100%;
+    max-width: 100%;
+    text-align: center;
+    line-height: 1;
+    flex: 0 0 auto;
+  }
+
+  /* Sub during PRESSES 1–25 (data-sub-out="0"): sits IN the flex column
+     directly below the count, inside the button. No absolute positioning
+     means it can't overlap with num — they share the column and stack. */
+  body[data-mash-locked="1"][data-sub-out="0"] .mash-sub {
+    position: static;
+    left: auto;
+    bottom: auto;
+    transform: none;
+    transition: none;
+    flex: 0 0 auto;
+    /* Smaller during the intro so num + sub stack within the button's
+       58–117px height range. */
+    font-size: clamp(11px, 2.6vw, 14px);
+    line-height: 1.05;
+    max-width: 100%;
+  }
+
+  /* Sub during PRESSES 26+ (data-sub-out="1"): jumps above the button.
+     Uses the measured button height (--btn-h written each press). The
+     0.8× ratio lands sub's bottom edge ~8px above the button's top edge
+     (math derived from overlay being ~0.6× btn_h centered in button +
+     sub anchored 8px from overlay bottom — verified via dumpMashLayout). */
+  body[data-mash-locked="1"][data-sub-out="1"] .mash-sub {
     position: absolute;
     left: 50%;
-    top: 50%;
-    transform: translate(-50%, -50%);
+    bottom: 8px;
+    /* Math (overlay now fills btn h so sub natural bottom sits at btn_top +
+       (btn_h - 8)). To land sub bottom 8px ABOVE btn top:
+       translateY = (btn_top - 8) − (btn_top + btn_h − 8) = -btn_h. */
+    transform: translateX(-50%)
+      translateY(calc(-1 * var(--btn-h, 120px)));
+    transition: none;
+    flex: initial;
+    font-size: clamp(13px, 4vw, 19px);
+    line-height: 1.15;
   }
 
   /* Killing backdrop-filter on the event shell during lock destroys its
@@ -356,8 +405,10 @@ const GlobalStyle = createGlobalStyle`
     margin-left: auto;
     margin-right: auto;
     display: flex;
-    padding-top: calc((var(--hd-pad-y, 14px)) + 31px * var(--migration-progress, 0));
-    padding-bottom: calc((var(--hd-pad-y, 14px)) + 31px * var(--migration-progress, 0));
+    /* Use --migration-fast (sqrt curve) so growth is felt earlier in the
+       intro. Bumped max from 31 to 48 so final button is heftier. */
+    padding-top: calc((var(--hd-pad-y, 14px)) + 48px * var(--migration-fast, 0));
+    padding-bottom: calc((var(--hd-pad-y, 14px)) + 48px * var(--migration-fast, 0));
     transition: width 0.42s cubic-bezier(.22,.61,.36,1),
                 padding 0.42s cubic-bezier(.22,.61,.36,1);
   }

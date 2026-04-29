@@ -41,6 +41,7 @@ const Hint = styled.div`
   font-family: 'Inter', sans-serif;
 `;
 
+// eslint-disable-next-line no-unused-vars
 const Row = styled.div`
   display: flex;
   align-items: center;
@@ -49,6 +50,7 @@ const Row = styled.div`
   margin-top: 10px;
 `;
 
+// eslint-disable-next-line no-unused-vars
 const CountPill = styled.div`
   display: inline-flex;
   align-items: center;
@@ -100,6 +102,7 @@ export default function RsvpToggle({ event }) {
   const { user, loading } = useCurrentUser();
   const [rsvped, setRsvped] = useState(false);
   const [busy, setBusy] = useState(false);
+  // eslint-disable-next-line no-unused-vars
   const [count, setCount] = useState(0);
   const [toast, setToast] = useState('');
 

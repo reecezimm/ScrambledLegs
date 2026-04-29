@@ -8,9 +8,41 @@ import { logEvent } from '../../services/analytics';
 import {
   setMashEnergy, clearMashEnergy, applyShockwave, clearShockwave,
   spawnHotDog, spawnRainbowEgg, flashBackground, spawnPhrase, rainbowChance,
-  dumpMashLayers,
 } from '../../hooks/useMashEffects';
 import { fmtCount } from '../../hooks/useEventLifecycle';
+import { gameStore } from '../../game/store';
+
+// Spawn a "+N" or "-N" floater at (x, y). Single source of truth for bonus
+// visual feedback — both mode-driven (golden egg taps, freeze penalties) and
+// director-driven (gauntlet win bonus) end up here via the bonus listener.
+function spawnPressCountBurst(delta, x, y) {
+  if (typeof document === 'undefined' || !delta) return;
+  const isPenalty = delta < 0;
+  const burst = document.createElement('div');
+  burst.textContent = (isPenalty ? '' : '+') + delta;
+  const color = isPenalty ? '#FF4747' : '#FFD700';
+  const shadow = isPenalty
+    ? '0 0 16px rgba(255,71,71,0.95),0 0 32px rgba(180,0,0,0.85),0 3px 10px rgba(0,0,0,0.75)'
+    : '0 0 16px rgba(255,215,0,0.95),0 0 32px rgba(255,140,0,0.8),0 3px 10px rgba(0,0,0,0.7)';
+  burst.style.cssText = [
+    'position:fixed', 'pointer-events:none', 'z-index:9200',
+    `left:${x}px`, `top:${y}px`,
+    "font-family:'Fredoka',sans-serif", 'font-weight:700', 'font-size:42px',
+    `color:${color}`,
+    `text-shadow:${shadow}`,
+    'transform:translate(-50%,-50%)', 'will-change:transform,opacity',
+  ].join(';') + ';';
+  document.body.appendChild(burst);
+  burst.animate(
+    [
+      { transform: 'translate(-50%,-50%) scale(0.4)', opacity: 0, offset: 0 },
+      { transform: 'translate(-50%,-50%) scale(1.3)', opacity: 1, offset: 0.18 },
+      { transform: 'translate(-50%,-90px) scale(1)',  opacity: 1, offset: 0.7 },
+      { transform: 'translate(-50%,-160px) scale(0.9)', opacity: 0, offset: 1 },
+    ],
+    { duration: 1100, easing: 'cubic-bezier(.22,.61,.36,1)', fill: 'forwards' }
+  ).onfinish = () => burst.remove();
+}
 
 // ─── Constants ───────────────────────────────────────────────────────────────
 const KUDOS_SAVE_DELAY_MS = 2500;
@@ -724,6 +756,7 @@ export default function KudosCta({ event, isSheetContext }) {
   const lastPhraseIndexRef = useRef(-1);
   const sessionStartRef = useRef(0);
   const sessionUidRef = useRef(null);
+  const vvCleanupRef = useRef(null);
 
   const updateMashFocus = useCallback(() => {
     const btn = btnRef.current;
@@ -789,6 +822,10 @@ export default function KudosCta({ event, isSheetContext }) {
     if (subEl) setSub(subEl, '');
     clearMashEnergy();
     clearShockwave();
+    delete document.body.dataset.mashPhase;
+    // Reset mini-game director so the next session starts clean.
+    try { gameStore.reset(); } catch (_) {}
+    if (vvCleanupRef.current) vvCleanupRef.current();
     // ── MASH GAME END ──
     // Release the page lock and restore scroll. clearMashEnergy already
     // removed body data flags + CSS vars.
@@ -804,17 +841,180 @@ export default function KudosCta({ event, isSheetContext }) {
       window.scrollTo(0, savedY);
       if (wasLocked) {
         console.log('[mash-game] GAME END — unlocked, scroll restored to', savedY);
-        dumpMashLayers('GAME END (post-cleanup)');
       }
     } catch (e) {
       console.warn('[mash-game] GAME END failed:', e && e.message);
     }
   }, []);
 
+  // ── Save flow ─────────────────────────────────────────────────────────
+  // Extracted so it can be called by either the normal save-timer (after
+  // KUDOS_SAVE_DELAY_MS of inactivity) or the mini-game session-end
+  // listener (when a `endsMashSession: true` mini-game fails — fires
+  // immediately, no delay).
+  const runSaveFlow = useCallback(() => {
+    const btn = btnRef.current;
+    if (!btn) return;
+    const row = btn.parentElement;
+    const numEl = row && row.querySelector('.mash-num');
+    const subEl = row && row.querySelector('.mash-sub');
+    if (hdPressCountRef.current <= 0) {
+      btn.classList.remove('is-mashing', 'is-deep-mashing', 'is-saving', 'is-burning');
+      btn.dataset.intensity = '0';
+      btn.style.setProperty('--hd-rest', '1');
+      btn.style.setProperty('--hd-pad-y', '14px');
+      btn.style.removeProperty('--hd-hue');
+      if (numEl) { numEl.style.fontSize = ''; numEl.textContent = '+1'; }
+      if (subEl) subEl.textContent = '';
+      return;
+    }
+    // Phase A — saving
+    btn.classList.remove('is-mashing', 'is-deep-mashing');
+    btn.classList.add('is-saving');
+    document.body.dataset.mashPhase = 'saving';   // hides GameStatus
+    if (numEl) { numEl.textContent = `saving ${fmtCount(hdPressCountRef.current)}`; numEl.style.fontSize = '28px'; }
+    if (subEl) subEl.textContent = '';
+    setTimeout(() => {
+      // Phase B — burn
+      btn.classList.remove('is-saving');
+      btn.classList.add('is-burning');
+      document.body.dataset.mashPhase = 'burning';
+      let burnMsg;
+      do { burnMsg = HD_BURN_MESSAGES[Math.floor(Math.random() * HD_BURN_MESSAGES.length)]; }
+      while (burnMsg === hdLastBurnRef.current && HD_BURN_MESSAGES.length > 1);
+      hdLastBurnRef.current = burnMsg;
+      if (numEl) { numEl.textContent = burnMsg; numEl.style.fontSize = ''; }
+      setTimeout(() => {
+        // Phase C — reset
+        const finalCount = hdPressCountRef.current;
+        const sessionStart = sessionStartRef.current;
+        const sessionUid = sessionUidRef.current;
+        if (sessionUid && finalCount > 0 && event && event.id) {
+          try {
+            const sessionRef = dbPush(dbRef(database, `mashSessions/${event.id}/${sessionUid}`));
+            dbSet(sessionRef, {
+              startedAt: sessionStart || Date.now(),
+              endedAt: Date.now(),
+              count: finalCount,
+            }).catch(() => {});
+            runTransaction(
+              dbRef(database, `eventMashTotals/${event.id}/${sessionUid}`),
+              (cur) => (cur || 0) + finalCount,
+            ).catch(() => {});
+            logEvent('mash_session_complete', {
+              eventId: event.id,
+              count: finalCount,
+              durationMs: Date.now() - (sessionStart || Date.now()),
+            });
+          } catch (_) {}
+        } else if (finalCount > 0 && event && event.id) {
+          logEvent('mash_session_complete', {
+            eventId: event.id,
+            count: finalCount,
+            anonymous: true,
+          });
+        }
+        hdPressCountRef.current = 0;
+        hdLastChallengeRef.current = '';
+        hdLastChallengeAtRef.current = 0;
+        sessionStartRef.current = 0;
+        sessionUidRef.current = null;
+        btn.style.setProperty('--hd-rest-y', '1');
+        enterIdleState();
+      }, KUDOS_BURN_MS);
+    }, KUDOS_SAVE_ANIM_MS);
+  }, [enterIdleState, user, event]); // eslint-disable-line react-hooks/exhaustive-deps
+
+  // ── Mini-game session-end listener ────────────────────────────────────
+  // When a mini-game fails with endsMashSession:true, the gameStore fires
+  // sessionEnd. We clear any pending save timer and run the save flow now.
+  useEffect(() => {
+    const unsub = gameStore.onSessionEnd(() => {
+      console.log('[mg-host] session-end received → triggering save flow');
+      if (hdResetTimerRef.current) {
+        clearTimeout(hdResetTimerRef.current);
+        hdResetTimerRef.current = null;
+      }
+      runSaveFlow();
+    });
+    return unsub;
+  }, [runSaveFlow]);
+
+  // ── Bonus delta listener ──────────────────────────────────────────────
+  // bonusCount changes (mode awardBonus + director onWin/onLose rules) fan
+  // out as { delta, opts } where opts may carry tap coordinates. We roll
+  // delta into hdPressCountRef so the user-facing score reflects rewards/
+  // penalties immediately, update the MashNum overlay text, and spawn a
+  // floating "+N"/"-N" burst at the supplied tap coords (or button center
+  // for director-applied bonuses).
+  useEffect(() => {
+    const unsub = gameStore.onBonusAwarded((delta, opts) => {
+      if (!delta) return;
+      const before = hdPressCountRef.current;
+      hdPressCountRef.current = Math.max(0, hdPressCountRef.current + delta);
+      const btn = btnRef.current;
+      if (btn) {
+        const row = btn.parentElement;
+        const numEl = row && row.querySelector('.mash-num');
+        if (numEl && btn.classList.contains('is-mashing')) {
+          numEl.textContent = `+${fmtCount(hdPressCountRef.current)}`;
+        }
+        // Pick spawn location: tap coords if provided, else button center.
+        let x, y;
+        if (opts && typeof opts.x === 'number' && typeof opts.y === 'number') {
+          x = opts.x; y = opts.y;
+        } else {
+          const r = btn.getBoundingClientRect();
+          x = r.left + r.width / 2;
+          y = r.top + r.height / 2;
+        }
+        spawnPressCountBurst(delta, x, y);
+      }
+      console.log('[mg-host] bonus', delta > 0 ? '+' + delta : delta, '| pressCount', before, '→', hdPressCountRef.current);
+    });
+    return unsub;
+  }, []);
+
+  // ── Pause save-timer when gameClock is paused ─────────────────────────
+  // Mini-games declaring `overrides.gameClock: 'paused'` (e.g. Freeze)
+  // expect the WHOLE world to halt — not just the canvas/heartbeat. Pause
+  // the save timer here too so the user isn't auto-saved out from under
+  // the freeze. On unpause, re-arm with a fresh full delay so the user has
+  // time to resume mashing before the save kicks in.
+  useEffect(() => {
+    let pausedSnapshot = false;
+    const unsub = gameStore.subscribe((s) => {
+      const paused = !!(s.resolved && s.resolved.gameClockPaused);
+      if (paused && !pausedSnapshot) {
+        pausedSnapshot = true;
+        if (hdResetTimerRef.current) {
+          clearTimeout(hdResetTimerRef.current);
+          hdResetTimerRef.current = null;
+        }
+      } else if (!paused && pausedSnapshot) {
+        pausedSnapshot = false;
+        if (hdPressCountRef.current > 0 && !hdResetTimerRef.current) {
+          hdResetTimerRef.current = setTimeout(runSaveFlow, KUDOS_SAVE_DELAY_MS);
+        }
+      }
+    });
+    return unsub;
+  }, [runSaveFlow]);
+
   const handleClick = useCallback(() => {
     const btn = btnRef.current;
     if (!btn) return;
     if (btn.classList.contains('is-saving') || btn.classList.contains('is-burning')) return;
+
+    // ── Mini-game director hook ──
+    // Always notify the store so subscribed modes (e.g. doNotPress, threshold-
+    // Mash) hear the press. If the active mini-game has overridden mashing to
+    // 'paused' or 'inverted', we early-return without running mash visuals or
+    // incrementing pressCount.
+    const gs = gameStore.getState().resolved;
+    const mashingMode = (gs && gs.mashingMode) || 'normal';
+    gameStore.handlePress(Date.now());
+    if (mashingMode === 'paused' || mashingMode === 'inverted') return;
 
     btn.classList.remove('is-idle');
     updateMashFocus();
@@ -837,6 +1037,8 @@ export default function KudosCta({ event, isSheetContext }) {
 
     hdPressCountRef.current += 1;
     const pressCount = hdPressCountRef.current;
+    // Push canonical press count to the mini-game director.
+    gameStore.setPressCount(pressCount);
     console.log('[mash-game] press', pressCount);
     if (pressCount === 1) {
       sessionStartRef.current = Date.now();
@@ -855,7 +1057,10 @@ export default function KudosCta({ event, isSheetContext }) {
         const targetCx = window.innerWidth / 2;
         // Bottom fifth of the viewport — center of button at ~85% Y so the
         // bottom of the button lands near 90vh (thumb-friendly anchor zone).
-        const targetCy = window.innerHeight * 0.85;
+        // Use visualViewport.height when available so we measure the actually-
+        // visible viewport (Android Chrome's nav bar / chrome insets handled).
+        const vh = (window.visualViewport && window.visualViewport.height) || window.innerHeight;
+        const targetCy = vh * 0.85;
         const dx = Math.round(targetCx - rowCx);
         const dy = Math.round(targetCy - rowCy);
         console.log('[mash-game] GAME START — rect:', {
@@ -874,9 +1079,49 @@ export default function KudosCta({ event, isSheetContext }) {
         document.body.style.width = '100%';
         document.body.dataset.mashLocked = '1';
         console.log('[mash-game] LOCKED — page frozen at scrollY=' + savedY);
-        // Defer one frame so any reflow from the body[data-mash-locked] CSS
-        // rules takes effect before we read computed styles.
-        requestAnimationFrame(() => dumpMashLayers('LOCKED (post-rule-apply)'));
+        // Recompute --btn-dy on visualViewport changes (Android chrome
+        // collapse, soft keyboard, etc.) so the migration target stays
+        // anchored to the actually-visible viewport bottom-fifth.
+        try {
+          if (window.visualViewport && !vvCleanupRef.current) {
+            const recalc = () => {
+              if (document.body.dataset.mashLocked !== '1') return;
+              const rowEl = btn.parentElement;
+              if (!rowEl) return;
+              // Read the row's CURRENT (translated) position, then back out
+              // the migration delta to find its natural origin, then recompute
+              // the new delta against the fresh viewport height.
+              const cs = getComputedStyle(rowEl);
+              // Grab the natural rect by temporarily ignoring transform isn't
+              // trivial; instead use the captured --btn-dx/--btn-dy by reading
+              // body style and the migration progress.
+              const progress = parseFloat(cs.getPropertyValue('--migration-progress')) || 0;
+              const curRect = rowEl.getBoundingClientRect();
+              const curCx = curRect.left + curRect.width / 2;
+              const curCy = curRect.top + curRect.height / 2;
+              const oldDx = parseFloat(document.body.style.getPropertyValue('--btn-dx')) || 0;
+              const oldDy = parseFloat(document.body.style.getPropertyValue('--btn-dy')) || 0;
+              const naturalCx = curCx - oldDx * progress;
+              const naturalCy = curCy - oldDy * progress;
+              const vv = window.visualViewport;
+              const newTargetCx = vv.width / 2;
+              const newTargetCy = vv.height * 0.85;
+              const newDx = Math.round(newTargetCx - naturalCx);
+              const newDy = Math.round(newTargetCy - naturalCy);
+              document.body.style.setProperty('--btn-dx', newDx + 'px');
+              document.body.style.setProperty('--btn-dy', newDy + 'px');
+            };
+            window.visualViewport.addEventListener('resize', recalc);
+            window.visualViewport.addEventListener('scroll', recalc);
+            vvCleanupRef.current = () => {
+              try {
+                window.visualViewport.removeEventListener('resize', recalc);
+                window.visualViewport.removeEventListener('scroll', recalc);
+              } catch (_) {}
+              vvCleanupRef.current = null;
+            };
+          }
+        } catch (_) {}
       } catch (e) {
         console.warn('[mash-game] GAME START failed:', e && e.message);
       }
@@ -937,9 +1182,13 @@ export default function KudosCta({ event, isSheetContext }) {
 
     // Heartbeat: restart the save-timer indicator animation. Each press
     // resets the heartbeat so it only plays through if the user pauses.
-    btn.classList.remove('hd-heartbeat');
-    void btn.offsetWidth; // force reflow so the animation actually restarts
-    btn.classList.add('hd-heartbeat');
+    if (document.body.dataset.ambHeartbeat !== 'off') {
+      btn.classList.remove('hd-heartbeat');
+      void btn.offsetWidth; // force reflow so the animation actually restarts
+      btn.classList.add('hd-heartbeat');
+    } else {
+      btn.classList.remove('hd-heartbeat');
+    }
 
     // Button scale ramp
     const restScale = 1 + pressCount * 0.022;
@@ -985,91 +1234,39 @@ export default function KudosCta({ event, isSheetContext }) {
 
     // Challenge text — crew-specific challenges get 1.5s extra dwell (4s total)
     // so there's time to actually read the inside jokes.
+    // When a mini-game has frozen the challenge text (data-amb-challenge=
+    // frozen) or turned it off, skip the rotation so the user reads the
+    // mini-game's instruction instead.
     const now = Date.now();
-    const isHandTuned = pressCount <= HD_FIRST_25.length;
-    const currentDwell = CREW_CHALLENGES.has(hdLastChallengeRef.current) ? 4000 : 2500;
-    const shouldRefreshChallenge = isHandTuned || (now - hdLastChallengeAtRef.current >= currentDwell);
-    if (shouldRefreshChallenge) {
-      const challenge = pickChallenge(pressCount, hdLastChallengeRef.current);
-      hdLastChallengeRef.current = challenge;
-      hdLastChallengeAtRef.current = now;
-      if (subEl) setSub(subEl, challenge);
+    const ambChallenge = document.body.dataset.ambChallenge;
+    if (ambChallenge !== 'frozen' && ambChallenge !== 'off') {
+      const isHandTuned = pressCount <= HD_FIRST_25.length;
+      const currentDwell = CREW_CHALLENGES.has(hdLastChallengeRef.current) ? 4000 : 2500;
+      const shouldRefreshChallenge = isHandTuned || (now - hdLastChallengeAtRef.current >= currentDwell);
+      if (shouldRefreshChallenge) {
+        const challenge = pickChallenge(pressCount, hdLastChallengeRef.current);
+        hdLastChallengeRef.current = challenge;
+        hdLastChallengeAtRef.current = now;
+        if (subEl) setSub(subEl, challenge);
+      }
     }
 
+    // ── Layout diagnostics ──
     if (pressCount >= DEEP_MASH_THRESHOLD) btn.classList.add('is-deep-mashing');
     else btn.classList.remove('is-deep-mashing');
 
-    // Save/burn/reset sequence
+    // Save/burn/reset sequence — armed each press; cleared by the next
+    // press. If the user stops mashing for KUDOS_SAVE_DELAY_MS, runSaveFlow
+    // fires. Also called directly by gameStore.onSessionEnd on a mini-game
+    // fail-out.
     if (hdResetTimerRef.current) clearTimeout(hdResetTimerRef.current);
-    hdResetTimerRef.current = setTimeout(() => {
-      if (hdPressCountRef.current <= 0) {
-        btn.classList.remove('is-mashing', 'is-deep-mashing', 'is-saving', 'is-burning');
-        btn.dataset.intensity = '0';
-        btn.style.setProperty('--hd-rest', '1');
-        btn.style.setProperty('--hd-pad-y', '14px');
-        btn.style.removeProperty('--hd-hue');
-        if (numEl) { numEl.style.fontSize = ''; numEl.textContent = '+1'; }
-        if (subEl) subEl.textContent = '';
-        return;
-      }
-
-      // Phase A — saving
-      btn.classList.remove('is-mashing', 'is-deep-mashing');
-      btn.classList.add('is-saving');
-      if (numEl) { numEl.textContent = `saving ${fmtCount(hdPressCountRef.current)}`; numEl.style.fontSize = '28px'; }
-      if (subEl) subEl.textContent = '';
-
-      setTimeout(() => {
-        // Phase B — burn
-        btn.classList.remove('is-saving');
-        btn.classList.add('is-burning');
-        let burnMsg;
-        do { burnMsg = HD_BURN_MESSAGES[Math.floor(Math.random() * HD_BURN_MESSAGES.length)]; }
-        while (burnMsg === hdLastBurnRef.current && HD_BURN_MESSAGES.length > 1);
-        hdLastBurnRef.current = burnMsg;
-        if (numEl) { numEl.textContent = burnMsg; numEl.style.fontSize = ''; }
-
-        setTimeout(() => {
-          // Phase C — reset
-          const finalCount = hdPressCountRef.current;
-          const sessionStart = sessionStartRef.current;
-          const sessionUid = sessionUidRef.current;
-          if (sessionUid && finalCount > 0 && event && event.id) {
-            try {
-              const sessionRef = dbPush(dbRef(database, `mashSessions/${event.id}/${sessionUid}`));
-              dbSet(sessionRef, {
-                startedAt: sessionStart || Date.now(),
-                endedAt: Date.now(),
-                count: finalCount,
-              }).catch(() => {});
-              runTransaction(
-                dbRef(database, `eventMashTotals/${event.id}/${sessionUid}`),
-                (cur) => (cur || 0) + finalCount,
-              ).catch(() => {});
-              logEvent('mash_session_complete', {
-                eventId: event.id,
-                count: finalCount,
-                durationMs: Date.now() - (sessionStart || Date.now()),
-              });
-            } catch (_) {}
-          } else if (finalCount > 0 && event && event.id) {
-            logEvent('mash_session_complete', {
-              eventId: event.id,
-              count: finalCount,
-              anonymous: true,
-            });
-          }
-          hdPressCountRef.current = 0;
-          hdLastChallengeRef.current = '';
-          hdLastChallengeAtRef.current = 0;
-          sessionStartRef.current = 0;
-          sessionUidRef.current = null;
-          btn.style.setProperty('--hd-rest-y', '1');
-          enterIdleState();
-        }, KUDOS_BURN_MS);
-      }, KUDOS_SAVE_ANIM_MS);
-    }, KUDOS_SAVE_DELAY_MS);
-  }, [mash, enterIdleState, user, updateMashFocus]);
+    // Don't arm a save timer while the world is paused (e.g. during Freeze).
+    // The pause subscription will re-arm it when the freeze ends.
+    const gsResolved = gameStore.getState().resolved;
+    if (!(gsResolved && gsResolved.gameClockPaused)) {
+      hdResetTimerRef.current = setTimeout(runSaveFlow, KUDOS_SAVE_DELAY_MS);
+    }
+  }, [mash, updateMashFocus, user, event, runSaveFlow]);
 
   return (
     <KudosRow className="kudos-row">

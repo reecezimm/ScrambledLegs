@@ -432,6 +432,7 @@ const Input = styled.input`
   }
 `;
 
+// eslint-disable-next-line no-unused-vars
 const eggShakeAnimation = keyframes`
   0%, 100% { transform: rotate(0deg); }
   25% { transform: rotate(-5deg); }

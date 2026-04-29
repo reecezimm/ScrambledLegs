@@ -45,6 +45,7 @@ const LockIcon = () => (
 let showToastGlobal = null;
 
 export function useLockToast() {
+  // eslint-disable-next-line no-unused-vars
   const [, forceUpdate] = useState(0);
 
   const show = (message) => {

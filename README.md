@@ -2,6 +2,10 @@
 
 Official website for Scrambled Legs, featuring the famous Hot Dog Counter.
 
+## Documentation
+
+- [Mini-Game Builder Guide](./MINI_GAME_BUILDER.md) — contributor guide for the mash-button mini-game system (schema, mode contract, how to add a new mini-game).
+
 ## Development
 
 This project was built with React and uses React Router for navigation.

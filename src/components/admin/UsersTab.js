@@ -1,7 +1,7 @@
 import React, { useEffect, useMemo, useState } from 'react';
 import ReactDOM from 'react-dom';
 import styled, { keyframes } from 'styled-components';
-import { ref as dbRef, onValue, update as dbUpdate, remove as dbRemove, query as dbQuery, orderByChild, limitToLast } from 'firebase/database';
+import { ref as dbRef, onValue, update as dbUpdate, query as dbQuery, orderByChild, limitToLast } from 'firebase/database';
 import { database, auth } from '../../services/firebase';
 import { sendResetEmail, ADMIN_EMAILS } from '../../services/auth';
 

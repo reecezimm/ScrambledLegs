@@ -3,12 +3,16 @@ import styled from 'styled-components';
 import { useParams } from 'react-router-dom';
 import { useEvents } from '../../hooks/useEvents';
 import { useEventSheet } from '../../hooks/useEventSheet';
-import { getStatus, fmtCountdown, fmtTimeSince, STATUS_LABEL } from '../../hooks/useEventLifecycle';
+import { getStatus } from '../../hooks/useEventLifecycle';
 import EventFeatured from './EventFeatured';
 import EventComingUp from './EventComingUp';
 import EventArchive from './EventArchive';
 import EventSheet from './EventSheet';
 import LockToast from './LockToast';
+import GameStatus from './GameStatus';
+import DevTogglePanel from './DevTogglePanel';
+import { gameStore } from '../../game/store';
+import { createDefaultInfiniteStrategy } from '../../game/miniGames';
 
 // ─── Layout ───────────────────────────────────────────────────────────────────
 const CalSection = styled.section`
@@ -104,6 +108,17 @@ export default function CalendarWidget() {
     return () => clearInterval(id);
   }, []);
 
+  // Bootstrap the mini-game schedule once with the infinite-loop strategy:
+  // first game is always Golden Egg at press 40; subsequent games are
+  // random from the pool with 15-press gaps and no repeats in a row.
+  // DevTogglePanel may override this (in development) by calling setSchedule
+  // with the user's choice.
+  useEffect(() => {
+    if (gameStore.getState().schedule.length === 0) {
+      gameStore.setSchedule({ strategy: createDefaultInfiniteStrategy() });
+    }
+  }, []);
+
   const { upcoming, past } = partitionEvents(events);
 
   const featuredEvent = upcoming[0] || null;
@@ -139,6 +154,8 @@ export default function CalendarWidget() {
 
       <LockToast />
       <MashOverlays />
+      <GameStatus />
+      <DevTogglePanel />
     </CalSection>
   );
 }

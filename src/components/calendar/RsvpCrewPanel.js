@@ -269,6 +269,7 @@ const RankBadge = styled.span`
   &[data-medal="other"] { background: #2a2a2a; color: rgba(255,255,255,0.65); border-color: #1a1a1a; }
 `;
 
+// eslint-disable-next-line no-unused-vars
 const LaurelSvg = styled.svg`
   position: absolute;
   /* Doubled in size and shifted down so the leaves cradle the avatar from
@@ -431,6 +432,7 @@ const RottenStat = styled.div`
   white-space: nowrap;
 `;
 
+// eslint-disable-next-line no-unused-vars
 const RottenEmoji = styled.span`
   font-size: 14px;
   filter: saturate(0.6);

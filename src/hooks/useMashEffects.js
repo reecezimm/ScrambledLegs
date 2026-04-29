@@ -23,6 +23,12 @@ export function setMashEnergy(pressCount) {
   if (pressCount >= 50) document.body.dataset.eggsRainbow = '1';
   else delete document.body.dataset.eggsRainbow;
 
+  // While the mini-game director has frozen the game clock (e.g. Freeze
+  // mini-game), skip updating the visual transformation vars so the canvas /
+  // migration / sub state stays put. Energy/overdrive still update because
+  // they're cheap and don't drive transforms.
+  if (document.body.dataset.gameClock === 'paused') return;
+
   // ── Mash Game state ──
   // Canvas grows on an ease-in curve across presses 1→25: slow at first,
   // accelerating to full takeover by press 25.
@@ -32,10 +38,52 @@ export function setMashEnergy(pressCount) {
   // Button migration toward the bottom-third anchor across presses 1→25.
   const migration = Math.min(pressCount / 25, 1);
   document.body.style.setProperty('--migration-progress', migration.toFixed(3));
-  // Sub-text lift — challenge text starts floating up at press 15, fully out
-  // by press 25 (canvas takeover complete, count alone in centered button).
-  const subOut = Math.max(0, Math.min(1, (pressCount - 15) / 10));
-  document.body.style.setProperty('--sub-out', subOut.toFixed(3));
+  // Ease-out curve (sqrt) for VISUAL growth that's perceived earlier — e.g.
+  // at press 5 (linear=0.20) this is 0.45, so the button is already noticeably
+  // taller. Used by the padding rule so vertical growth feels quicker.
+  const migrationFast = Math.sqrt(migration);
+  document.body.style.setProperty('--migration-fast', migrationFast.toFixed(3));
+  // Sub-text lift — challenge text stays put inside the button during 1–25,
+  // then JUMPS instantly above the button on press 26 (no smooth ramp — user
+  // wants no incremental "willy nilly" movement during the intro).
+  const subOut = pressCount >= 26 ? 1 : 0;
+  document.body.style.setProperty('--sub-out', String(subOut));
+  // Mirror as a body data attribute so CSS attribute selectors can switch
+  // sub between "in flex flow alongside num" (sub-out=0) and "absolute,
+  // jumped above button" (sub-out=1). CSS vars can't drive position-mode
+  // changes, but data attrs can.
+  document.body.dataset.subOut = String(subOut);
+  // Track the button's actual height so the sub can be translated by exactly
+  // -btnH-gap to land just above the button, regardless of padding/scale.
+  try {
+    const btnEl = document.querySelector('.hd-cta');
+    if (btnEl) {
+      document.body.style.setProperty('--btn-h', btnEl.clientHeight + 'px');
+    }
+  } catch (_) {}
+
+  // Re-anchor the migration target every press. The press-1 capture freezes
+  // the row's natural position, but content above (e.g. EggMansTake AI text
+  // loading async) can grow the card and push the row down post-capture. By
+  // press 30 the button can drift below the viewport. Each press, compute
+  // the row's CURRENT natural position (rect.top - transformY) and rewrite
+  // --btn-dy so the migration target stays anchored to vh * 0.85.
+  try {
+    if (document.body.dataset.mashLocked === '1') {
+      const row = document.querySelector('.kudos-row');
+      if (row) {
+        const cs = getComputedStyle(row);
+        const tMatch = cs.transform && cs.transform.match(/matrix\(([^)]+)\)/);
+        const tY = tMatch ? parseFloat(tMatch[1].split(',')[5]) || 0 : 0;
+        const r = row.getBoundingClientRect();
+        const naturalCy = (r.top - tY) + r.height / 2;
+        const vh = (window.visualViewport && window.visualViewport.height) || window.innerHeight;
+        const targetCy = vh * 0.85;
+        const dy = Math.round(targetCy - naturalCy);
+        document.body.style.setProperty('--btn-dy', dy + 'px');
+      }
+    }
+  } catch (_) {}
   // Level — Math.floor(pressCount / 100), capped at 10. Surfaces level paint
   // hooks for body[data-mash-level="N"] CSS rules later.
   const level = Math.min(Math.floor(pressCount / 100), 10);
@@ -110,6 +158,178 @@ export function dumpMashLayers(tag = '') {
   }
 }
 
+/**
+ * Diagnostic layout dumper — logs the rect, transforms, and CSS vars for the
+ * button + overlay + mash-num + mash-sub so we can see exactly where things
+ * are landing on the device. Use to debug positioning issues during the first
+ * 25 presses (and the burn message at session end).
+ *
+ * Call from KudosCta on tagged presses: `dumpMashLayout('press 5')`.
+ */
+export function dumpMashLayout(tag = '') {
+  if (typeof document === 'undefined') return;
+  const btn = document.querySelector('.hd-cta');
+  const overlay = document.querySelector('.hd-cta-mash');
+  const num = document.querySelector('.mash-num');
+  const sub = document.querySelector('.mash-sub');
+  const row = document.querySelector('.kudos-row');
+
+  const snap = (el, name) => {
+    if (!el) return { name, missing: true };
+    const r = el.getBoundingClientRect();
+    const cs = getComputedStyle(el);
+    return {
+      name,
+      rect: {
+        x: Math.round(r.left),
+        y: Math.round(r.top),
+        w: Math.round(r.width),
+        h: Math.round(r.height),
+        cx: Math.round(r.left + r.width / 2),
+        cy: Math.round(r.top + r.height / 2),
+      },
+      pos: cs.position,
+      transform: cs.transform === 'none' ? '-' : cs.transform,
+      zIndex: cs.zIndex,
+      display: cs.display,
+      flex: cs.justifyContent === 'normal' && cs.alignItems === 'normal'
+        ? '-'
+        : `${cs.justifyContent} / ${cs.alignItems}`,
+      classes: el.className,
+      text: el.textContent ? el.textContent.slice(0, 40) : '',
+    };
+  };
+
+  const bodyStyle = document.body.style;
+  const vars = {
+    '--btn-h': bodyStyle.getPropertyValue('--btn-h') || '-',
+    '--btn-dx': bodyStyle.getPropertyValue('--btn-dx') || '-',
+    '--btn-dy': bodyStyle.getPropertyValue('--btn-dy') || '-',
+    '--migration-progress': bodyStyle.getPropertyValue('--migration-progress') || '-',
+    '--canvas-radius': bodyStyle.getPropertyValue('--canvas-radius') || '-',
+    '--sub-out': bodyStyle.getPropertyValue('--sub-out') || '-',
+    '--mash-scale': btn ? getComputedStyle(btn).getPropertyValue('--mash-scale') || '-' : '-',
+    '--hd-rest': btn ? btn.style.getPropertyValue('--hd-rest') || '-' : '-',
+    '--hd-rest-y': btn ? btn.style.getPropertyValue('--hd-rest-y') || '-' : '-',
+    '--hd-pad-y': btn ? btn.style.getPropertyValue('--hd-pad-y') || '-' : '-',
+  };
+  const flags = {
+    mashLocked: document.body.dataset.mashLocked || '-',
+    mashing: document.body.dataset.mashing || '-',
+    gameClock: document.body.dataset.gameClock || '-',
+    mashMode: document.body.dataset.mashMode || '-',
+    ambChallenge: document.body.dataset.ambChallenge || '-',
+    btnIntensity: btn ? btn.dataset.intensity || '-' : '-',
+  };
+  const vp = {
+    inner: { w: window.innerWidth, h: window.innerHeight },
+    visual: window.visualViewport
+      ? { w: Math.round(window.visualViewport.width), h: Math.round(window.visualViewport.height) }
+      : null,
+  };
+
+  // Print flat strings so the values are visible inline (no need to click
+  // through collapsed object groups in the console).
+  const fmt = (s) => !s
+    ? `MISSING`
+    : `rect=(x=${s.rect.x}, y=${s.rect.y}, w=${s.rect.w}, h=${s.rect.h}, cx=${s.rect.cx}, cy=${s.rect.cy}) pos=${s.pos} z=${s.zIndex} display=${s.display} flex=${s.flex} transform=${s.transform} text="${s.text}"`;
+
+  const lines = [];
+  lines.push(`────── [mash-layout] ${tag} ──────`);
+  lines.push(`viewport: inner=${vp.inner.w}x${vp.inner.h}` + (vp.visual ? ` visual=${vp.visual.w}x${vp.visual.h}` : ''));
+  lines.push(`flags:    ` + Object.entries(flags).map(([k, v]) => `${k}=${v}`).join('  '));
+  lines.push(`vars:     ` + Object.entries(vars).map(([k, v]) => `${k}=${String(v).trim() || '-'}`).join('  '));
+  lines.push(`row:      ${fmt(snap(row, 'row'))}`);
+  lines.push(`btn:      ${fmt(snap(btn, 'btn'))}`);
+  lines.push(`overlay:  ${fmt(snap(overlay, 'overlay'))}`);
+  lines.push(`num:      ${fmt(snap(num, 'num'))}`);
+  lines.push(`sub:      ${fmt(snap(sub, 'sub'))}`);
+
+  if (btn) {
+    const br = btn.getBoundingClientRect();
+    const rel = (el) => {
+      if (!el) return 'MISSING';
+      const r = el.getBoundingClientRect();
+      const dx = Math.round((r.left + r.width / 2) - (br.left + br.width / 2));
+      const dy = Math.round((r.top + r.height / 2) - (br.top + br.height / 2));
+      return `cx-offset=${dx} cy-offset=${dy} (top-edge=${Math.round(r.top - br.top)} bottom-edge=${Math.round(br.bottom - r.bottom)} left-edge=${Math.round(r.left - br.left)} right-edge=${Math.round(br.right - r.right)})`;
+    };
+    lines.push(`num→btn:  ${rel(num)}   ← cx/cy=0 means perfectly centered in button`);
+    lines.push(`sub→btn:  ${rel(sub)}`);
+  }
+
+  // ── Visibility / fold-of-viewport check ─────────────────────────────────
+  // Does the button fit inside the actually-visible viewport (visualViewport
+  // for Android Chrome with bottom system UI, or innerHeight as fallback)?
+  if (btn) {
+    const br = btn.getBoundingClientRect();
+    const vh = (window.visualViewport && window.visualViewport.height) || window.innerHeight;
+    const vw = (window.visualViewport && window.visualViewport.width) || window.innerWidth;
+    const aboveFold = Math.max(0, Math.round(0 - br.top));
+    const belowFold = Math.max(0, Math.round(br.bottom - vh));
+    const offLeft = Math.max(0, Math.round(0 - br.left));
+    const offRight = Math.max(0, Math.round(br.right - vw));
+    const fullyVisible = !aboveFold && !belowFold && !offLeft && !offRight;
+    lines.push(`btn-fit:  ${fullyVisible ? 'OK — fully in viewport' : 'CLIPPED'}` +
+      (aboveFold ? ` | ${aboveFold}px ABOVE top` : '') +
+      (belowFold ? ` | ${belowFold}px BELOW fold` : '') +
+      (offLeft  ? ` | ${offLeft}px OFF LEFT`     : '') +
+      (offRight ? ` | ${offRight}px OFF RIGHT`   : '') +
+      ` (btn ${Math.round(br.top)}..${Math.round(br.bottom)} vs viewport 0..${vh})`);
+  }
+
+  // ── Overlap detection between text elements ────────────────────────────
+  // Visually two elements overlap when their bounding boxes intersect AND
+  // they're on the same z-layer (we just print rect overlap; user can judge).
+  const rectOverlap = (a, b) => {
+    if (!a || !b) return null;
+    const ra = a.getBoundingClientRect();
+    const rb = b.getBoundingClientRect();
+    const xOverlap = Math.max(0, Math.min(ra.right, rb.right) - Math.max(ra.left, rb.left));
+    const yOverlap = Math.max(0, Math.min(ra.bottom, rb.bottom) - Math.max(ra.top, rb.top));
+    if (xOverlap === 0 || yOverlap === 0) return 'NO overlap';
+    return `OVERLAP ${Math.round(xOverlap)}px × ${Math.round(yOverlap)}px ` +
+      `(a: y=${Math.round(ra.top)}..${Math.round(ra.bottom)}, b: y=${Math.round(rb.top)}..${Math.round(rb.bottom)})`;
+  };
+  lines.push(`num↔sub:  ${rectOverlap(num, sub) || '-'}    ← should always be NO overlap`);
+  if (btn) {
+    // num and sub each vs button — confirms whether they're inside or hanging out
+    const inside = (el, label) => {
+      if (!el) return `${label}: MISSING`;
+      const r = el.getBoundingClientRect();
+      const br = btn.getBoundingClientRect();
+      const fullyInside = r.top >= br.top && r.bottom <= br.bottom && r.left >= br.left && r.right <= br.right;
+      const above = r.bottom <= br.top;
+      const below = r.top >= br.bottom;
+      let where;
+      if (fullyInside) where = 'INSIDE button';
+      else if (above) where = `ABOVE button (gap=${Math.round(br.top - r.bottom)}px)`;
+      else if (below) where = `BELOW button (gap=${Math.round(r.top - br.bottom)}px)`;
+      else where = `STRADDLES button edge (top out by ${Math.max(0, Math.round(br.top - r.top))}px, bottom out by ${Math.max(0, Math.round(r.bottom - br.bottom))}px)`;
+      return `${label}: ${where}`;
+    };
+    lines.push(`num where: ${inside(num, 'num')}`);
+    lines.push(`sub where: ${inside(sub, 'sub')}`);
+  }
+
+  // ── Layout-shift drift ──────────────────────────────────────────────────
+  // The migration delta was captured at press 1. If the surrounding layout
+  // has changed since (e.g. EggMansTake text loaded after press 1 and grew
+  // the card), the row's natural position has drifted. Print the natural
+  // row Y vs original to expose this.
+  if (row) {
+    const rowR = row.getBoundingClientRect();
+    const cs = getComputedStyle(row);
+    const tMatch = cs.transform.match(/matrix\(([^)]+)\)/);
+    const tY = tMatch ? parseFloat(tMatch[1].split(',')[5]) : 0;
+    const naturalY = Math.round(rowR.top - tY);
+    lines.push(`row drift: row.top=${Math.round(rowR.top)} - transformY=${Math.round(tY)} = naturalY=${naturalY}` +
+      ` (if naturalY changes between presses, surrounding content has shifted the row)`);
+  }
+  lines.push(`──────────────────────────────────`);
+  console.log(lines.join('\n'));
+}
+
 export function clearMashEnergy() {
   document.body.style.removeProperty('--mash-energy');
   document.body.style.removeProperty('--mash-overdrive');
@@ -121,6 +341,7 @@ export function clearMashEnergy() {
   document.body.style.removeProperty('--btn-dx');
   document.body.style.removeProperty('--btn-dy');
   document.body.style.removeProperty('--sub-out');
+  document.body.style.removeProperty('--btn-h');
   delete document.body.dataset.mashing;
   delete document.body.dataset.eggsRainbow;
   delete document.body.dataset.mashLevel;
@@ -174,6 +395,7 @@ export function rainbowChance(pressCount) {
 }
 
 export function spawnHotDog(originBtn, opts = {}) {
+  if (document.body.dataset.ambFlying === 'off') return;
   if (activeHotDogs >= MAX_ACTIVE_HOTDOGS) return;
   incActiveHotDogs();
   const emoji = opts.emoji || '🌭';
@@ -232,6 +454,7 @@ export function spawnHotDog(originBtn, opts = {}) {
 }
 
 export function spawnRainbowEgg(originBtn) {
+  if (document.body.dataset.ambFlying === 'off') return;
   if (activeHotDogs >= MAX_ACTIVE_HOTDOGS) return;
   incActiveHotDogs();
   const rect = originBtn.getBoundingClientRect();
@@ -289,6 +512,7 @@ export function spawnRainbowEgg(originBtn) {
 }
 
 export function flashBackground(pressCount) {
+  if (document.body.dataset.ambFlash === 'off') return;
   if (pressCount < 10) return;
   const flash = document.getElementById('mash-flash');
   if (!flash) return;
@@ -304,6 +528,7 @@ export function flashBackground(pressCount) {
 }
 
 export function spawnPhrase(btn, phraseCooldownRef, lastPhraseIndexRef) {
+  if (document.body.dataset.ambBubble === 'off') return;
   const now = Date.now();
   if (now < phraseCooldownRef.current) return;
   phraseCooldownRef.current = now + 5000;
@@ -394,15 +619,22 @@ export function spawnPhrase(btn, phraseCooldownRef, lastPhraseIndexRef) {
   // +30% pause time — bump the floating duration by 1.3x.
   const dur = (8500 + Math.random() * 900) * 1.3;
 
+  // Trajectory phases (desktop dur ≈ 11.5s):
+  //   0    →  1.0s  : initial burst, 0 → -82px (DOUBLED distance, 1s duration)
+  //   1.0s →  5.0s  : 4-second pause, drifts -82 → -101 (~19px gentle hover)
+  //   5.0s →  6.4s  : second burst kicks off, -101 → -180
+  //   6.4s →  8.3s  : -180 → -320
+  //   8.3s → 10.1s  : -320 → -460, opacity 1 → 0.85
+  //  10.1s → 11.5s  : -460 → -600, fades to 0
   span.animate(
     [
       { transform: 'translate(-50%,0) rotate(0deg)', opacity: 0, offset: 0 },
-      { transform: 'translate(-50%,-34px) rotate(0deg)', opacity: 1, offset: 0.05 },
-      { transform: `translate(calc(-50% + ${(Math.random() - 0.5) * 3}px),-50px) rotate(${(Math.random() - 0.5) * 3}deg)`, opacity: 1, offset: 0.40 },
-      { transform: `translate(calc(-50% + ${drift * 0.25 - wiggleA * 0.3}px),-110px) rotate(${rotA * 0.4}deg)`, opacity: 1, offset: 0.55 },
-      { transform: `translate(calc(-50% + ${drift * 0.55 + wiggleA * 0.6}px),-220px) rotate(${rotA * 0.7}deg)`, opacity: 1, offset: 0.72 },
-      { transform: `translate(calc(-50% + ${drift * 0.82 - wiggleA * 0.4}px),-340px) rotate(${rotA * 0.9}deg)`, opacity: 0.85, offset: 0.88 },
-      { transform: `translate(calc(-50% + ${drift}px),-460px) rotate(${rotA}deg)`, opacity: 0, offset: 1 },
+      { transform: 'translate(-50%,-82px) rotate(0deg)', opacity: 1, offset: 0.087 },
+      { transform: `translate(calc(-50% + ${(Math.random() - 0.5) * 3}px),-101px) rotate(${(Math.random() - 0.5) * 3}deg)`, opacity: 1, offset: 0.435 },
+      { transform: `translate(calc(-50% + ${drift * 0.25 - wiggleA * 0.3}px),-180px) rotate(${rotA * 0.4}deg)`, opacity: 1, offset: 0.56 },
+      { transform: `translate(calc(-50% + ${drift * 0.55 + wiggleA * 0.6}px),-320px) rotate(${rotA * 0.7}deg)`, opacity: 1, offset: 0.72 },
+      { transform: `translate(calc(-50% + ${drift * 0.82 - wiggleA * 0.4}px),-460px) rotate(${rotA * 0.9}deg)`, opacity: 0.85, offset: 0.88 },
+      { transform: `translate(calc(-50% + ${drift}px),-600px) rotate(${rotA}deg)`, opacity: 0, offset: 1 },
     ],
     { duration: dur, easing: 'cubic-bezier(.22,.61,.36,1)', fill: 'forwards' }
   ).onfinish = () => span.remove();
@@ -415,6 +647,7 @@ export function spawnPhrase(btn, phraseCooldownRef, lastPhraseIndexRef) {
 
 const RARE_ICONS = ['🌟', '💎', '🏆', '🍩', '🦄'];
 
+// eslint-disable-next-line no-unused-vars
 function spawnRareBonus(onClaim) {
   if (typeof document === 'undefined') return;
   // Don't pile rare bonuses up on low-tier — at most 1 in flight.
@@ -510,6 +743,7 @@ function spawnRareBonus(onClaim) {
 // ─── Gamification: level-up popup ──────────────────────────────────────────
 // Briefly flashes "LEVEL N" overlay at 100/200/.../1000. Level 10 gets a
 // gold treatment and longer hold. Single DOM node; ~1.4s lifetime.
+// eslint-disable-next-line no-unused-vars
 function spawnLevelUp(level) {
   if (typeof document === 'undefined') return;
   const isMax = level >= 10;
