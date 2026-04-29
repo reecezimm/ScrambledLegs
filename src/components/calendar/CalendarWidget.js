@@ -79,19 +79,10 @@ function partitionEvents(events) {
   return { upcoming, past };
 }
 
+// Label only — countdown lives in the StatusChip on the map.
 function featuredLabel(event) {
   if (!event) return 'Up Next';
-  const status = getStatus(event);
-  if (status === 'upcoming') {
-    const ms = (event.start || 0) - Date.now();
-    const cd = fmtCountdown(ms);
-    return cd ? `In ${cd}` : 'Up Next';
-  }
-  if (status === 'in_progress') {
-    return `Riding · ${fmtTimeSince(Date.now() - event.start)}`;
-  }
-  if (status === 'beers') return 'Beers being consumed';
-  return STATUS_LABEL[status] || 'Up Next';
+  return 'Up Next';
 }
 
 // ─── CalendarWidget ───────────────────────────────────────────────────────────

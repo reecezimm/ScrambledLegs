@@ -48,20 +48,23 @@ const StatusChip = styled.div`
   display: inline-flex;
   align-items: center;
   gap: 6px;
-  padding: 6px 12px;
+  padding: 7px 14px;
   border-radius: 999px;
   font-family: 'Montserrat', sans-serif;
   font-size: 10px;
   font-weight: 700;
   letter-spacing: 0.10em;
   text-transform: uppercase;
-  backdrop-filter: blur(8px);
-  border: 1px solid rgba(255,255,255,0.18);
+  backdrop-filter: blur(10px);
+  background: rgba(20,20,20,0.78);
+  border: 1px solid rgba(255,255,255,0.22);
+  box-shadow: 0 4px 14px rgba(0,0,0,0.45);
+  text-shadow: 0 1px 2px rgba(0,0,0,0.55);
   font-variant-numeric: tabular-nums;
 
-  &[data-status="upcoming"]   { background: rgba(255,199,44,0.18); color: #FFE66D; }
-  &[data-status="in_progress"]{ background: rgba(111,207,151,0.18); color: #6FCF97; }
-  &[data-status="beers"]      { background: rgba(255,177,85,0.18); color: #FFB155; }
+  &[data-status="upcoming"]   { color: #FFE66D; border-color: rgba(255,199,44,0.55); }
+  &[data-status="in_progress"]{ color: #8DEBA9; border-color: rgba(111,207,151,0.55); }
+  &[data-status="beers"]      { color: #FFC58A; border-color: rgba(255,177,85,0.55); }
 `;
 
 const Dot = styled.span`
@@ -245,7 +248,7 @@ export default function EventFeatured({ event }) {
 
         {event.description && <EventDesc className="event-desc">{event.description}</EventDesc>}
 
-        <WeatherPanel event={event} onData={handleWeatherData} />
+        <WeatherPanel event={event} onData={handleWeatherData} showEggMansTake={false} />
 
         <EventActions event={event} />
 
