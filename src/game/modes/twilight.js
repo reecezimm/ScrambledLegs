@@ -13,8 +13,10 @@ const MIN_CONCURRENT = 5;
 const STAGGER_MS = 150;
 const REWARD = 25;
 const SIZE_PX = 81;          // half of golden egg's 162px
-const FLIGHT_MIN = 2550;     // 2× faster than golden egg's 5100ms
-const FLIGHT_MAX = 3450;     // 2× faster than golden egg's 6900ms
+// Halved (was 2550–3450). Stars now match golden-egg flight duration so
+// they feel readable on desktop without losing their streak quality.
+const FLIGHT_MIN = 5100;
+const FLIGHT_MAX = 6900;
 
 // Dark night-sky gradient that overrides the canvas during play.
 const SKY_GRADIENT =

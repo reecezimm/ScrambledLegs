@@ -10,6 +10,7 @@ import EventArchive from './EventArchive';
 import EventSheet from './EventSheet';
 import LockToast from './LockToast';
 import GameStatus from './GameStatus';
+import TimerWidget from './TimerWidget';
 import DevTogglePanel from './DevTogglePanel';
 import { gameStore } from '../../game/store';
 import { createDefaultInfiniteStrategy } from '../../game/miniGames';
@@ -164,6 +165,7 @@ export default function CalendarWidget() {
       <LockToast />
       <MashOverlays />
       <GameStatus />
+      <TimerWidget />
       <DevTogglePanel />
     </CalSection>
   );

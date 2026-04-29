@@ -948,6 +948,91 @@ export default function KudosCta({ event, isSheetContext }) {
     return unsub;
   }, [runSaveFlow]);
 
+  // ── Drag-and-hold wiring ──────────────────────────────────────────────
+  // Activates when a mini-game declares overrides.button: 'draggable'.
+  // Pointerdown on the mash button captures the pointer; pointermove
+  // translates the kudos-row via --btn-drag-x/y CSS vars; pointerup
+  // releases. Cumulative offset persists across gestures (button parks
+  // where released and a re-grab continues from there). When the play
+  // phase exits (buttonState no longer 'draggable'), the offset is cleared
+  // and the row's CSS transition slides the button back to anchor.
+  useEffect(() => {
+    let attached = false;
+    let pointerId = null;
+    let lastX = 0, lastY = 0;
+    let cumDX = 0, cumDY = 0;
+    let rafId = 0;
+    let pendingX = 0, pendingY = 0;
+
+    const onMove = (e) => {
+      if (e.pointerId !== pointerId) return;
+      const dx = e.clientX - lastX;
+      const dy = e.clientY - lastY;
+      lastX = e.clientX; lastY = e.clientY;
+      cumDX += dx; cumDY += dy;
+      pendingX = e.clientX; pendingY = e.clientY;
+      if (rafId) return;
+      rafId = requestAnimationFrame(() => {
+        rafId = 0;
+        document.body.style.setProperty('--btn-drag-x', cumDX + 'px');
+        document.body.style.setProperty('--btn-drag-y', cumDY + 'px');
+        gameStore.handleDragMove({ x: pendingX, y: pendingY, dx: cumDX, dy: cumDY });
+      });
+    };
+    const onUp = (e) => {
+      if (pointerId == null || e.pointerId !== pointerId) return;
+      const btn = btnRef.current;
+      try { btn && btn.releasePointerCapture(pointerId); } catch (_) {}
+      pointerId = null;
+      window.removeEventListener('pointermove', onMove);
+      window.removeEventListener('pointerup', onUp);
+      window.removeEventListener('pointercancel', onUp);
+      gameStore.handleDragEnd({ x: e.clientX, y: e.clientY, dx: cumDX, dy: cumDY });
+    };
+    const onDown = (e) => {
+      const btn = btnRef.current;
+      if (!btn) return;
+      e.preventDefault();
+      pointerId = e.pointerId;
+      lastX = e.clientX; lastY = e.clientY;
+      try { btn.setPointerCapture(pointerId); } catch (_) {}
+      gameStore.handleDragStart({ x: e.clientX, y: e.clientY });
+      window.addEventListener('pointermove', onMove);
+      window.addEventListener('pointerup', onUp);
+      window.addEventListener('pointercancel', onUp);
+    };
+
+    function attach() {
+      const btn = btnRef.current;
+      if (!btn || attached) return;
+      attached = true;
+      btn.addEventListener('pointerdown', onDown);
+    }
+    function detach() {
+      const btn = btnRef.current;
+      if (btn) btn.removeEventListener('pointerdown', onDown);
+      attached = false;
+      if (rafId) { cancelAnimationFrame(rafId); rafId = 0; }
+      if (pointerId != null) {
+        window.removeEventListener('pointermove', onMove);
+        window.removeEventListener('pointerup', onUp);
+        window.removeEventListener('pointercancel', onUp);
+        pointerId = null;
+      }
+      // Clear drag offset so the button snaps back to the migration anchor.
+      document.body.style.removeProperty('--btn-drag-x');
+      document.body.style.removeProperty('--btn-drag-y');
+      cumDX = 0; cumDY = 0;
+    }
+
+    const unsub = gameStore.subscribe((s) => {
+      const draggable = s.resolved && s.resolved.buttonState === 'draggable';
+      if (draggable && !attached) attach();
+      else if (!draggable && attached) detach();
+    });
+    return () => { unsub(); detach(); };
+  }, []);
+
   // ── Bonus delta listener ──────────────────────────────────────────────
   // bonusCount changes (mode awardBonus + director onWin/onLose rules) fan
   // out as { delta, opts } where opts may carry tap coordinates. We roll

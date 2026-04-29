@@ -67,7 +67,7 @@ export const MASH_GAUNTLET = {
       timeout: { kind: 'ms', value: 5000, outcome: 'lose' },
       overrides: { mashing: 'normal', button: 'visible', gameClock: 'run' },
       ambient: { flyingEmojis: 'on', bubbleText: 'on', challengeText: 'frozen' },
-      config: { target: 25 },
+      config: { target: 25, showTimer: true },
     },
     // Branched outcome status. WIN runs press-counted (5p). FAILED is
     // ms-timed (2s) so it shows even though the user might be panicking.
@@ -122,7 +122,7 @@ export const FREEZE = {
         flyingEmojis: 'off', bubbleText: 'off',
         challengeText: 'frozen', heartbeat: 'off', flash: 'off',
       },
-      config: { penaltyPerPress: 10, playStatus: "DON'T TOUCH" },
+      config: { penaltyPerPress: 10, playStatus: "DON'T TOUCH", showTimer: true },
     },
     // Release the pause AND turn the heartbeat ring back on. Without the
     // explicit ambient.heartbeat: 'on' override, the mg-level 'off' would
@@ -155,7 +155,7 @@ export const TWILIGHT = {
   presentation: {},
   phases: [
     { kind: 'status',    text: 'TWILIGHT\nINCOMING',                 presses: 5 },
-    { kind: 'status',    text: 'TAP THE STARS\nFOR BONUS POINTS',    presses: 5 },
+    { kind: 'status',    text: 'KEEP MASHING\nAND TAP THE STARS',    presses: 5 },
     { kind: 'countdown', from: 5,                                    presses: 5 },
     { kind: 'play',
       mode: 'twilight',
@@ -179,8 +179,54 @@ export const TWILIGHT = {
   ],
 };
 
+// ── 5. Pig Boy Attack ─ orbital pigs lock onto a draggable button ──────────
+// First mini-game using the drag-and-hold input mechanic. The mash button
+// becomes a draggable target — user holds and drags it to dodge pigs that
+// fly in from the top, gravitate toward the button's current position, and
+// orbit around it on a constant tangential thrust. Survive 20s for +250.
+// Touching the button = lose. Mashing is paused throughout play (drag is the
+// only input). Heartbeat off so the burn ring doesn't compete with the
+// urgency of the dodge.
+export const PIG_BOY_ATTACK = {
+  id: 'pig-boy-attack',
+  label: 'Pig Boy Attack',
+  startAtPress: FIRST_START,
+  rules: { canLose: true, onWin: { bonus: +250 }, onLose: { bonus: 0 } },
+  ambient: { challengeText: 'frozen', heartbeat: 'off' },
+  presentation: { accentColor: '#FFB3D9' },
+  input: { dragHold: 'on' },
+  phases: [
+    { kind: 'status',    text: 'PIG BOY ATTACK\nINCOMING',                 presses: 5 },
+    { kind: 'status',    text: 'TAP AND HOLD TO DRAG\nRELEASE TO PARK',    presses: 5 },
+    { kind: 'countdown', from: 5,                                          presses: 5 },
+    { kind: 'play',
+      mode: 'pigDodge',
+      timeout: { kind: 'ms', value: 20000, outcome: 'win' },
+      overrides: { mashing: 'paused', button: 'draggable', gameClock: 'run' },
+      ambient: { flyingEmojis: 'off', bubbleText: 'off', heartbeat: 'off', flash: 'off' },
+      config: {
+        pigSize: 40,
+        gravity: 800,
+        thrust: 200,
+        maxSpeed: 600,
+        spawnEveryMs: 900,
+        showTimer: true,
+        statusText: 'DODGE THE PIGS',
+      },
+    },
+    // Branched outcome: win → "+250 SURVIVED. START MASHING.";
+    // lose → "PIG BOY GOT YOU." Both ms-timed so the message is always seen.
+    { kind: 'status',
+      text: ({ outcome }) => outcome === 'win'
+        ? '+250 SURVIVED.\nSTART MASHING.'
+        : 'PIG BOY GOT YOU.',
+      ms: 2400,
+    },
+  ],
+};
+
 // ── Registry + canonical schedule ──────────────────────────────────────────
-export const ALL_MINI_GAMES = [GOLDEN_EGG, MASH_GAUNTLET, FREEZE, TWILIGHT];
+export const ALL_MINI_GAMES = [GOLDEN_EGG, MASH_GAUNTLET, FREEZE, TWILIGHT, PIG_BOY_ATTACK];
 
 export function findById(id) {
   return ALL_MINI_GAMES.find((g) => g.id === id) || null;

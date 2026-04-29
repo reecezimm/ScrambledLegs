@@ -382,11 +382,31 @@ const GlobalStyle = createGlobalStyle`
   body[data-mash-locked="1"] .kudos-row {
     z-index: 9001;
     position: relative;
+    /* Migration translate + optional drag offset (Pig Boy Attack uses this).
+       --btn-drag-x/y are written by KudosCta during pointermove while the
+       buttonState is 'draggable'. They persist after pointerup (button
+       parks where released) and clear on phase-end (button snaps back
+       via the transition rule below). */
     transform: translate(
-      calc(var(--btn-dx, 0px) * var(--migration-progress, 0)),
-      calc(var(--btn-dy, 0px) * var(--migration-progress, 0))
+      calc(var(--btn-dx, 0px) * var(--migration-progress, 0) + var(--btn-drag-x, 0px)),
+      calc(var(--btn-dy, 0px) * var(--migration-progress, 0) + var(--btn-drag-y, 0px))
     );
     transition: transform 0.42s cubic-bezier(.22,.61,.36,1);
+  }
+  /* While draggable, kill the transition so the button tracks the finger
+     1:1. The button-state attribute is cleared by applyAmbient when the
+     play phase exits — at which point the transition kicks back in and
+     the button smoothly slides back to its migration anchor. */
+  body[data-button-state="draggable"] .kudos-row {
+    transition: none;
+  }
+  body[data-button-state="draggable"] .hd-cta {
+    /* Prevent native scroll-on-drag on touch devices */
+    touch-action: none;
+    cursor: grab;
+  }
+  body[data-button-state="draggable"] .hd-cta:active {
+    cursor: grabbing;
   }
 
   /* Button reshape during migration:

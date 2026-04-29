@@ -16,6 +16,9 @@ const listeners = new Set();
 const pressListeners = new Set();
 const sessionEndListeners = new Set();
 const bonusListeners = new Set();
+const dragStartListeners = new Set();
+const dragMoveListeners = new Set();
+const dragEndListeners = new Set();
 let modeCleanup = null;
 let phaseTimeoutId = null;        // play-phase mode timeout (ms)
 let statusTimeoutId = null;       // status/countdown ms-based auto-advance
@@ -188,6 +191,22 @@ function makeCtx(phase) {
       pressListeners.add(fn);
       return () => pressListeners.delete(fn);
     },
+    // Drag-and-hold subscriptions for mini-games using `button: 'draggable'`.
+    // Each fires with viewport-relative coordinates; modes use these to
+    // track button position in real time (e.g. pigDodge applies gravity
+    // toward the button's current position).
+    onDragStart(fn) {
+      dragStartListeners.add(fn);
+      return () => dragStartListeners.delete(fn);
+    },
+    onDragMove(fn) {
+      dragMoveListeners.add(fn);
+      return () => dragMoveListeners.delete(fn);
+    },
+    onDragEnd(fn) {
+      dragEndListeners.add(fn);
+      return () => dragEndListeners.delete(fn);
+    },
     // Mode-driven bonus award. Pass opts={x,y} to attach a tap location;
     // bonus listeners (KudosCta) will spawn the burst at those coords.
     awardBonus(n, opts) { gameStore.awardBonus(n, opts); },
@@ -254,6 +273,18 @@ export const gameStore = {
   // Modes subscribe via ctx.onPress to hear taps.
   handlePress(now) {
     pressListeners.forEach((fn) => { try { fn(now); } catch (_) {} });
+  },
+
+  // Drag-and-hold input plumbing — KudosCta dispatches these from pointer
+  // events when `body.dataset.buttonState === 'draggable'`.
+  handleDragStart(payload) {
+    dragStartListeners.forEach((fn) => { try { fn(payload); } catch (_) {} });
+  },
+  handleDragMove(payload) {
+    dragMoveListeners.forEach((fn) => { try { fn(payload); } catch (_) {} });
+  },
+  handleDragEnd(payload) {
+    dragEndListeners.forEach((fn) => { try { fn(payload); } catch (_) {} });
   },
 
   // Called by KudosCta after it increments its local pressCount (only when
