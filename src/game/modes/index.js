@@ -2,9 +2,11 @@
 import goldenEgg from './goldenEgg';
 import thresholdMash from './thresholdMash';
 import doNotPress from './doNotPress';
+import twilight from './twilight';
 
 export const MODES = {
   goldenEgg,
   thresholdMash,
   doNotPress,
+  twilight,
 };

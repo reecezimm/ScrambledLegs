@@ -16,9 +16,12 @@ const doNotPress = {
 
     console.log(`[mg] mode doNotPress start | penaltyPerPress=-${penaltyPerPress} timeout=${ctx.timeoutMs}ms`);
 
-    const statusText = (ctx.config && ctx.config.playStatus) || 'FREEZE.';
+    // Main status text: e.g. "DON'T TOUCH" — set once and persists for the
+    // play phase. No sub-status until the user actually taps and gets a
+    // penalty (then sub shows the running -N total).
+    const statusText = (ctx.config && ctx.config.playStatus) || "DON'T TOUCH";
     ctx.setStatus(statusText);
-    ctx.setSubStatus('DON\'T TOUCH');
+    ctx.setSubStatus(null);
 
     const unsubPress = ctx.onPress(() => {
       totalPenalty += penaltyPerPress;

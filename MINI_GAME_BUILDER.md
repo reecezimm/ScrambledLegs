@@ -494,6 +494,159 @@ Each entry below is a one-line mechanic plus the new mode that would need to be 
 | **vandal-endurance** | Long-press the button, fill a meter, don't release early. | `holdMeter` — pointerdown/up timing + meter UI |
 | **birnos-snowmobile** | Swipe gesture: swipe a path matching an on-screen guide. | `swipe` — touch path tracker + path-similarity scoring |
 
+### 8.1 Design dive: tap-and-hold + drag mini-games
+
+A new input modality the existing schema doesn't yet support: the user **presses and holds the mash button**, and while held, **drags the button around the viewport** to dodge incoming obstacles, follow a path, balance against forces, etc. Releasing (or being hit) ends the round.
+
+This is meaningfully different from the existing `tap` and the planned `longPress`/`swipe` because:
+- The button itself becomes the **player avatar** — its position is no longer fixed.
+- The user's tap is **continuous** (one long pointerdown event), not discrete (many tapclicks).
+- A second axis of input emerges: where the cursor/finger is *moving* during the hold.
+
+#### Schema additions needed
+
+```js
+input: {
+  tap: 'on' | 'off',
+  longPress: 'on' | 'off',
+  swipe: 'on' | 'off',
+  dragHold: 'on' | 'off',     // NEW — button becomes draggable while pressed
+}
+
+overrides: {
+  button: 'visible' | 'hidden' | 'roaming' | 'draggable',  // NEW value
+  // 'draggable' = button is anchored normally until pointerdown; while held,
+  // its translate offset tracks the pointer; on pointerup, returns to anchor
+  // (or stays at last drag position if mode wants — config decision).
+}
+```
+
+The play phase declares it like any other override:
+
+```js
+{ kind: 'play',
+  mode: 'dragDodge',
+  overrides: { mashing: 'paused', button: 'draggable', gameClock: 'run' },
+  config: { ... },
+}
+```
+
+#### Mode contract additions
+
+The `ctx` object grows three optional drag callbacks. They're delivered in viewport coordinates so the mode can spawn obstacles relative to the button's current position:
+
+```js
+ctx.onDragStart(fn)   // fn({ x, y })          — pointerdown on button
+ctx.onDragMove(fn)    // fn({ x, y, dx, dy })  — pointermove while held
+ctx.onDragEnd(fn)     // fn({ x, y, durationMs }) — pointerup OR pointercancel
+```
+
+Each returns an unsubscribe function (same pattern as `onPress`). Modes that don't subscribe simply don't get the events; backwards-compatible.
+
+A new helper for collision detection (since this becomes the dominant mechanic):
+
+```js
+ctx.onCollision(target, fn)
+// target: { selector } | { rectFn: () => DOMRect }
+// fn({ target, point }) — fires once per overlap entry; rate-limited internally
+```
+
+#### KudosCta wiring (host-side changes required)
+
+When `body.dataset.buttonState === 'draggable'`, KudosCta must:
+
+1. Listen for `pointerdown` on `.hd-cta` → call `gameStore.handleDragStart({x, y})`.
+2. Listen for `pointermove` on `window` while held → throttle to rAF, call `gameStore.handleDragMove({x, y, dx, dy})`.
+3. Listen for `pointerup` / `pointercancel` on `window` → call `gameStore.handleDragEnd(...)`, release.
+4. Apply the drag delta to the button via `--btn-drag-x` / `--btn-drag-y` CSS vars in addition to (or replacing) the migration translate. The locked-state CSS rule on `.kudos-row` adds these to its transform when `body.dataset.buttonState === 'draggable'`.
+5. Do NOT increment `pressCount` from a drag. `pointerdown` ≠ a "press" in the mash sense — it's the start of a held gesture. `mashingMode` should be `'paused'` during drag-only mini-games (set via the play phase's `overrides.mashing`).
+
+The store gains:
+- `gameStore.handleDragStart / Move / End` — fan out to drag listeners (mode-side).
+- An internal `dragListeners` Set parallel to `pressListeners`.
+
+#### Example mini-game
+
+```js
+export const DODGE_METEORS = {
+  id: 'dodge-meteors',
+  label: 'Dodge Meteors',
+  startAtPress: FIRST_START,
+  rules: { canLose: true, onWin: { bonus: +150 }, onLose: { bonus: -40 } },
+  ambient: { challengeText: 'frozen', heartbeat: 'off' },
+  presentation: { bodyBackground: '#1a0606', accentColor: '#FF6B6B' },
+  input: { dragHold: 'on' },
+  phases: [
+    { kind: 'status', text: 'METEOR SHOWER\nINCOMING',                 presses: 5 },
+    { kind: 'status', text: 'HOLD AND DRAG THE BUTTON\nTO DODGE',      presses: 5 },
+    { kind: 'countdown', from: 3, presses: 3 },
+    { kind: 'play',
+      mode: 'dragDodge',
+      timeout: { kind: 'ms', value: 12000, outcome: 'win' },
+      overrides: { mashing: 'paused', button: 'draggable', gameClock: 'run' },
+      ambient: { flyingEmojis: 'off', bubbleText: 'off' },
+      config: {
+        spawnEveryMs: 600,
+        obstacleEmoji: '☄️',
+        obstacleSize: 64,
+        obstacleSpeedMs: [1800, 2400],
+        maxHits: 3,
+        rewardOnSurvive: 150,
+      },
+    },
+    { kind: 'status',
+      text: ({ outcome }) => outcome === 'win' ? 'UNTOUCHABLE.' : 'PULVERIZED.',
+      ms: 2200,
+    },
+  ],
+};
+```
+
+Mode skeleton (`src/game/modes/dragDodge.js`):
+
+```js
+const dragDodge = {
+  id: 'dragDodge',
+  start(ctx) {
+    let hits = 0;
+    const obstacles = new Set();
+    let pos = null;        // last known button center
+    let isHeld = false;
+
+    const unsubStart = ctx.onDragStart(({ x, y }) => { isHeld = true; pos = { x, y }; });
+    const unsubMove  = ctx.onDragMove(({ x, y }) => { pos = { x, y }; });
+    const unsubEnd   = ctx.onDragEnd(() => { isHeld = false; });
+
+    const spawnTimer = setInterval(spawnObstacle, ctx.config.spawnEveryMs);
+
+    function spawnObstacle() { /* spawn DOM, animate flight, on each frame
+                                  check distance(pos, obstacleCenter) < threshold;
+                                  if hit, hits++, ctx.awardBonus(-10),
+                                  if hits >= ctx.config.maxHits → ctx.endPhase('lose') */ }
+
+    return () => {
+      clearInterval(spawnTimer);
+      obstacles.forEach((el) => el.remove());
+      unsubStart(); unsubMove(); unsubEnd();
+    };
+  },
+};
+```
+
+#### Pitfalls specific to drag mini-games
+
+- **Pointer Events vs touch/mouse.** Use Pointer Events API (`pointerdown`/`pointermove`/`pointerup`) and `setPointerCapture` for clean iOS/Android/desktop coverage. Don't mix touch and mouse listeners.
+- **Touch action.** The button needs `touch-action: none` while draggable so the browser doesn't try to scroll the page when the user drags. Already set on `body[data-mash-locked]` via the input-isolation rules; extend per `data-button-state="draggable"`.
+- **rAF-throttle pointermove.** Native pointermove can fire 60–240Hz; throttle to one rAF tick per frame before notifying mode listeners. Otherwise a 60-line collision check runs 4× per frame.
+- **Returning to anchor on phase end.** After the play phase exits, the button must drift back to its anchored position smoothly. Apply a CSS transition on `--btn-drag-x` / `--btn-drag-y` only when `body.dataset.buttonState !== 'draggable'`; during drag, transitions off so the button tracks the finger 1:1.
+- **Don't consume pointerdown as a press.** A long-hold + drag should NOT advance `pressCount`. The mode owns the entire gesture; `mashingMode: 'paused'` keeps the press machinery dormant.
+- **Don't break burn ring / heartbeat.** While dragging, the user's "last press" is functionally now (they're still touching). Pause heartbeat at the mini-game level (`ambient: { heartbeat: 'off' }`) and pause the save timer (`overrides.gameClock` could be `'paused'` if you want the world to stop too — design choice).
+- **Cleanup on `pointercancel`.** iOS fires `pointercancel` if the OS interrupts (e.g., notification banner pulls focus). Treat it as `pointerup` with no win/loss penalty so you don't unfairly fail the user.
+
+#### Reusable downstream
+
+Once `dragHold` and `button: 'draggable'` exist, several backlog mini-games become trivial — `dodge-mash` (already in the table), a tightrope-balance variant, a "guide the egg through the maze" variant, etc. The drag primitive is the unlock; subsequent mini-games are pure data + a shared collision helper.
+
 ---
 
 ## 9. Debugging via Console Logs

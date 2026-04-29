@@ -7,7 +7,7 @@
 import React, { useEffect, useState } from 'react';
 import styled from 'styled-components';
 import { gameStore } from '../../game/store';
-import { GOLDEN_EGG, MASH_GAUNTLET, FREEZE, createDefaultInfiniteStrategy } from '../../game/miniGames';
+import { GOLDEN_EGG, MASH_GAUNTLET, FREEZE, TWILIGHT, createDefaultInfiniteStrategy } from '../../game/miniGames';
 
 const STORAGE_KEY = 'sl_dev_minigame_choice';
 const PANEL_OPEN_KEY = 'sl_dev_panel_open';
@@ -17,6 +17,7 @@ const CHOICES = [
   { id: 'golden-egg',    label: 'Golden Egg only' },
   { id: 'mash-gauntlet', label: 'Mash Gauntlet only' },
   { id: 'freeze',        label: 'Freeze only' },
+  { id: 'twilight',      label: 'Twilight only' },
 ];
 
 // Returns a schedule spec for gameStore.setSchedule. "auto" yields the
@@ -28,6 +29,7 @@ function buildScheduleSpec(choiceId) {
   if (choiceId === 'golden-egg') return [GOLDEN_EGG];
   if (choiceId === 'mash-gauntlet') return [MASH_GAUNTLET];
   if (choiceId === 'freeze') return [FREEZE];
+  if (choiceId === 'twilight') return [TWILIGHT];
   return { strategy: createDefaultInfiniteStrategy() };
 }
 

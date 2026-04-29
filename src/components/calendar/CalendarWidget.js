@@ -113,10 +113,19 @@ export default function CalendarWidget() {
   // random from the pool with 15-press gaps and no repeats in a row.
   // DevTogglePanel may override this (in development) by calling setSchedule
   // with the user's choice.
+  // Unmount cleanup: if the user navigates away from the calendar entirely,
+  // tear down the schedule + strategy + any pending timers so nothing keeps
+  // ticking in the background.
   useEffect(() => {
     if (gameStore.getState().schedule.length === 0) {
       gameStore.setSchedule({ strategy: createDefaultInfiniteStrategy() });
     }
+    return () => {
+      try {
+        gameStore.reset();
+        gameStore.setSchedule([]);
+      } catch (_) {}
+    };
   }, []);
 
   const { upcoming, past } = partitionEvents(events);

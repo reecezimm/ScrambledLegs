@@ -823,7 +823,15 @@ export default function KudosCta({ event, isSheetContext }) {
     clearMashEnergy();
     clearShockwave();
     delete document.body.dataset.mashPhase;
-    // Reset mini-game director so the next session starts clean.
+    // Defensive: any pending save timer is now obsolete (we're already
+    // tearing down). Cancel it before reset so it can't fire post-cleanup.
+    if (hdResetTimerRef.current) {
+      clearTimeout(hdResetTimerRef.current);
+      hdResetTimerRef.current = null;
+    }
+    // Reset mini-game director so the next session starts clean. Director
+    // clears its own timeouts (mode, status timeout) and resets the
+    // strategy so the next session opens with Golden Egg again.
     try { gameStore.reset(); } catch (_) {}
     if (vvCleanupRef.current) vvCleanupRef.current();
     // ── MASH GAME END ──
@@ -1160,8 +1168,11 @@ export default function KudosCta({ event, isSheetContext }) {
     setTimeout(() => ping.remove(), 500);
 
     // Flying hot dogs — capped at 15 per press for perf headroom.
-    const dogCount = Math.min(pressCount, 15);
-    const stagger = Math.max(14, Math.floor(800 / dogCount));
+    // Cap concurrent emojis at 12 per press (was 15) and stagger spawns
+    // across a wider window (~1100ms vs 800ms) so they release in a more
+    // visible cascade rather than a tight burst.
+    const dogCount = Math.min(pressCount, 12);
+    const stagger = Math.max(22, Math.floor(1100 / dogCount));
     const pRainbow = rainbowChance(pressCount);
     for (let i = 0; i < dogCount; i++) {
       const rainbow = Math.random() < pRainbow;

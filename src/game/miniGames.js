@@ -103,40 +103,84 @@ export const FREEZE = {
   },
   ambient: {
     challengeText: 'frozen',
-    heartbeat: 'off',         // kill the burn ring across the whole mini-game
+    heartbeat: 'off',         // kill the burn ring during intros + play
   },
   presentation: { accentColor: '#5FB3FF' },
   phases: [
-    // Alert
+    // Alert (auto-advances; no pressing required)
     { kind: 'status', text: 'FREEZE GAME\nCOMING UP', ms: 1500 },
-    // Instructions
-    { kind: 'status', text: "DON'T TOUCH",            ms: 1500 },
-    // Countdown — press-counted so the user can pace it (5,4,3,2,1).
+    // Countdown — press-counted so the user paces it (5,4,3,2,1).
     { kind: 'countdown', from: 5, presses: 5 },
-    // Play
+    // Play — "DON'T TOUCH" shows here, when the game actually starts.
+    // doNotPress mode reads playStatus from config and pushes it to the
+    // GameStatus zone via ctx.setStatus.
     { kind: 'play',
       mode: 'doNotPress',
-      // Timeout = win (user survived the freeze without tapping out).
       timeout: { kind: 'ms', value: 4000, outcome: 'win' },
       overrides: { mashing: 'inverted', button: 'visible', gameClock: 'paused' },
       ambient: {
         flyingEmojis: 'off', bubbleText: 'off',
         challengeText: 'frozen', heartbeat: 'off', flash: 'off',
       },
-      config: { penaltyPerPress: 10, playStatus: 'FREEZE.' },
+      config: { penaltyPerPress: 10, playStatus: "DON'T TOUCH" },
     },
-    // Release the pause: world resumes, save timer can re-arm.
+    // Release the pause AND turn the heartbeat ring back on. Without the
+    // explicit ambient.heartbeat: 'on' override, the mg-level 'off' would
+    // leak through and the button would stay dead post-freeze.
     { kind: 'status', text: 'UNFREEZE',
       ms: 1200,
-      overrides: { gameClock: 'run' } },
+      overrides: { gameClock: 'run' },
+      ambient: { heartbeat: 'on', flash: 'on' } },
     { kind: 'status', text: 'START MASHING',
       presses: 3,
-      overrides: { gameClock: 'run' } },
+      overrides: { gameClock: 'run' },
+      ambient: { heartbeat: 'on', flash: 'on' } },
+  ],
+};
+
+// ── 4. Twilight ─ tap shooting stars in a darkened night sky ───────────────
+// The whole canvas turns into a near-uniform night-sky gradient during play
+// while the mash button stays its normal color and fully interactable. White
+// stars with glittery shooting-star tails streak across; tap them for +25.
+// Bonus-only — canLose: false. The mode itself paints the sky takeover by
+// overriding the #mash-canvas background and body background during play,
+// then restores them on cleanup.
+export const TWILIGHT = {
+  id: 'twilight',
+  label: 'Twilight',
+  startAtPress: FIRST_START,
+  rules: { canLose: false, onWin: { bonus: 0 }, onLose: { bonus: 0 } },
+  ambient: { challengeText: 'frozen' },
+  // No accentColor override — preserve the mash button's normal color.
+  presentation: {},
+  phases: [
+    { kind: 'status',    text: 'TWILIGHT\nINCOMING',                 presses: 5 },
+    { kind: 'status',    text: 'TAP THE STARS\nFOR BONUS POINTS',    presses: 5 },
+    { kind: 'countdown', from: 5,                                    presses: 5 },
+    { kind: 'play',
+      mode: 'twilight',
+      timeout: { kind: 'ms', value: 18000, outcome: 'win' },
+      overrides: { mashing: 'normal', button: 'visible', gameClock: 'run' },
+      ambient: { flyingEmojis: 'off', bubbleText: 'off', challengeText: 'frozen' },
+      presentation: { bodyBackground: '#040515' },
+    },
+    // Outro — cheesy + on-brand + slightly rude one-liner. ms-timed (2.5s)
+    // so it always shows even if the user freezes after the play window.
+    { kind: 'status',
+      text: ({ score }) => {
+        const s = score || 0;
+        if (s > 100) return "YOU'RE MY SHOOTING STAR. ALSO BLOCK ME ON STRAVA.";
+        if (s > 50)  return 'DECENT TWINKLE. STILL SLOWER THAN YOUR LAST KOM.';
+        if (s > 0)   return 'CAUGHT A FEW. NOT ENOUGH TO MATTER.';
+        return 'ZERO STARS. EVEN THE NIGHT SKY GAVE UP ON YOU.';
+      },
+      ms: 2500,
+    },
   ],
 };
 
 // ── Registry + canonical schedule ──────────────────────────────────────────
-export const ALL_MINI_GAMES = [GOLDEN_EGG, MASH_GAUNTLET, FREEZE];
+export const ALL_MINI_GAMES = [GOLDEN_EGG, MASH_GAUNTLET, FREEZE, TWILIGHT];
 
 export function findById(id) {
   return ALL_MINI_GAMES.find((g) => g.id === id) || null;

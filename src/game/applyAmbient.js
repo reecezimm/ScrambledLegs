@@ -15,17 +15,33 @@ export function applySideEffects(prev, next) {
   if (!next) return;
 
   const body = document.body;
+  const idle = !next.miniGameId;
 
-  // Mashing mode: 'normal' | 'paused' | 'inverted'
+  if (idle) {
+    // Idle (no active mini-game): wipe ALL mini-game body data attrs and
+    // CSS vars so no stale state lingers. Existing ambient systems
+    // (spawnHotDog, spawnPhrase, setMashEnergy, etc.) treat absent attrs
+    // as "default" and run normally.
+    delete body.dataset.mashMode;
+    delete body.dataset.buttonState;
+    delete body.dataset.gameClock;
+    delete body.dataset.ambFlying;
+    delete body.dataset.ambBubble;
+    delete body.dataset.ambChallenge;
+    delete body.dataset.ambHeartbeat;
+    delete body.dataset.ambFlash;
+    delete body.dataset.ambShockwave;
+    delete body.dataset.miniGameId;
+    delete body.dataset.phaseKind;
+    delete body.dataset.subOut;
+    body.style.removeProperty('--game-accent');
+    return;
+  }
+
   setAttr(body, 'mashMode', next.mashingMode || 'normal');
-
-  // Button state: 'visible' | 'hidden' | 'roaming'
   setAttr(body, 'buttonState', next.buttonState || 'visible');
-
-  // Game clock: 'run' | 'paused' (gates setMashEnergy visual updates)
   setAttr(body, 'gameClock', next.gameClockPaused ? 'paused' : 'run');
 
-  // Ambient toggles
   const amb = next.ambient || {};
   setAmbAttr(body, 'flying', amb.flyingEmojis);
   setAmbAttr(body, 'bubble', amb.bubbleText);
@@ -34,16 +50,12 @@ export function applySideEffects(prev, next) {
   setAmbAttr(body, 'flash', amb.flash);
   setAmbAttr(body, 'shockwave', amb.shockwave);
 
-  // Mini-game accent color (presentation)
   const accent = next.presentation && next.presentation.accentColor;
   if (accent) body.style.setProperty('--game-accent', accent);
   else body.style.removeProperty('--game-accent');
 
-  // Mini-game id for debug / per-game CSS hooks
-  if (next.miniGameId) body.dataset.miniGameId = next.miniGameId;
-  else delete body.dataset.miniGameId;
+  body.dataset.miniGameId = next.miniGameId;
 
-  // Phase kind (for status-zone display logic)
   if (next.phaseKind && next.phaseKind !== 'idle') body.dataset.phaseKind = next.phaseKind;
   else delete body.dataset.phaseKind;
 }

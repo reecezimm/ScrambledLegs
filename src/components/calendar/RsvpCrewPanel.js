@@ -1,5 +1,5 @@
 import React, { useEffect, useMemo, useState } from 'react';
-import styled, { keyframes } from 'styled-components';
+import styled, { keyframes, css } from 'styled-components';
 import { ref, onValue, set, remove, get, child, serverTimestamp } from 'firebase/database';
 import { database } from '../../services/firebase';
 import { useCurrentUser } from '../../services/auth';
@@ -207,6 +207,33 @@ const Row = styled.div`
   padding: 6px 4px;
   border-bottom: 1px solid rgba(255,255,255,0.05);
   &:last-child { border-bottom: none; }
+`;
+
+// Scrollable crew list — caps the visible area at ~4 rows. When there are
+// more than 4 crew members, a fade-out mask + thin scrollbar make the
+// scrollability obvious without taking up vertical space.
+const CrewListScroll = styled.div`
+  position: relative;
+  ${(p) => p.$overflowing && css`
+    max-height: 196px;     /* ~4 rows tall */
+    overflow-y: auto;
+    overscroll-behavior: contain;
+    /* Bottom-edge fade hints there's more below — fades the last ~28px */
+    mask-image: linear-gradient(to bottom, #000 calc(100% - 28px), transparent 100%);
+    -webkit-mask-image: linear-gradient(to bottom, #000 calc(100% - 28px), transparent 100%);
+
+    /* Slim scrollbar so the rail is visible but not bulky */
+    &::-webkit-scrollbar { width: 4px; }
+    &::-webkit-scrollbar-track { background: transparent; }
+    &::-webkit-scrollbar-thumb {
+      background: rgba(255,199,44,0.45);
+      border-radius: 4px;
+    }
+    &::-webkit-scrollbar-thumb:hover { background: rgba(255,199,44,0.75); }
+    /* Firefox */
+    scrollbar-width: thin;
+    scrollbar-color: rgba(255,199,44,0.45) transparent;
+  `}
 `;
 
 const AvatarWrap = styled.div`
@@ -685,26 +712,28 @@ export default function RsvpCrewPanel({ event }) {
             {crew.length === 0 ? (
               <Empty>No RSVPs yet — be the first to lock it in.</Empty>
             ) : (
-              crew.map((row, i) => {
-                const medal = i < 3 ? String(i + 1) : 'other';
-                return (
-                  <Row key={row.uid}>
-                    <AvatarWrap>
-                      <Avatar $photo={row.photoURL} data-medal={i < 3 ? String(i + 1) : undefined}>
-                        {!row.photoURL && initialFor(row.displayName)}
-                      </Avatar>
-                      <RankBadge data-medal={medal}>{i + 1}</RankBadge>
-                    </AvatarWrap>
-                    <NameWrap className="crew-name">
-                      <Name>{row.displayName}</Name>
-                      {i < 3 && row.mashes > 0 && (
-                        <TierTag data-medal={medal}>{TIER_LABEL[i + 1]}</TierTag>
-                      )}
-                    </NameWrap>
-                    <Stat><span style={{ fontStyle: 'normal' }}>{mashIcon}</span> {row.mashes}</Stat>
-                  </Row>
-                );
-              })
+              <CrewListScroll $overflowing={crew.length > 4}>
+                {crew.map((row, i) => {
+                  const medal = i < 3 ? String(i + 1) : 'other';
+                  return (
+                    <Row key={row.uid}>
+                      <AvatarWrap>
+                        <Avatar $photo={row.photoURL} data-medal={i < 3 ? String(i + 1) : undefined}>
+                          {!row.photoURL && initialFor(row.displayName)}
+                        </Avatar>
+                        <RankBadge data-medal={medal}>{i + 1}</RankBadge>
+                      </AvatarWrap>
+                      <NameWrap className="crew-name">
+                        <Name>{row.displayName}</Name>
+                        {i < 3 && row.mashes > 0 && (
+                          <TierTag data-medal={medal}>{TIER_LABEL[i + 1]}</TierTag>
+                        )}
+                      </NameWrap>
+                      <Stat><span style={{ fontStyle: 'normal' }}>{mashIcon}</span> {row.mashes}</Stat>
+                    </Row>
+                  );
+                })}
+              </CrewListScroll>
             )}
 
             {badEggs.length > 0 && (
