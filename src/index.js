@@ -118,6 +118,206 @@ const GlobalStyle = createGlobalStyle`
     z-index: 700;
   }
 
+  /* ────────────────────────────────────────────────────────────────────────
+     MASH GAME — locked-state visual stack
+     Activates on first press (body[data-mash-locked="1"]).
+     Releases on burn-complete (cleared by clearMashEnergy).
+     Mobile portrait is the design center; desktop scales gracefully.
+     ──────────────────────────────────────────────────────────────────────── */
+
+  /* MashCanvas — full-viewport gradient layer that grows from button center.
+     --canvas-radius scales 0→1 across presses 1→50 on an ease-in curve.
+     Opacity is bound to canvas-radius so the canvas fades IN as it grows —
+     by press 50 it's fully opaque + fully sized = completely solid takeover. */
+  .mash-canvas {
+    position: fixed;
+    inset: 0;
+    pointer-events: none;
+    z-index: 480;
+    opacity: var(--canvas-radius, 0);
+    background:
+      radial-gradient(
+        circle at var(--mash-x, 50%) var(--mash-y, 72%),
+        rgba(255,107,107,1) 0%,
+        rgba(120,40,110,1) 30%,
+        rgba(35,20,55,1) 70%,
+        rgba(8,5,15,1) 100%
+      );
+    clip-path: circle(
+      calc(var(--canvas-radius, 0) * 150vmax)
+      at var(--mash-x, 50%) var(--mash-y, 72%)
+    );
+    will-change: clip-path, opacity;
+  }
+  body[data-mash-locked="1"] .mash-canvas {
+    /* Pointer-events stay none so clicks pass through to the button.
+       Body[position:fixed] handles the actual page lock — the canvas is
+       purely visual. */
+    pointer-events: none;
+    z-index: 9000;
+  }
+
+  /* Lift all spawn effects above the canvas during the mash game so the
+     flying hot dogs, eggs, and phrase characters paint over the canvas
+     instead of being buried beneath it. */
+  body[data-mash-locked="1"] .flying-hot-dog,
+  body[data-mash-locked="1"] .flying-egg,
+  body[data-mash-locked="1"] .phrase-char {
+    z-index: 9100 !important;
+  }
+
+  /* ── Heartbeat / save-timer indicator ────────────────────────────────────
+     2500ms duration matches KUDOS_SAVE_DELAY_MS. Restarts on each press.
+     Phases (non-linear, accelerating intensity):
+     - 0-50%   calm, barely visible
+     - 50-65%  subtle scale + slight color drift starts
+     - 65-80%  noticeable color shift, hue starts cycling, brightness up
+     - 80-92%  scale beats + dramatic hue jumps + saturation spikes
+     - 92-100% rapid strobe, intense hue rotation, "about to explode"
+     Concentric rings emanate from the button via ::before / ::after with
+     staggered keyframes — first ripple at 55%, accelerating through 100%. */
+  @keyframes hdHeartbeat {
+    0%, 50% { transform: scale(min(var(--mash-scale, 1), 1.15)); filter: none; }
+    /* Phase 1: 50→65% — color awareness starts */
+    55% { transform: scale(calc(min(var(--mash-scale, 1), 1.15) * 1.02)); filter: brightness(1.05) saturate(1.10) hue-rotate(8deg); }
+    62% { transform: scale(calc(min(var(--mash-scale, 1), 1.15) * 0.99)); filter: brightness(1.02) saturate(1.05) hue-rotate(-4deg); }
+    /* Phase 2: 65→80% — color drift dialing up */
+    68% { transform: scale(calc(min(var(--mash-scale, 1), 1.15) * 1.06)); filter: brightness(1.12) saturate(1.20) hue-rotate(18deg); }
+    75% { transform: scale(calc(min(var(--mash-scale, 1), 1.15) * 1.00)); filter: brightness(1.05) saturate(1.15) hue-rotate(-12deg); }
+    /* Phase 3: 80→92% — scale beats + dramatic shifts */
+    82% { transform: scale(calc(min(var(--mash-scale, 1), 1.15) * 1.10)); filter: brightness(1.20) saturate(1.30) hue-rotate(35deg); }
+    86% { transform: scale(calc(min(var(--mash-scale, 1), 1.15) * 0.97)); filter: brightness(0.92) saturate(1.40) hue-rotate(-25deg); }
+    90% { transform: scale(calc(min(var(--mash-scale, 1), 1.15) * 1.14)); filter: brightness(1.30) saturate(1.50) hue-rotate(55deg); }
+    /* Phase 4: 92→100% — rapid strobe */
+    93% { transform: scale(calc(min(var(--mash-scale, 1), 1.15) * 0.94)); filter: brightness(0.78) saturate(1.60) hue-rotate(-50deg); }
+    95% { transform: scale(calc(min(var(--mash-scale, 1), 1.15) * 1.20)); filter: brightness(1.50) saturate(1.70) hue-rotate(80deg); }
+    97% { transform: scale(calc(min(var(--mash-scale, 1), 1.15) * 0.90)); filter: brightness(0.65) saturate(1.80) hue-rotate(-70deg); }
+    99% { transform: scale(calc(min(var(--mash-scale, 1), 1.15) * 1.24)); filter: brightness(1.75) saturate(1.95) hue-rotate(120deg); }
+    100% { transform: scale(calc(min(var(--mash-scale, 1), 1.15) * 1.28)); filter: brightness(1.95) saturate(2.10) hue-rotate(160deg); }
+  }
+
+  /* Ripple ring 1 — starts at 55%, expands to white. 3 emissions, accelerating. */
+  @keyframes hdRipple1 {
+    0%, 55% { box-shadow: 0 0 0 0 rgba(255,255,255,0); transform: scale(1); }
+    /* Wave A — white */
+    58% { box-shadow: 0 0 0 0 rgba(255,255,255,0.95); }
+    68% { box-shadow: 0 0 0 18px rgba(255,255,255,0); }
+    /* Wave B — gold */
+    78% { box-shadow: 0 0 0 0 rgba(255,200,80,1); }
+    86% { box-shadow: 0 0 0 24px rgba(255,200,80,0); }
+    /* Wave C — red, intense */
+    91% { box-shadow: 0 0 0 0 rgba(255,80,80,1); }
+    96% { box-shadow: 0 0 0 32px rgba(255,80,80,0); }
+    /* Wave D — magenta strobe */
+    98% { box-shadow: 0 0 0 0 rgba(255,40,180,1); }
+    100% { box-shadow: 0 0 0 38px rgba(255,40,180,0); }
+  }
+
+  /* Ripple ring 2 — offset for layered/staggered effect */
+  @keyframes hdRipple2 {
+    0%, 62% { box-shadow: 0 0 0 0 rgba(255,255,255,0); }
+    65% { box-shadow: 0 0 0 0 rgba(255,220,150,0.9); }
+    74% { box-shadow: 0 0 0 22px rgba(255,220,150,0); }
+    83% { box-shadow: 0 0 0 0 rgba(255,140,60,1); }
+    89% { box-shadow: 0 0 0 28px rgba(255,140,60,0); }
+    94% { box-shadow: 0 0 0 0 rgba(255,60,60,1); }
+    98% { box-shadow: 0 0 0 36px rgba(255,60,60,0); }
+    100% { box-shadow: 0 0 0 0 rgba(255,60,60,0); }
+  }
+
+  .hd-cta.hd-heartbeat {
+    animation: hdHeartbeat 2500ms ease-in forwards;
+  }
+  .hd-cta.hd-heartbeat::before,
+  .hd-cta.hd-heartbeat::after {
+    content: '';
+    position: absolute;
+    inset: 0;
+    border-radius: inherit;
+    pointer-events: none;
+    z-index: -1;
+  }
+  .hd-cta.hd-heartbeat::before { animation: hdRipple1 2500ms ease-in forwards; }
+  .hd-cta.hd-heartbeat::after  { animation: hdRipple2 2500ms ease-in forwards; }
+
+  /* Challenge text (MashSub) lifts OUT of the button at press 50 — when
+     the canvas takeover is complete. The count (MashNum) stays in the
+     button always. --sub-out 0→1 across presses 40→50 (sharp transition
+     right at takeover). Lifts ~180px so it sits ~10-15px ABOVE the button
+     top edge (vs over the button bounds before). */
+  body[data-mash-locked="1"] .mash-sub {
+    transform: translateY(calc(-180px * var(--sub-out, 0)));
+    transition: transform 0.5s cubic-bezier(.22,.61,.36,1);
+  }
+
+  /* Killing backdrop-filter on the event shell during lock destroys its
+     stacking context. Same for CalSection's z-index. Both are stacking
+     context creators that were trapping the kudos-row's z-index 9001 inside
+     a context lower than the canvas's z 9000. With these dropped, the
+     row's z 9001 competes directly with the canvas in the body's stacking
+     context — row wins, button paints above canvas.
+
+     The shell/section's other content (banner, name, etc.) stays at z auto
+     and remains visually covered by the canvas — desired. */
+  body[data-mash-locked="1"] .event-shell {
+    backdrop-filter: none !important;
+    /* Card's overflow:hidden was clipping the migrated button below its
+       natural box. Allow children to render outside while locked. */
+    overflow: visible !important;
+  }
+  body[data-mash-locked="1"] .cal-section,
+  body[data-mash-locked="1"] .home-content {
+    z-index: auto !important;
+  }
+
+  /* Vignette fades while the canvas owns the screen — canvas does the
+     darkening job once it's full. */
+  body[data-mash-locked="1"] .mash-vignette {
+    opacity: calc(0.65 * (1 - var(--canvas-radius, 0))) !important;
+    transition: opacity 0.4s ease;
+  }
+
+  /* Kudos row migration via transform — stays in document flow (avoids
+     containing-block issues with backdrop-filter on Card/SheetBody) and just
+     visually translates from its natural slot toward the captured target
+     delta over presses 1→25. */
+  body[data-mash-locked="1"] .kudos-row {
+    z-index: 9001;
+    position: relative;
+    transform: translate(
+      calc(var(--btn-dx, 0px) * var(--migration-progress, 0)),
+      calc(var(--btn-dy, 0px) * var(--migration-progress, 0))
+    );
+    transition: transform 0.42s cubic-bezier(.22,.61,.36,1);
+  }
+
+  /* Button reshape during migration:
+     - Width shrinks 25% (1.0 → 0.75) over presses 1→25
+     - Vertical padding grows so button gets ~25% taller
+     Result by press 25: noticeably more square-ish (still rectangular).
+     Outer scale cap at 1.15 stays. */
+  /* Button reshape during migration:
+     - Width shrinks 32.5% (1.0 → 0.675) by press 25 (25% + additional 10%)
+     - Vertical padding grows from 14 → ~45 over presses 1→25 (~50% taller)
+     Result: noticeably more square-ish action button at destination.
+     Outer scale cap at 1.15 stays. */
+  body[data-mash-locked="1"] .hd-cta {
+    transform: scale(min(var(--mash-scale, 1), 1.15));
+    width: calc(100% - 32.5% * var(--migration-progress, 0));
+    margin-left: auto;
+    margin-right: auto;
+    display: flex;
+    padding-top: calc((var(--hd-pad-y, 14px)) + 31px * var(--migration-progress, 0));
+    padding-bottom: calc((var(--hd-pad-y, 14px)) + 31px * var(--migration-progress, 0));
+    transition: width 0.42s cubic-bezier(.22,.61,.36,1),
+                padding 0.42s cubic-bezier(.22,.61,.36,1);
+  }
+
+  /* Lock-release transitions back. .kudos-row drops back into flow when
+     [data-mash-locked] is removed. The transition above handles the snap-back
+     direction (~450ms). Then position:fixed inline rule clears with the body
+     attr removal — kudos-row returns to natural document flow. */
+
   /* ── Rainbow animations ── */
   @keyframes rainbowHalo {
     0%   { filter: drop-shadow(0 0 10px hsl(  0,100%,60%)) drop-shadow(0 0 22px hsl( 40,100%,60%)) brightness(1.3) saturate(1.5); }

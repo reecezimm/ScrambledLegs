@@ -8,6 +8,7 @@ import { logEvent } from '../../services/analytics';
 import {
   setMashEnergy, clearMashEnergy, applyShockwave, clearShockwave,
   spawnHotDog, spawnRainbowEgg, flashBackground, spawnPhrase, rainbowChance,
+  dumpMashLayers,
 } from '../../hooks/useMashEffects';
 import { fmtCount } from '../../hooks/useEventLifecycle';
 
@@ -474,8 +475,8 @@ const HdCta = styled.button`
   &[data-intensity="1"] { box-shadow: 0 8px 28px rgba(255,107,107,0.55); animation-duration: 1.3s; }
   &[data-intensity="2"] { box-shadow: 0 10px 36px rgba(255,107,107,0.65); animation-duration: 1.1s; }
   &[data-intensity="3"] { box-shadow: 0 14px 48px rgba(255,107,107,0.78); animation: ${ctaThrob} 0.85s ease-in-out infinite; }
-  &[data-intensity="4"] { box-shadow: 0 20px 70px rgba(255,255,255,0.65); animation: ${ctaThrob} 0.65s ease-in-out infinite; }
-  &[data-intensity="5"] { box-shadow: 0 24px 90px rgba(255,255,200,0.85), 0 0 60px rgba(255,255,255,0.5); animation: ${ctaThrob} 0.45s ease-in-out infinite; }
+  &[data-intensity="4"] { box-shadow: 0 20px 70px rgba(255,180,60,0.65); animation: ${ctaThrob} 0.65s ease-in-out infinite; }
+  &[data-intensity="5"] { box-shadow: 0 24px 90px rgba(255,160,40,0.85), 0 0 60px rgba(255,140,30,0.5); animation: ${ctaThrob} 0.45s ease-in-out infinite; }
   &[data-intensity="6"] { box-shadow: 0 30px 120px rgba(255,255,255,1), 0 0 100px rgba(255,255,200,0.95); animation: ${ctaThrob} 0.30s ease-in-out infinite; }
 
   /* Hide top/text during mashing, saving, burning */
@@ -773,7 +774,7 @@ export default function KudosCta({ event, isSheetContext }) {
     const btn = btnRef.current;
     if (!btn) return;
     const row = btn.parentElement;
-    btn.classList.remove('is-mashing', 'is-deep-mashing', 'is-saving', 'is-burning');
+    btn.classList.remove('is-mashing', 'is-deep-mashing', 'is-saving', 'is-burning', 'hd-heartbeat');
     btn.classList.add('is-idle');
     btn.dataset.intensity = '0';
     btn.style.setProperty('--hd-rest', '1');
@@ -788,6 +789,26 @@ export default function KudosCta({ event, isSheetContext }) {
     if (subEl) setSub(subEl, '');
     clearMashEnergy();
     clearShockwave();
+    // ── MASH GAME END ──
+    // Release the page lock and restore scroll. clearMashEnergy already
+    // removed body data flags + CSS vars.
+    try {
+      const wasLocked = !!document.body.dataset.savedScrollY;
+      const savedY = parseInt(document.body.dataset.savedScrollY || '0', 10);
+      document.body.style.position = '';
+      document.body.style.top = '';
+      document.body.style.left = '';
+      document.body.style.right = '';
+      document.body.style.width = '';
+      delete document.body.dataset.savedScrollY;
+      window.scrollTo(0, savedY);
+      if (wasLocked) {
+        console.log('[mash-game] GAME END — unlocked, scroll restored to', savedY);
+        dumpMashLayers('GAME END (post-cleanup)');
+      }
+    } catch (e) {
+      console.warn('[mash-game] GAME END failed:', e && e.message);
+    }
   }, []);
 
   const handleClick = useCallback(() => {
@@ -816,9 +837,49 @@ export default function KudosCta({ event, isSheetContext }) {
 
     hdPressCountRef.current += 1;
     const pressCount = hdPressCountRef.current;
+    console.log('[mash-game] press', pressCount);
     if (pressCount === 1) {
       sessionStartRef.current = Date.now();
       sessionUidRef.current = user ? user.uid : null;
+      // ── MASH GAME START ──
+      // Compute the DELTA needed to translate the row from its natural slot
+      // to the viewport center-bottom anchor (50vw, 62vh top of row). Using
+      // transform: translate() instead of position:fixed because parent
+      // containers (Card, SheetBody) have backdrop-filter which creates a
+      // containing block — position:fixed would anchor to them, not viewport.
+      try {
+        const row = btn.parentElement;
+        const r = (row || btn).getBoundingClientRect();
+        const rowCx = r.left + r.width / 2;
+        const rowCy = r.top + r.height / 2;
+        const targetCx = window.innerWidth / 2;
+        // Bottom fifth of the viewport — center of button at ~85% Y so the
+        // bottom of the button lands near 90vh (thumb-friendly anchor zone).
+        const targetCy = window.innerHeight * 0.85;
+        const dx = Math.round(targetCx - rowCx);
+        const dy = Math.round(targetCy - rowCy);
+        console.log('[mash-game] GAME START — rect:', {
+          left: Math.round(r.left), top: Math.round(r.top), width: Math.round(r.width),
+        }, '→ delta:', { dx, dy });
+        document.body.style.setProperty('--btn-dx', `${dx}px`);
+        document.body.style.setProperty('--btn-dy', `${dy}px`);
+        document.body.style.setProperty('--migration-progress', '0');
+        document.body.style.setProperty('--canvas-radius', '0');
+        const savedY = window.scrollY || window.pageYOffset || 0;
+        document.body.dataset.savedScrollY = String(savedY);
+        document.body.style.position = 'fixed';
+        document.body.style.top = `-${savedY}px`;
+        document.body.style.left = '0';
+        document.body.style.right = '0';
+        document.body.style.width = '100%';
+        document.body.dataset.mashLocked = '1';
+        console.log('[mash-game] LOCKED — page frozen at scrollY=' + savedY);
+        // Defer one frame so any reflow from the body[data-mash-locked] CSS
+        // rules takes effect before we read computed styles.
+        requestAnimationFrame(() => dumpMashLayers('LOCKED (post-rule-apply)'));
+      } catch (e) {
+        console.warn('[mash-game] GAME START failed:', e && e.message);
+      }
       // First press in the session — if signed in, mark this event as
       // interacted-with so they qualify for the Bad Eggs list if they
       // never RSVP. Fire-and-forget; safe if rules reject.
@@ -853,9 +914,9 @@ export default function KudosCta({ event, isSheetContext }) {
     btn.appendChild(ping);
     setTimeout(() => ping.remove(), 500);
 
-    // Flying hot dogs
-    const dogCount = Math.min(pressCount, 25);
-    const stagger = Math.max(12, Math.floor(800 / dogCount));
+    // Flying hot dogs — capped at 15 per press for perf headroom.
+    const dogCount = Math.min(pressCount, 15);
+    const stagger = Math.max(14, Math.floor(800 / dogCount));
     const pRainbow = rainbowChance(pressCount);
     for (let i = 0; i < dogCount; i++) {
       const rainbow = Math.random() < pRainbow;
@@ -873,6 +934,12 @@ export default function KudosCta({ event, isSheetContext }) {
     }
 
     flashBackground(pressCount);
+
+    // Heartbeat: restart the save-timer indicator animation. Each press
+    // resets the heartbeat so it only plays through if the user pauses.
+    btn.classList.remove('hd-heartbeat');
+    void btn.offsetWidth; // force reflow so the animation actually restarts
+    btn.classList.add('hd-heartbeat');
 
     // Button scale ramp
     const restScale = 1 + pressCount * 0.022;

@@ -441,6 +441,8 @@ function initialFor(name) {
   return name.charAt(0);
 }
 
+const MASH_ICONS = ['🌭', '🥚', '🚴'];
+
 export default function RsvpCrewPanel({ event }) {
   const { user, loading } = useCurrentUser();
 
@@ -448,6 +450,14 @@ export default function RsvpCrewPanel({ event }) {
   const [rsvped, setRsvped] = useState(false);
   const [busy, setBusy] = useState(false);
   const [toast, setToast] = useState('');
+  const [mashIcon, setMashIcon] = useState(MASH_ICONS[0]);
+
+  useEffect(() => {
+    const id = setInterval(() => {
+      setMashIcon((cur) => MASH_ICONS[(MASH_ICONS.indexOf(cur) + 1) % MASH_ICONS.length]);
+    }, 2500);
+    return () => clearInterval(id);
+  }, []);
 
   // Leaderboard state
   const [rsvps, setRsvps] = useState({});
@@ -678,48 +688,6 @@ export default function RsvpCrewPanel({ event }) {
                 return (
                   <Row key={row.uid}>
                     <AvatarWrap>
-                      {i === 0 && (
-                        <LaurelSvg viewBox="0 0 96 50" aria-hidden="true">
-                          {/* Left laurel branch */}
-                          <g fill="none" stroke="#7DBE7D" strokeWidth="2" strokeLinecap="round">
-                            <path d="M14 38 C 8 32, 6 24, 12 16" />
-                            <path d="M16 42 C 10 38, 8 30, 14 22" />
-                            <path d="M19 45 C 13 42, 11 35, 16 28" />
-                          </g>
-                          {/* Right laurel branch */}
-                          <g fill="none" stroke="#7DBE7D" strokeWidth="2" strokeLinecap="round">
-                            <path d="M82 38 C 88 32, 90 24, 84 16" />
-                            <path d="M80 42 C 86 38, 88 30, 82 22" />
-                            <path d="M77 45 C 83 42, 85 35, 80 28" />
-                          </g>
-                          {/* Left leaves */}
-                          <g fill="#7DBE7D">
-                            <ellipse cx="11" cy="20" rx="3.6" ry="1.8" transform="rotate(-55 11 20)" />
-                            <ellipse cx="10" cy="27" rx="3.6" ry="1.8" transform="rotate(-35 10 27)" />
-                            <ellipse cx="11" cy="34" rx="3.6" ry="1.8" transform="rotate(-15 11 34)" />
-                            <ellipse cx="14" cy="40" rx="3.4" ry="1.7" transform="rotate(5 14 40)" />
-                            <ellipse cx="19" cy="44" rx="3.2" ry="1.6" transform="rotate(20 19 44)" />
-                          </g>
-                          {/* Right leaves */}
-                          <g fill="#7DBE7D">
-                            <ellipse cx="85" cy="20" rx="3.6" ry="1.8" transform="rotate(55 85 20)" />
-                            <ellipse cx="86" cy="27" rx="3.6" ry="1.8" transform="rotate(35 86 27)" />
-                            <ellipse cx="85" cy="34" rx="3.6" ry="1.8" transform="rotate(15 85 34)" />
-                            <ellipse cx="82" cy="40" rx="3.4" ry="1.7" transform="rotate(-5 82 40)" />
-                            <ellipse cx="77" cy="44" rx="3.2" ry="1.6" transform="rotate(-20 77 44)" />
-                          </g>
-                          {/* Top floret/victory ornament — golden flower poking above the avatar */}
-                          <g>
-                            <circle cx="48" cy="6" r="3.2" fill="#FFD24A" stroke="#B6852A" strokeWidth="0.6" />
-                            <circle cx="44" cy="9" r="2.2" fill="#FFE066" />
-                            <circle cx="52" cy="9" r="2.2" fill="#FFE066" />
-                            <circle cx="48" cy="11" r="2" fill="#FFE066" />
-                            <circle cx="48" cy="6" r="1.2" fill="#C99417" />
-                          </g>
-                          {/* Tiny stem connecting floret to the wreath */}
-                          <path d="M48 12 L 48 16" stroke="#7DBE7D" strokeWidth="1.2" strokeLinecap="round" />
-                        </LaurelSvg>
-                      )}
                       <Avatar $photo={row.photoURL} data-medal={i < 3 ? String(i + 1) : undefined}>
                         {!row.photoURL && initialFor(row.displayName)}
                       </Avatar>
@@ -731,7 +699,7 @@ export default function RsvpCrewPanel({ event }) {
                         <TierTag data-medal={medal}>{TIER_LABEL[i + 1]}</TierTag>
                       )}
                     </NameWrap>
-                    <Stat>🌭 {row.mashes}</Stat>
+                    <Stat><span style={{ fontStyle: 'normal' }}>{mashIcon}</span> {row.mashes}</Stat>
                   </Row>
                 );
               })
@@ -754,8 +722,12 @@ export default function RsvpCrewPanel({ event }) {
                           <RottenAvatar $photo={photo}>
                             {!photo && initialFor(dn)}
                           </RottenAvatar>
-                          <RottenName>🤢 {dn}</RottenName>
-                          <RottenStat>🌭 {row.mashes}</RottenStat>
+                          <RottenName>
+                            <span style={{ fontStyle: 'normal', fontFamily: 'sans-serif' }}>🤢</span> {dn}
+                          </RottenName>
+                          <RottenStat>
+                            <span style={{ fontStyle: 'normal', fontFamily: 'sans-serif' }}>{mashIcon}</span> {row.mashes}
+                          </RottenStat>
                         </Row>
                       );
                     })}

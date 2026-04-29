@@ -221,14 +221,24 @@ async function _runCached(prompt, options) {
     return value;
   }
 
-  // 4. Persist result.
+  // 4. Persist result. Failure (e.g. unauthenticated localhost dev) must NOT
+  // discard the value we just paid tokens for — log + return the text anyway.
   console.log('[ai.cache] write', sanitized, '| value chars:', (value || '').length);
-  await set(cRef, {
-    value,
-    prompt: typeof prompt === 'string' ? prompt.slice(0, 2000) : '',
-    generatedAt: serverTimestamp(),
-    ttlMs,
-  });
+  try {
+    await set(cRef, {
+      value,
+      prompt: typeof prompt === 'string' ? prompt.slice(0, 2000) : '',
+      generatedAt: serverTimestamp(),
+      ttlMs,
+    });
+  } catch (err) {
+    console.warn(
+      '[ai.cache] write FAILED — returning value uncached. cacheKey=',
+      sanitized,
+      '| reason:',
+      err && (err.message || err)
+    );
+  }
 
   return value;
 }

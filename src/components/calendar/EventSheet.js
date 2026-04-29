@@ -316,7 +316,7 @@ function SheetContent({ event, onClose }) {
   return (
     <SheetWrap>
       <Backdrop onClick={onClose} />
-      <SheetBody onClick={e => e.stopPropagation()}>
+      <SheetBody className="event-shell" onClick={e => e.stopPropagation()}>
         <CloseBtn type="button" aria-label="Close" onClick={onClose}>×</CloseBtn>
         <Handle type="button" onClick={onClose} aria-label="Close panel" />
 

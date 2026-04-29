@@ -533,7 +533,7 @@ function Home() {
         </FloatingEgg>
       ))}
       
-      <ContentContainer>
+      <ContentContainer className="home-content">
         <Logo 
           src="/assets/cogg white shadow.png" 
           alt="Scrambled Legs Logo" 

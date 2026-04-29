@@ -240,7 +240,7 @@ export default function EventFeatured({ event }) {
   const hasRl = !!event.rideLeader;
 
   return (
-    <Card>
+    <Card className="event-shell">
       <MediaWrap>
         {event.bannerUrl
           ? <BannerImg style={{ backgroundImage: `url('${event.bannerUrl}')` }} />

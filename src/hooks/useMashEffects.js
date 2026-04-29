@@ -5,11 +5,10 @@ export let activeHotDogs = 0;
 const IS_MOBILE = typeof window !== 'undefined' &&
   window.matchMedia && window.matchMedia('(max-width: 768px)').matches;
 
-// 15% reduction on mobile
+// Simple mobile-vs-desktop scaling. Mobile gets a 15% cap reduction
+// (80→68) and a 25% shorter lifetime to keep paint cost tolerable.
 export const MAX_ACTIVE_HOTDOGS = IS_MOBILE ? 68 : 80;
-
-// Mobile shortens spawn lifetime ~25%
-const LIFETIME_SCALE = IS_MOBILE ? 0.75 : 1;
+const LIFETIME_SCALE = IS_MOBILE ? 0.75 : 1.0;
 
 export function incActiveHotDogs() { activeHotDogs++; }
 export function decActiveHotDogs() { activeHotDogs = Math.max(0, activeHotDogs - 1); }
@@ -23,13 +22,111 @@ export function setMashEnergy(pressCount) {
   else delete document.body.dataset.mashing;
   if (pressCount >= 50) document.body.dataset.eggsRainbow = '1';
   else delete document.body.dataset.eggsRainbow;
+
+  // ── Mash Game state ──
+  // Canvas grows on an ease-in curve across presses 1→50: slow at first,
+  // accelerating as press count climbs. pow(t, 2.4) ≈ ~10% radius at press 25,
+  // ~50% at press 38, full at press 50.
+  const tCanvas = Math.min(pressCount / 50, 1);
+  const canvasRadius = Math.pow(tCanvas, 2.4);
+  document.body.style.setProperty('--canvas-radius', canvasRadius.toFixed(3));
+  // Button migration toward the bottom-third anchor across presses 1→25.
+  const migration = Math.min(pressCount / 25, 1);
+  document.body.style.setProperty('--migration-progress', migration.toFixed(3));
+  // Sub-text lift — challenge text floats above button starting press 40,
+  // fully out of button by press 50 (canvas takeover complete).
+  const subOut = Math.max(0, Math.min(1, (pressCount - 40) / 10));
+  document.body.style.setProperty('--sub-out', subOut.toFixed(3));
+  // Level — Math.floor(pressCount / 100), capped at 10. Surfaces level paint
+  // hooks for body[data-mash-level="N"] CSS rules later.
+  const level = Math.min(Math.floor(pressCount / 100), 10);
+  const prevLevel = parseInt(document.body.dataset.mashLevel || '0', 10);
+  if (level > 0) document.body.dataset.mashLevel = String(level);
+  else delete document.body.dataset.mashLevel;
+  if (level !== prevLevel && level > 0) {
+    console.log('[mash-game] LEVEL', level, '— pressCount', pressCount);
+  }
+  // Stage transition logs at key thresholds
+  if (pressCount === 1 || pressCount === 25 || pressCount === 50) {
+    if (pressCount === 25) console.log('[mash-game] migration complete (button anchored)');
+    if (pressCount === 50) console.log('[mash-game] canvas full — UI takeover');
+    dumpMashLayers(`press ${pressCount}`);
+  }
+}
+
+/**
+ * Dump z-index stack for the mash game so we can debug visibility issues.
+ * Logs the canvas + kudos-row + their ancestors that create stacking contexts.
+ */
+export function dumpMashLayers(tag = '') {
+  if (typeof document === 'undefined') return;
+  const canvas = document.getElementById('mash-canvas');
+  const row = document.querySelector('.kudos-row');
+  const dump = (el, label) => {
+    if (!el) return { label, missing: true };
+    const cs = getComputedStyle(el);
+    return {
+      label,
+      tag: el.tagName + (el.className ? '.' + String(el.className).split(' ').join('.') : ''),
+      z: cs.zIndex,
+      pos: cs.position,
+      opacity: cs.opacity,
+      transform: cs.transform === 'none' ? '-' : cs.transform,
+      backdropFilter: cs.backdropFilter || '-',
+      filter: cs.filter || '-',
+    };
+  };
+  // Walk up from row, collecting any ancestor that creates a stacking context.
+  const ancestors = [];
+  let cur = row && row.parentElement;
+  while (cur && cur !== document.body) {
+    const cs = getComputedStyle(cur);
+    const createsContext =
+      (cs.position !== 'static' && cs.zIndex !== 'auto') ||
+      cs.transform !== 'none' ||
+      cs.filter !== 'none' ||
+      cs.backdropFilter !== 'none' ||
+      cs.isolation === 'isolate' ||
+      cs.contain.includes('layout') || cs.contain.includes('paint');
+    if (createsContext) {
+      ancestors.push({
+        tag: cur.tagName + (cur.className ? '.' + String(cur.className).split(' ').join('.') : ''),
+        z: cs.zIndex,
+        pos: cs.position,
+        backdropFilter: cs.backdropFilter || '-',
+        transform: cs.transform === 'none' ? '-' : cs.transform,
+      });
+    }
+    cur = cur.parentElement;
+  }
+  console.log('[mash-layers]', tag);
+  console.log('  canvas:', dump(canvas, 'canvas'));
+  console.log('  row:   ', dump(row, 'row'));
+  if (ancestors.length === 0) {
+    console.log('  row ancestors creating stacking contexts: NONE');
+  } else {
+    console.log(`  row ancestors creating stacking contexts (${ancestors.length}, child→root):`);
+    ancestors.forEach((a, i) => {
+      console.log(`    [${i}]`, a.tag, '| z=' + a.z, '| pos=' + a.pos, '| backdrop=' + a.backdropFilter, '| transform=' + a.transform);
+    });
+  }
 }
 
 export function clearMashEnergy() {
   document.body.style.removeProperty('--mash-energy');
   document.body.style.removeProperty('--mash-overdrive');
+  document.body.style.removeProperty('--canvas-radius');
+  document.body.style.removeProperty('--migration-progress');
+  document.body.style.removeProperty('--btn-start-x');
+  document.body.style.removeProperty('--btn-start-y');
+  document.body.style.removeProperty('--btn-w');
+  document.body.style.removeProperty('--btn-dx');
+  document.body.style.removeProperty('--btn-dy');
+  document.body.style.removeProperty('--sub-out');
   delete document.body.dataset.mashing;
   delete document.body.dataset.eggsRainbow;
+  delete document.body.dataset.mashLevel;
+  delete document.body.dataset.mashLocked;
 }
 
 const SHOCKWAVE_SELECTOR = [
@@ -311,4 +408,155 @@ export function spawnPhrase(btn, phraseCooldownRef, lastPhraseIndexRef) {
     ],
     { duration: dur, easing: 'cubic-bezier(.22,.61,.36,1)', fill: 'forwards' }
   ).onfinish = () => span.remove();
+}
+
+// ─── Gamification: deferred (user is brainstorming, not shipping) ──────────
+// Helpers below (spawnRareBonus, spawnLevelUp) are kept as dead code in the
+// module, never called from KudosCta. They're not exported anywhere they'd
+// load. Tree-shaker drops them from the bundle since nothing imports them.
+
+const RARE_ICONS = ['🌟', '💎', '🏆', '🍩', '🦄'];
+
+function spawnRareBonus(onClaim) {
+  if (typeof document === 'undefined') return;
+  // Don't pile rare bonuses up on low-tier — at most 1 in flight.
+  if (document.querySelectorAll('.flying-rare').length >= 2) return;
+
+  const dir = Math.random() < 0.5 ? 1 : -1;
+  const w = window.innerWidth;
+  const h = window.innerHeight;
+  const startX = dir === 1 ? -80 : w + 80;
+  const endX = dir === 1 ? w + 80 : -80;
+  // Mid-band of the viewport so the user can actually reach it.
+  const y = h * (0.30 + Math.random() * 0.35);
+  const dur = 4200 + Math.random() * 1200;
+  const icon = RARE_ICONS[Math.floor(Math.random() * RARE_ICONS.length)];
+  const bonus = 50 + Math.floor(Math.random() * 151); // +50…+200
+
+  const el = document.createElement('div');
+  el.className = 'flying-rare';
+  el.textContent = icon;
+  el.style.cssText = [
+    'position:fixed',
+    'pointer-events:auto',
+    'cursor:pointer',
+    'z-index:1500',
+    'font-size:48px',
+    'will-change:transform,opacity',
+    'filter:drop-shadow(0 0 14px rgba(255,215,0,0.9)) drop-shadow(0 0 28px rgba(255,140,0,0.6))',
+    `left:${startX}px`,
+    `top:${y}px`,
+    'user-select:none',
+    '-webkit-user-select:none',
+    'touch-action:manipulation',
+  ].join(';') + ';';
+  document.body.appendChild(el);
+
+  let claimed = false;
+  let removed = false;
+  const safeRemove = () => {
+    if (removed) return;
+    removed = true;
+    el.remove();
+  };
+
+  const anim = el.animate(
+    [
+      { transform: 'translate(-50%,-50%) scale(0.4) rotate(0deg)', opacity: 0, offset: 0 },
+      { transform: 'translate(-50%,-50%) scale(1) rotate(0deg)', opacity: 1, offset: 0.08 },
+      { transform: `translate(${endX - startX}px, ${(Math.random() - 0.5) * 80}px) scale(1) rotate(${dir * 360}deg)`, opacity: 1, offset: 0.92 },
+      { transform: `translate(${endX - startX}px, 0) scale(0.6) rotate(${dir * 380}deg)`, opacity: 0, offset: 1 },
+    ],
+    { duration: dur, easing: 'linear', fill: 'forwards' }
+  );
+  anim.onfinish = safeRemove;
+
+  el.addEventListener('click', (e) => {
+    e.stopPropagation();
+    if (claimed) return;
+    claimed = true;
+    try { anim.cancel(); } catch (_) {}
+    // Pop feedback
+    const rect = el.getBoundingClientRect();
+    const burst = document.createElement('div');
+    burst.textContent = `+${bonus}!`;
+    burst.style.cssText = [
+      'position:fixed',
+      'pointer-events:none',
+      'z-index:1600',
+      `left:${rect.left + rect.width / 2}px`,
+      `top:${rect.top + rect.height / 2}px`,
+      "font-family:'Fredoka',sans-serif",
+      'font-weight:700',
+      'font-size:42px',
+      'color:#FFD700',
+      'text-shadow:0 0 16px rgba(255,215,0,0.95),0 0 32px rgba(255,140,0,0.8),0 3px 10px rgba(0,0,0,0.7)',
+      'transform:translate(-50%,-50%)',
+      'will-change:transform,opacity',
+    ].join(';') + ';';
+    document.body.appendChild(burst);
+    burst.animate(
+      [
+        { transform: 'translate(-50%,-50%) scale(0.4)', opacity: 0, offset: 0 },
+        { transform: 'translate(-50%,-50%) scale(1.3)', opacity: 1, offset: 0.2 },
+        { transform: 'translate(-50%,-110px) scale(1)', opacity: 1, offset: 0.7 },
+        { transform: 'translate(-50%,-180px) scale(0.9)', opacity: 0, offset: 1 },
+      ],
+      { duration: 1200, easing: 'cubic-bezier(.22,.61,.36,1)', fill: 'forwards' }
+    ).onfinish = () => burst.remove();
+    safeRemove();
+    try { onClaim && onClaim(bonus); } catch (_) {}
+  }, { once: true });
+}
+
+// ─── Gamification: level-up popup ──────────────────────────────────────────
+// Briefly flashes "LEVEL N" overlay at 100/200/.../1000. Level 10 gets a
+// gold treatment and longer hold. Single DOM node; ~1.4s lifetime.
+function spawnLevelUp(level) {
+  if (typeof document === 'undefined') return;
+  const isMax = level >= 10;
+  const dur = isMax ? 2600 : 1400;
+  const el = document.createElement('div');
+  el.className = 'level-up-overlay';
+  el.style.cssText = [
+    'position:fixed',
+    'left:50%',
+    'top:38%',
+    'transform:translate(-50%,-50%)',
+    'pointer-events:none',
+    'z-index:1700',
+    "font-family:'Fredoka',sans-serif",
+    'font-weight:700',
+    'font-size:clamp(40px, 12vw, 96px)',
+    'letter-spacing:0.06em',
+    'text-align:center',
+    'will-change:transform,opacity',
+    'white-space:nowrap',
+    isMax
+      ? 'color:#FFD700;text-shadow:0 0 24px rgba(255,215,0,1),0 0 48px rgba(255,180,0,0.95),0 0 96px rgba(255,140,0,0.8),0 6px 20px rgba(0,0,0,0.85)'
+      : 'color:#fff;text-shadow:0 0 16px rgba(255,255,255,0.95),0 0 36px rgba(255,199,44,0.8),0 4px 14px rgba(0,0,0,0.85)',
+  ].join(';') + ';';
+  el.innerHTML = isMax
+    ? `<div style="font-size:0.5em;letter-spacing:0.2em;opacity:0.95">MAX LEVEL</div><div>LEVEL ${level}</div>`
+    : `<div style="font-size:0.45em;letter-spacing:0.2em;opacity:0.85">LEVEL UP</div><div>LEVEL ${level}</div>`;
+  document.body.appendChild(el);
+
+  el.animate(
+    isMax
+      ? [
+          { transform: 'translate(-50%,-50%) scale(0.4)', opacity: 0, offset: 0 },
+          { transform: 'translate(-50%,-50%) scale(1.25)', opacity: 1, offset: 0.10 },
+          { transform: 'translate(-50%,-50%) scale(1.0)', opacity: 1, offset: 0.20 },
+          { transform: 'translate(-50%,-50%) scale(1.05)', opacity: 1, offset: 0.85 },
+          { transform: 'translate(-50%,-50%) scale(0.95)', opacity: 0, offset: 1 },
+        ]
+      : [
+          { transform: 'translate(-50%,-50%) scale(0.5)', opacity: 0, offset: 0 },
+          { transform: 'translate(-50%,-50%) scale(1.2)', opacity: 1, offset: 0.18 },
+          { transform: 'translate(-50%,-50%) scale(1.0)', opacity: 1, offset: 0.30 },
+          { transform: 'translate(-50%,-50%) scale(1.0)', opacity: 1, offset: 0.75 },
+          { transform: 'translate(-50%,-50%) scale(0.9)', opacity: 0, offset: 1 },
+        ],
+    { duration: dur, easing: 'cubic-bezier(.22,.61,.36,1)', fill: 'forwards' }
+  ).onfinish = () => el.remove();
 }

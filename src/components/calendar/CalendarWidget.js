@@ -60,6 +60,13 @@ function MashOverlays() {
       flash.className = 'mash-flash';
       document.body.appendChild(flash);
     }
+    let canvas = document.getElementById('mash-canvas');
+    if (!canvas) {
+      canvas = document.createElement('div');
+      canvas.id = 'mash-canvas';
+      canvas.className = 'mash-canvas';
+      document.body.appendChild(canvas);
+    }
     return () => {
       // Don't remove — may be used by other instances
     };
@@ -103,7 +110,7 @@ export default function CalendarWidget() {
   const comingUpEvents = upcoming.slice(1);
 
   return (
-    <CalSection>
+    <CalSection className="cal-section">
       <div id="featured-section">
         <SectionLabel className="cal-section-label">{featuredLabel(featuredEvent)}</SectionLabel>
         <EventFeatured event={featuredEvent} />

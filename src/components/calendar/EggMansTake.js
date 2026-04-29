@@ -57,10 +57,15 @@ const Quote = styled.div`
   position: relative;
   font-family: 'Inter', sans-serif;
   font-style: italic;
-  font-size: 14px;
-  line-height: 1.6;
+  font-size: 13px;
+  line-height: 1.55;
   color: rgba(255,255,255,0.85);
   white-space: pre-wrap;
+
+  @media (max-width: 480px) {
+    font-size: 12px;
+    line-height: 1.5;
+  }
 
   &::before {
     content: '“';

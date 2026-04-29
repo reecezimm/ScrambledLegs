@@ -33,6 +33,7 @@ DON'T:
 - Don't say "let's crush it", "send it", "you got this" or any sports-coach cliché.
 - Don't end on weather advice. Don't end on "good luck." Don't say "oof" or "lol."
 - Don't soften the bit. If the joke is gross, deliver it gross.
+- Don't QUOTE people verbatim from their blurbs. Don't put their traits in actual quotation marks. Don't say things like: he's "stubborn as a knot" or she's "the bad egg." Instead, INTEGRATE the trait into your own prose, paraphrased through Eggman's voice — turn "stubborn finisher" into "Vandal will finish this ride out of pure spite, even if his legs unscrew at the knee." Make it feel like Eggman knows these people, not like Eggman is reading their dossier aloud.
 
 WEATHER is mood color, not the closer. Drop it mid-monologue if it sharpens a jab.
 
@@ -82,14 +83,33 @@ function fmtEventWhen(ts) {
   } catch { return ''; }
 }
 
+function ordinalSuffix(n) {
+  const s = ['th', 'st', 'nd', 'rd'];
+  const v = n % 100;
+  return n + (s[(v - 20) % 10] || s[v] || s[0]);
+}
+
 function fmtCentralNow() {
   try {
-    return new Intl.DateTimeFormat('en-US', {
+    const now = new Date();
+    // Pull individual parts in Central Time so we can compose with ordinal day.
+    const parts = new Intl.DateTimeFormat('en-US', {
       timeZone: 'America/Chicago',
-      weekday: 'long', month: 'long', day: 'numeric',
-      hour: 'numeric', minute: '2-digit',
-      timeZoneName: 'short',
-    }).format(new Date());
+      weekday: 'long',
+      month: 'long',
+      day: 'numeric',
+      year: 'numeric',
+      hour: 'numeric',
+      minute: '2-digit',
+      hour12: true,
+    }).formatToParts(now).reduce((acc, p) => {
+      acc[p.type] = p.value;
+      return acc;
+    }, {});
+    const day = parseInt(parts.day, 10);
+    const ordinalDay = isNaN(day) ? parts.day : ordinalSuffix(day);
+    // "Tuesday, April 29th, 2026 — 2:34 PM Central Time"
+    return `${parts.weekday}, ${parts.month} ${ordinalDay}, ${parts.year} — ${parts.hour}:${parts.minute} ${parts.dayPeriod} Central Time`;
   } catch { return ''; }
 }
 
