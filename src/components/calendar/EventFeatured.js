@@ -1,14 +1,13 @@
-import React, { useState, useCallback } from 'react';
+import React, { useState, useCallback, useEffect } from 'react';
 import styled, { keyframes } from 'styled-components';
 import EventMap from './EventMap';
 import RideLeaderBadge from './RideLeaderBadge';
 import WeatherPanel from './WeatherPanel';
-import EventCountdown from './EventCountdown';
 import EventActions from './EventActions';
 import KudosCta from './KudosCta';
 import RsvpToggle from './RsvpToggle';
 import EventLeaderboard from './EventLeaderboard';
-import { getStatus, STATUS_LABEL, weatherInRange, fmtDateLong, fmtTime } from '../../hooks/useEventLifecycle';
+import { getStatus, STATUS_LABEL, fmtCountdown, fmtTimeSince, fmtDateLong, fmtTime } from '../../hooks/useEventLifecycle';
 
 const pulse = keyframes`
   0%,100% { transform: scale(1); opacity: 1; }
@@ -54,10 +53,11 @@ const StatusChip = styled.div`
   font-family: 'Montserrat', sans-serif;
   font-size: 10px;
   font-weight: 700;
-  letter-spacing: 0.14em;
+  letter-spacing: 0.10em;
   text-transform: uppercase;
   backdrop-filter: blur(8px);
   border: 1px solid rgba(255,255,255,0.18);
+  font-variant-numeric: tabular-nums;
 
   &[data-status="upcoming"]   { background: rgba(255,199,44,0.18); color: #FFE66D; }
   &[data-status="in_progress"]{ background: rgba(111,207,151,0.18); color: #6FCF97; }
@@ -73,24 +73,6 @@ const Dot = styled.span`
   [data-status="upcoming"] &   { background: #FFC72C; box-shadow: 0 0 8px #FFC72C; }
   [data-status="in_progress"] &{ background: #6FCF97; box-shadow: 0 0 8px #6FCF97; animation-duration: 1.2s; }
   [data-status="beers"] &      { background: #FFB155; box-shadow: 0 0 8px #FFB155; animation-duration: 2s; }
-`;
-
-const WeatherChip = styled.div`
-  position: absolute;
-  top: 14px;
-  right: 14px;
-  z-index: 20;
-  display: inline-flex;
-  align-items: center;
-  gap: 6px;
-  padding: 6px 10px 6px 8px;
-  border-radius: 999px;
-  background: rgba(0,0,0,0.45);
-  border: 1px solid rgba(255,255,255,0.10);
-  backdrop-filter: blur(8px);
-  font-size: 12px;
-  font-weight: 600;
-  color: #f4f4f4;
 `;
 
 const Body = styled.div`
@@ -191,10 +173,27 @@ const Empty = styled.div`
   .sub { font-size: 13px; color: rgba(255,255,255,0.55); line-height: 1.5; }
 `;
 
+function statusText(event, status) {
+  if (status === 'upcoming') {
+    const ms = (event.start || 0) - Date.now();
+    return fmtCountdown(ms) || STATUS_LABEL.upcoming;
+  }
+  if (status === 'in_progress') {
+    return `Riding · ${fmtTimeSince(Date.now() - event.start)}`;
+  }
+  if (status === 'beers') return 'Beers being consumed';
+  return STATUS_LABEL[status] || status;
+}
+
 export default function EventFeatured({ event }) {
-  // Lift weather data so the banner chip and the panel both show real values.
   const [liveWeather, setLiveWeather] = useState(null);
   const handleWeatherData = useCallback((wx) => setLiveWeather(wx), []);
+  const [, setTick] = useState(0);
+
+  useEffect(() => {
+    const id = setInterval(() => setTick((t) => t + 1), 1000);
+    return () => clearInterval(id);
+  }, []);
 
   if (!event) {
     return (
@@ -208,28 +207,20 @@ export default function EventFeatured({ event }) {
 
   const status = getStatus(event);
   const hasRl = !!event.rideLeader;
-  const inWeatherRange = weatherInRange(event.start);
 
   return (
     <Card>
       {event.bannerUrl
         ? <BannerImg style={{ backgroundImage: `url('${event.bannerUrl}')` }} />
         : event.startLoc && (
-          <EventMap startLoc={event.startLoc} endLoc={event.endLoc} />
+          <EventMap startLoc={event.startLoc} endLoc={event.endLoc} weather={liveWeather} />
         )
       }
 
       <StatusChip data-status={status}>
         <Dot />
-        <span>{STATUS_LABEL[status] || status}</span>
+        <span>{statusText(event, status)}</span>
       </StatusChip>
-
-      {inWeatherRange && (
-        <WeatherChip>
-          <span>{liveWeather?.icon || '🌤'}</span>
-          <span>{liveWeather?.temp != null ? `${liveWeather.temp}°` : '—°'}</span>
-        </WeatherChip>
-      )}
 
       <RideLeaderBadge rideLeader={event.rideLeader} />
 
@@ -255,8 +246,6 @@ export default function EventFeatured({ event }) {
         {event.description && <EventDesc className="event-desc">{event.description}</EventDesc>}
 
         <WeatherPanel event={event} onData={handleWeatherData} />
-
-        <EventCountdown event={event} />
 
         <EventActions event={event} />
 

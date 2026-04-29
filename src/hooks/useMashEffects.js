@@ -1,7 +1,15 @@
 // Module-level counter shared across all KudosCta instances
 // (so different cards don't get independent counters that fight each other)
 export let activeHotDogs = 0;
-export const MAX_ACTIVE_HOTDOGS = 80;
+
+const IS_MOBILE = typeof window !== 'undefined' &&
+  window.matchMedia && window.matchMedia('(max-width: 768px)').matches;
+
+// 15% reduction on mobile
+export const MAX_ACTIVE_HOTDOGS = IS_MOBILE ? 68 : 80;
+
+// Mobile shortens spawn lifetime ~25%
+const LIFETIME_SCALE = IS_MOBILE ? 0.75 : 1;
 
 export function incActiveHotDogs() { activeHotDogs++; }
 export function decActiveHotDogs() { activeHotDogs = Math.max(0, activeHotDogs - 1); }
@@ -82,13 +90,21 @@ export function spawnHotDog(originBtn, opts = {}) {
   const endDx = dx * dist;
   const endDy = dy * dist;
   const rot = (Math.random() - 0.5) * 720;
-  const dur = 1700 + Math.random() * 1200;
+  const dur = (1700 + Math.random() * 1200) * LIFETIME_SCALE;
 
   const hd = document.createElement('div');
   hd.className = 'flying-hot-dog' + (opts.rainbow ? ' is-rainbow' : '');
   hd.textContent = emoji;
   hd.style.cssText = `position:fixed;pointer-events:none;z-index:1000;font-size:36px;will-change:transform,opacity;left:${startX}px;top:${startY}px;`;
   document.body.appendChild(hd);
+
+  let removed = false;
+  const safeRemove = () => {
+    if (removed) return;
+    removed = true;
+    hd.remove();
+    decActiveHotDogs();
+  };
 
   hd.animate(
     [
@@ -98,7 +114,19 @@ export function spawnHotDog(originBtn, opts = {}) {
       { transform: `translate(calc(-50% + ${endDx}px), calc(-50% + ${endDy}px)) scale(1) rotate(${rot}deg)`, opacity: 0, offset: 1 },
     ],
     { duration: dur, easing: 'cubic-bezier(.22,.61,.36,1)', fill: 'forwards' }
-  ).onfinish = () => { hd.remove(); decActiveHotDogs(); };
+  ).onfinish = safeRemove;
+
+  if (IS_MOBILE) {
+    const checkAt = dur * 0.5;
+    setTimeout(() => {
+      if (removed || !hd.isConnected) return;
+      const r = hd.getBoundingClientRect();
+      const offscreen =
+        r.right < 0 || r.bottom < 0 ||
+        r.left > window.innerWidth || r.top > window.innerHeight;
+      if (offscreen) safeRemove();
+    }, checkAt);
+  }
 }
 
 export function spawnRainbowEgg(originBtn) {
@@ -119,13 +147,21 @@ export function spawnRainbowEgg(originBtn) {
   const endDx = dx * dist;
   const endDy = dy * dist;
   const rot = (Math.random() - 0.5) * 720;
-  const dur = 1900 + Math.random() * 1300;
+  const dur = (1900 + Math.random() * 1300) * LIFETIME_SCALE;
 
   const eg = document.createElement('div');
   eg.className = 'flying-egg is-rainbow';
   eg.textContent = '🥚';
   eg.style.cssText = `position:fixed;pointer-events:none;z-index:1000;font-size:28px;will-change:transform,opacity;left:${startX}px;top:${startY}px;`;
   document.body.appendChild(eg);
+
+  let removed = false;
+  const safeRemove = () => {
+    if (removed) return;
+    removed = true;
+    eg.remove();
+    decActiveHotDogs();
+  };
 
   eg.animate(
     [
@@ -135,7 +171,19 @@ export function spawnRainbowEgg(originBtn) {
       { transform: `translate(calc(-50% + ${endDx}px), calc(-50% + ${endDy}px)) scale(1) rotate(${rot}deg)`, opacity: 0, offset: 1 },
     ],
     { duration: dur, easing: 'cubic-bezier(.22,.61,.36,1)', fill: 'forwards' }
-  ).onfinish = () => { eg.remove(); decActiveHotDogs(); };
+  ).onfinish = safeRemove;
+
+  if (IS_MOBILE) {
+    const checkAt = dur * 0.5;
+    setTimeout(() => {
+      if (removed || !eg.isConnected) return;
+      const r = eg.getBoundingClientRect();
+      const offscreen =
+        r.right < 0 || r.bottom < 0 ||
+        r.left > window.innerWidth || r.top > window.innerHeight;
+      if (offscreen) safeRemove();
+    }, checkAt);
+  }
 }
 
 export function flashBackground(pressCount) {
@@ -168,6 +216,9 @@ export function spawnPhrase(btn, phraseCooldownRef, lastPhraseIndexRef) {
     "Yolked + stoked!", "Eggs-traordinary!", "Cracked it!",
     "On the roster!", "Whisk on!", "Wednesday loading…",
     "Locked and loaded!",
+    // Mash team hype (replaces DOG MODE ACTIVATED + diversifies pool)
+    "LET'S GET SCRAMBLED", "CRACK 'EM ALL", "YOLK ON FIRE",
+    "FULL SEND", "EGG MODE: ON",
     // Jordan / Bad Egg
     "Bad Egg approved!", "Jordan would run. You ride.",
     // SWIDZ
@@ -202,36 +253,55 @@ export function spawnPhrase(btn, phraseCooldownRef, lastPhraseIndexRef) {
   const phrase = PHRASES[i];
 
   const rect = btn.getBoundingClientRect();
-  const baseX = rect.left + rect.width / 2;
   const baseY = rect.top - 8;
-  const charWidth = 16;
-  const totalWidth = phrase.length * charWidth;
-  const startX = baseX - totalWidth / 2;
 
-  [...phrase].forEach((ch, idx) => {
-    const span = document.createElement('span');
-    span.className = 'phrase-char';
-    span.textContent = ch;
-    span.style.cssText = `position:fixed;pointer-events:none;z-index:1001;font-family:'Fredoka',sans-serif;font-weight:700;font-size:26px;background:linear-gradient(45deg,#FFE66D,#FF8800);-webkit-background-clip:text;-webkit-text-fill-color:transparent;will-change:transform,opacity;left:${startX + idx * charWidth}px;top:${baseY}px;`;
-    document.body.appendChild(span);
+  // Render whole phrase as one wrapping element, centered horizontally,
+  // so long phrases never push past the viewport edge.
+  const span = document.createElement('span');
+  span.className = 'phrase-char';
+  span.textContent = phrase;
+  span.style.cssText = [
+    'position:fixed',
+    'pointer-events:none',
+    'z-index:1001',
+    "font-family:'Fredoka',sans-serif",
+    'font-weight:700',
+    'font-size:26px',
+    'background:linear-gradient(45deg,#FFE66D,#FF8800)',
+    '-webkit-background-clip:text',
+    '-webkit-text-fill-color:transparent',
+    'background-clip:text',
+    'will-change:transform,opacity',
+    'left:50%',
+    `top:${baseY}px`,
+    'transform:translateX(-50%)',
+    'max-width:calc(100vw - 24px)',
+    'width:max-content',
+    'text-align:center',
+    'white-space:normal',
+    'word-wrap:break-word',
+    'overflow-wrap:break-word',
+    'line-height:1.1',
+    'opacity:0',
+  ].join(';') + ';';
+  document.body.appendChild(span);
 
-    const drift = (Math.random() - 0.5) * 70;
-    const wiggleA = 18 + Math.random() * 22;
-    const rotA = (Math.random() - 0.5) * 36;
-    const dur = 8500 + Math.random() * 900 + idx * 45;
-    const delay = idx * 60;
+  const drift = (Math.random() - 0.5) * 70;
+  const wiggleA = 18 + Math.random() * 22;
+  const rotA = (Math.random() - 0.5) * 36;
+  // +30% pause time — bump the floating duration by 1.3x.
+  const dur = (8500 + Math.random() * 900) * 1.3;
 
-    span.animate(
-      [
-        { transform: 'translate(0,0) rotate(0deg)', opacity: 0, offset: 0 },
-        { transform: 'translate(0,-34px) rotate(0deg)', opacity: 1, offset: 0.05 },
-        { transform: `translate(${(Math.random() - 0.5) * 3}px,-50px) rotate(${(Math.random() - 0.5) * 3}deg)`, opacity: 1, offset: 0.40 },
-        { transform: `translate(${drift * 0.25 - wiggleA * 0.3}px,-110px) rotate(${rotA * 0.4}deg)`, opacity: 1, offset: 0.55 },
-        { transform: `translate(${drift * 0.55 + wiggleA * 0.6}px,-220px) rotate(${rotA * 0.7}deg)`, opacity: 1, offset: 0.72 },
-        { transform: `translate(${drift * 0.82 - wiggleA * 0.4}px,-340px) rotate(${rotA * 0.9}deg)`, opacity: 0.85, offset: 0.88 },
-        { transform: `translate(${drift}px,-460px) rotate(${rotA}deg)`, opacity: 0, offset: 1 },
-      ],
-      { duration: dur, delay, easing: 'cubic-bezier(.22,.61,.36,1)', fill: 'forwards' }
-    ).onfinish = () => span.remove();
-  });
+  span.animate(
+    [
+      { transform: 'translate(-50%,0) rotate(0deg)', opacity: 0, offset: 0 },
+      { transform: 'translate(-50%,-34px) rotate(0deg)', opacity: 1, offset: 0.05 },
+      { transform: `translate(calc(-50% + ${(Math.random() - 0.5) * 3}px),-50px) rotate(${(Math.random() - 0.5) * 3}deg)`, opacity: 1, offset: 0.40 },
+      { transform: `translate(calc(-50% + ${drift * 0.25 - wiggleA * 0.3}px),-110px) rotate(${rotA * 0.4}deg)`, opacity: 1, offset: 0.55 },
+      { transform: `translate(calc(-50% + ${drift * 0.55 + wiggleA * 0.6}px),-220px) rotate(${rotA * 0.7}deg)`, opacity: 1, offset: 0.72 },
+      { transform: `translate(calc(-50% + ${drift * 0.82 - wiggleA * 0.4}px),-340px) rotate(${rotA * 0.9}deg)`, opacity: 0.85, offset: 0.88 },
+      { transform: `translate(calc(-50% + ${drift}px),-460px) rotate(${rotA}deg)`, opacity: 0, offset: 1 },
+    ],
+    { duration: dur, easing: 'cubic-bezier(.22,.61,.36,1)', fill: 'forwards' }
+  ).onfinish = () => span.remove();
 }

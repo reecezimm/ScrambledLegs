@@ -1,9 +1,9 @@
-import React, { useEffect } from 'react';
+import React, { useEffect, useState } from 'react';
 import styled from 'styled-components';
 import { useParams } from 'react-router-dom';
 import { useEvents } from '../../hooks/useEvents';
 import { useEventSheet } from '../../hooks/useEventSheet';
-import { getStatus } from '../../hooks/useEventLifecycle';
+import { getStatus, fmtCountdown, fmtTimeSince, STATUS_LABEL } from '../../hooks/useEventLifecycle';
 import EventFeatured from './EventFeatured';
 import EventComingUp from './EventComingUp';
 import EventArchive from './EventArchive';
@@ -79,11 +79,33 @@ function partitionEvents(events) {
   return { upcoming, past };
 }
 
+function featuredLabel(event) {
+  if (!event) return 'Up Next';
+  const status = getStatus(event);
+  if (status === 'upcoming') {
+    const ms = (event.start || 0) - Date.now();
+    const cd = fmtCountdown(ms);
+    return cd ? `In ${cd}` : 'Up Next';
+  }
+  if (status === 'in_progress') {
+    return `Riding · ${fmtTimeSince(Date.now() - event.start)}`;
+  }
+  if (status === 'beers') return 'Beers being consumed';
+  return STATUS_LABEL[status] || 'Up Next';
+}
+
 // ─── CalendarWidget ───────────────────────────────────────────────────────────
 export default function CalendarWidget() {
   const { eventId } = useParams();
   const { events } = useEvents();
   const { openEventId, openSheet, closeSheet } = useEventSheet(eventId || null);
+  const [, setTick] = useState(0);
+
+  useEffect(() => {
+    const id = setInterval(() => setTick((t) => t + 1), 1000);
+    return () => clearInterval(id);
+  }, []);
+
   const { upcoming, past } = partitionEvents(events);
 
   const featuredEvent = upcoming[0] || null;
@@ -92,7 +114,7 @@ export default function CalendarWidget() {
   return (
     <CalSection>
       <div id="featured-section">
-        <SectionLabel className="cal-section-label">Up Next</SectionLabel>
+        <SectionLabel className="cal-section-label">{featuredLabel(featuredEvent)}</SectionLabel>
         <EventFeatured event={featuredEvent} />
       </div>
 

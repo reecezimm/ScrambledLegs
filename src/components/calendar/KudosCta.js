@@ -200,12 +200,20 @@ const CREW_CHALLENGES = new Set([
   "Birno is snowmobiling somewhere warm. Goals.",
 ]);
 
+const HD_HYPE_POOL = [
+  "LET'S GET SCRAMBLED",
+  "CRACK 'EM ALL",
+  "YOLK ON FIRE",
+  "FULL SEND",
+  "EGG MODE: ON",
+];
+
 const HD_FIRST_25 = [
   "MASH!", "MASH! MASH!", "GO GO GO!", "KEEP GOING!", "DON'T STOP!",
   "CRACK THAT SHELL!", "HARDER!", "PROVE IT!", "YOU CAN DO THIS!", "CRANK IT!",
   "OTHERS DID BETTER", "DON'T QUIT NOW", "HAMMER DOWN!", "SEND IT!", "THEY'RE BEATING YOU",
   "ALMOST THERE", "BEAST MODE", "UNHINGED YET?", "YOU GOT THIS", "MORE WATTS!",
-  "FEEL THE BURN", "PROVE THEM WRONG", "CHAMPION ENERGY", "ALL IN!", "DOG MODE: ACTIVE",
+  "FEEL THE BURN", "PROVE THEM WRONG", "CHAMPION ENERGY", "ALL IN!", "__HYPE__",
 ];
 
 function bandForPress(c) {
@@ -219,7 +227,17 @@ function bandForPress(c) {
 
 function pickChallenge(pressCount, lastChallenge) {
   if (pressCount >= 1 && pressCount <= HD_FIRST_25.length) {
-    return HD_FIRST_25[pressCount - 1];
+    const slot = HD_FIRST_25[pressCount - 1];
+    if (slot === '__HYPE__') {
+      let pick;
+      let attempts = 0;
+      do {
+        pick = HD_HYPE_POOL[Math.floor(Math.random() * HD_HYPE_POOL.length)];
+        attempts++;
+      } while (pick === lastChallenge && HD_HYPE_POOL.length > 1 && attempts < 10);
+      return pick;
+    }
+    return slot;
   }
   const band = HD_CHALLENGE_BANDS[bandForPress(pressCount)];
   let challenge;
@@ -236,7 +254,7 @@ function setSub(el, text) {
   el.textContent = text;
   if (!text) { el.style.fontSize = ''; return; }
   const maxW = Math.min(window.innerWidth * 0.86, 480);
-  const maxPx = 26, minPx = 12;
+  const maxPx = 26, minPx = 14;
   const estPx = Math.floor(maxW / Math.max(text.length * 0.63, 1));
   el.style.fontSize = `${Math.max(minPx, Math.min(maxPx, estPx))}px`;
 }
@@ -397,7 +415,7 @@ const MashOverlay = styled.div`
   align-items: center;
   justify-content: flex-end;
   gap: 6px;
-  max-width: 95%;
+  max-width: calc(100vw - 32px);
   width: max-content;
   text-align: center;
 
@@ -421,14 +439,16 @@ const MashNum = styled.span`
   font-weight: 700;
   font-variant-numeric: tabular-nums;
   font-size: 30px;
-  line-height: 1;
+  line-height: 1.05;
   color: #fff;
   text-shadow: 0 3px 12px rgba(0,0,0,0.85), 0 0 24px rgba(255,255,255,0.45);
   transition: font-size 0.22s ease;
   text-align: center;
-  max-width: 100%;
-  overflow: hidden;
-  text-overflow: ellipsis;
+  max-width: calc(100vw - 32px);
+  word-wrap: break-word;
+  overflow-wrap: break-word;
+  hyphens: auto;
+  white-space: normal;
 
   /* Idle big style */
   .is-idle ~ ${MashOverlay} & {
@@ -502,7 +522,11 @@ const MashSub = styled.span`
   opacity: 0;
   transition: opacity 0.22s;
   pointer-events: none;
-  white-space: nowrap;
+  white-space: normal;
+  word-wrap: break-word;
+  overflow-wrap: break-word;
+  hyphens: auto;
+  max-width: calc(100vw - 32px);
   text-align: center;
 
   .is-mashing ~ ${MashOverlay} & { opacity: 1; }
@@ -529,22 +553,50 @@ export default function KudosCta({ event, isSheetContext }) {
   const sessionStartRef = useRef(0);
   const sessionUidRef = useRef(null);
 
+  const updateMashFocus = useCallback(() => {
+    const btn = btnRef.current;
+    if (!btn) return;
+    const r = btn.getBoundingClientRect();
+    const cx = r.left + r.width / 2;
+    const cy = r.top + r.height / 2;
+    const xPct = (cx / Math.max(window.innerWidth, 1)) * 100;
+    const yPct = (cy / Math.max(window.innerHeight, 1)) * 100;
+    document.body.style.setProperty('--mash-x', `${xPct.toFixed(2)}%`);
+    document.body.style.setProperty('--mash-y', `${yPct.toFixed(2)}%`);
+  }, []);
+
   useEffect(() => {
     if (isSheetContext) {
       document.body.dataset.sheetOpen = '1';
     }
     // Ensure idle state on mount
     enterIdleState();
+    updateMashFocus();
+    let raf = 0;
+    const schedule = () => {
+      if (raf) return;
+      raf = requestAnimationFrame(() => {
+        raf = 0;
+        updateMashFocus();
+      });
+    };
+    window.addEventListener('resize', schedule);
+    window.addEventListener('scroll', schedule, true);
     return () => {
+      window.removeEventListener('resize', schedule);
+      window.removeEventListener('scroll', schedule, true);
+      if (raf) cancelAnimationFrame(raf);
       if (isSheetContext) {
         delete document.body.dataset.sheetOpen;
       }
+      document.body.style.removeProperty('--mash-x');
+      document.body.style.removeProperty('--mash-y');
       // Cleanup on unmount
       if (hdPressCountRef.current > 0) enterIdleState();
       if (hdResetTimerRef.current) clearTimeout(hdResetTimerRef.current);
       if (nudgeTimerRef.current) clearTimeout(nudgeTimerRef.current);
     };
-  }, [isSheetContext]); // eslint-disable-line react-hooks/exhaustive-deps
+  }, [isSheetContext, updateMashFocus]); // eslint-disable-line react-hooks/exhaustive-deps
 
   const enterIdleState = useCallback(() => {
     const btn = btnRef.current;
@@ -573,6 +625,7 @@ export default function KudosCta({ event, isSheetContext }) {
     if (btn.classList.contains('is-saving') || btn.classList.contains('is-burning')) return;
 
     btn.classList.remove('is-idle');
+    updateMashFocus();
     mash();
 
     if (!user) {
@@ -761,7 +814,7 @@ export default function KudosCta({ event, isSheetContext }) {
         }, KUDOS_BURN_MS);
       }, KUDOS_SAVE_ANIM_MS);
     }, KUDOS_SAVE_DELAY_MS);
-  }, [mash, enterIdleState, user]);
+  }, [mash, enterIdleState, user, updateMashFocus]);
 
   return (
     <KudosRow className="kudos-row">

@@ -26,7 +26,7 @@ const MapBox = styled.div`
   }
 
   & .leaflet-tile-pane {
-    filter: brightness(0.85) saturate(0.7);
+    filter: brightness(1.0) saturate(0.85) contrast(1.05);
   }
 
   & .leaflet-control-attribution {
@@ -126,7 +126,7 @@ export function MapPicker({ value, onChange, doneTargetId }) {
         scrollWheelZoom: false,
       }).setView(center, zoom);
 
-      L.tileLayer('https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png', {
+      L.tileLayer('https://{s}.basemaps.cartocdn.com/rastertiles/voyager/{z}/{x}/{y}{r}.png', {
         subdomains: 'abcd',
         maxZoom: 19,
         attribution: '&copy; OpenStreetMap &copy; CARTO',

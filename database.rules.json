@@ -61,9 +61,11 @@
           ".write": "auth != null && (auth.token.email == 'gm@thescrambledlegs.com' || auth.token.email == 'coach@thescrambledlegs.com' || root.child('userProfiles').child(auth.uid).child('isAdmin').val() == true)"
         },
         "displayName": {
+          ".read": "auth != null",
           ".write": "auth != null && (auth.uid == $uid || auth.token.email == 'gm@thescrambledlegs.com' || auth.token.email == 'coach@thescrambledlegs.com' || root.child('userProfiles').child(auth.uid).child('isAdmin').val() == true)"
         },
         "photoURL": {
+          ".read": "auth != null",
           ".write": "auth != null && (auth.uid == $uid || auth.token.email == 'gm@thescrambledlegs.com' || auth.token.email == 'coach@thescrambledlegs.com' || root.child('userProfiles').child(auth.uid).child('isAdmin').val() == true)"
         }
       }

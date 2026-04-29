@@ -56,12 +56,23 @@ const GlobalStyle = createGlobalStyle`
     z-index: 500;
     opacity: var(--mash-energy, 0);
     background: radial-gradient(
-      ellipse 58% 42% at 50% 75%,
+      ellipse 58% 42% at var(--mash-x, 50%) var(--mash-y, 75%),
       transparent 16%,
       rgba(0,0,0,0.7) 48%,
       rgba(0,0,0,1) 92%
     );
     transition: opacity 0.45s ease;
+  }
+
+  @media (max-width: 768px) {
+    .mash-vignette {
+      background: radial-gradient(
+        ellipse 58% 42% at var(--mash-x, 50%) var(--mash-y, 75%),
+        transparent 16%,
+        rgba(0,0,0,0.56) 48%,
+        rgba(0,0,0,0.80) 92%
+      );
+    }
   }
 
   /* ── Mash flash ── */
@@ -84,11 +95,22 @@ const GlobalStyle = createGlobalStyle`
   body[data-sheet-open="1"] .mash-flash   { z-index: 2150; }
   body[data-sheet-open="1"] .mash-vignette {
     background: radial-gradient(
-      ellipse 58% 40% at 50% 88%,
+      ellipse 58% 40% at var(--mash-x, 50%) var(--mash-y, 88%),
       transparent 16%,
       rgba(0,0,0,0.70) 48%,
       rgba(0,0,0,1) 92%
     );
+  }
+
+  @media (max-width: 768px) {
+    body[data-sheet-open="1"] .mash-vignette {
+      background: radial-gradient(
+        ellipse 58% 40% at var(--mash-x, 50%) var(--mash-y, 88%),
+        transparent 16%,
+        rgba(0,0,0,0.56) 48%,
+        rgba(0,0,0,0.80) 92%
+      );
+    }
   }
 
   /* ── kudos-row stays above vignette when mashing ── */
@@ -233,7 +255,7 @@ const GlobalStyle = createGlobalStyle`
     border: 3px solid #1a1a1a;
     box-shadow: 0 0 0 2px #FFC72C, 0 0 18px rgba(255,199,44,0.8);
   }
-  .leaflet-tile-pane { filter: brightness(0.85) saturate(0.7); }
+  .leaflet-tile-pane { filter: brightness(1.0) saturate(0.85) contrast(1.05); }
   .leaflet-control-attribution { font-size: 9px !important; opacity: 0.5; }
 `;
 

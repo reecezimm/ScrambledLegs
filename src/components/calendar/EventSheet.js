@@ -1,4 +1,4 @@
-import React, { useEffect } from 'react';
+import React, { useCallback, useEffect, useState } from 'react';
 import ReactDOM from 'react-dom';
 import styled, { keyframes } from 'styled-components';
 import EventMap from './EventMap';
@@ -9,7 +9,7 @@ import KudosCta from './KudosCta';
 import RsvpToggle from './RsvpToggle';
 import EventLeaderboard from './EventLeaderboard';
 import { logEvent } from '../../services/analytics';
-import { fmtDateLong, fmtTime, weatherInRange } from '../../hooks/useEventLifecycle';
+import { fmtDateLong, fmtTime } from '../../hooks/useEventLifecycle';
 
 const fadeIn = keyframes`from { opacity: 0; } to { opacity: 1; }`;
 const sheetSlide = keyframes`from { transform: translateY(100%); } to { transform: translateY(0); }`;
@@ -200,6 +200,8 @@ const PinIcon = () => (
 
 function SheetContent({ event, onClose }) {
   const hasRl = !!event.rideLeader;
+  const [liveWeather, setLiveWeather] = useState(null);
+  const handleWeatherData = useCallback((wx) => setLiveWeather(wx), []);
 
   useEffect(() => {
     document.body.dataset.sheetOpen = '1';
@@ -233,7 +235,7 @@ function SheetContent({ event, onClose }) {
         {event.bannerUrl
           ? <BannerImg style={{ backgroundImage: `url('${event.bannerUrl}')` }} />
           : event.startLoc && (
-            <EventMap startLoc={event.startLoc} endLoc={event.endLoc} />
+            <EventMap startLoc={event.startLoc} endLoc={event.endLoc} weather={liveWeather} />
           )
         }
 
@@ -260,7 +262,7 @@ function SheetContent({ event, onClose }) {
 
           {event.description && <EventDesc className="event-desc">{event.description}</EventDesc>}
 
-          <WeatherPanel event={event} />
+          <WeatherPanel event={event} onData={handleWeatherData} />
 
           <EventActions event={event} />
 

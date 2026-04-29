@@ -1,6 +1,6 @@
 import React, { useEffect, useMemo, useState } from 'react';
 import styled from 'styled-components';
-import { ref, onValue } from 'firebase/database';
+import { ref, onValue, get, child } from 'firebase/database';
 import { database } from '../../services/firebase';
 import { useCurrentUser } from '../../services/auth';
 import { teaserCountFor } from './RsvpToggle';
@@ -155,6 +155,51 @@ const Toggle = styled.button`
   &:hover { color: #FFE66D; }
 `;
 
+const RottenAvatar = styled.div`
+  width: 30px;
+  height: 30px;
+  border-radius: 50%;
+  background: ${(p) => p.$photo
+    ? `center/cover no-repeat url('${p.$photo}')`
+    : 'linear-gradient(45deg, #5a4a3a, #7a6a5a)'};
+  filter: ${(p) => p.$photo ? 'grayscale(0.7) brightness(0.75) sepia(0.25)' : 'none'};
+  color: rgba(255,200,180,0.65);
+  font-family: 'Courier New', monospace;
+  font-weight: 700;
+  font-size: 14px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  text-transform: uppercase;
+  flex-shrink: 0;
+`;
+
+const RottenName = styled.div`
+  flex: 1;
+  min-width: 0;
+  font-family: 'Courier New', monospace;
+  font-size: 13px;
+  color: rgba(255,200,180,0.65);
+  font-weight: 500;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  font-style: italic;
+`;
+
+const RottenStat = styled.div`
+  font-family: 'Courier New', monospace;
+  font-size: 12px;
+  color: #A66;
+  font-variant-numeric: tabular-nums;
+  white-space: nowrap;
+`;
+
+const RottenEmoji = styled.span`
+  font-size: 14px;
+  filter: saturate(0.6);
+`;
+
 const AnonLine = styled.div`
   margin-top: 10px;
   padding-top: 10px;
@@ -176,6 +221,7 @@ export default function EventLeaderboard({ event }) {
   const [totals, setTotals] = useState({});
   const [showBadEggs, setShowBadEggs] = useState(false);
   const [open, setOpen] = useState(false);
+  const [profiles, setProfiles] = useState({});
 
   useEffect(() => {
     if (!event || !event.id || !user) return undefined;
@@ -209,6 +255,32 @@ export default function EventLeaderboard({ event }) {
       .sort((a, b) => b.mashes - a.mashes);
     return { crew: crewRows, badEggs: eggRows, attributedTotal: totalAttributed };
   }, [rsvps, totals]);
+
+  useEffect(() => {
+    if (!user) return;
+    const uidsToFetch = badEggs
+      .map((r) => r.uid)
+      .filter((uid) => !(uid in profiles));
+    if (uidsToFetch.length === 0) return;
+    let cancelled = false;
+    (async () => {
+      const results = {};
+      await Promise.all(uidsToFetch.map(async (uid) => {
+        try {
+          const dnSnap = await get(child(ref(database), `userProfiles/${uid}/displayName`));
+          const phSnap = await get(child(ref(database), `userProfiles/${uid}/photoURL`));
+          results[uid] = {
+            displayName: dnSnap.exists() ? dnSnap.val() : null,
+            photoURL: phSnap.exists() ? phSnap.val() : null,
+          };
+        } catch (_) {
+          results[uid] = { displayName: null, photoURL: null };
+        }
+      }));
+      if (!cancelled) setProfiles((prev) => ({ ...prev, ...results }));
+    })();
+    return () => { cancelled = true; };
+  }, [badEggs, user, profiles]);
 
   const totalHotdogs = (event && event.hotdogs) || 0;
   const anonMashes = Math.max(0, totalHotdogs - attributedTotal);
@@ -262,7 +334,7 @@ export default function EventLeaderboard({ event }) {
                   {row.displayName} {i === 0 && row.mashes > 0 && <Crown>👑</Crown>}
                 </Name>
                 <Stat>🌭 {row.mashes}</Stat>
-                <Stat style={{ color: '#6FCF97' }}>✓ RSVP'd</Stat>
+                <Stat style={{ color: '#6FCF97', fontSize: 18, fontWeight: 700 }}>✓</Stat>
               </Row>
             ))
           )}
@@ -272,17 +344,24 @@ export default function EventLeaderboard({ event }) {
               <Toggle type="button" onClick={() => setShowBadEggs((s) => !s)}>
                 {showBadEggs ? '▾' : '▸'} Bad Eggs · {badEggs.length}
               </Toggle>
-              {showBadEggs && (
-                <AnonLine>
-                  {badEggs.length} signed-in {badEggs.length === 1 ? 'rider' : 'riders'} mashed but didn't RSVP.
-                </AnonLine>
-              )}
+              {showBadEggs && badEggs.map((row) => {
+                const prof = profiles[row.uid] || {};
+                const dn = prof.displayName || row.displayName || 'Anonymous masher';
+                const photo = prof.photoURL || row.photoURL || null;
+                return (
+                  <Row key={`bad-${row.uid}`}>
+                    <RottenAvatar $photo={photo}>
+                      {!photo && initialFor(dn)}
+                    </RottenAvatar>
+                    <RottenName>{dn}</RottenName>
+                    <RottenStat>🌭 {row.mashes}</RottenStat>
+                    <RottenEmoji>🤢</RottenEmoji>
+                  </Row>
+                );
+              })}
             </>
           )}
 
-          {anonMashes > 0 && (
-            <AnonLine>(Anonymous mashes: {anonMashes})</AnonLine>
-          )}
         </>
       )}
     </Wrap>

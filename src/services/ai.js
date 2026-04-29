@@ -19,9 +19,6 @@
 import { app, database } from './firebase';
 import { ref, get, set, remove, serverTimestamp } from 'firebase/database';
 
-const SDK_UPGRADE_REQUIRED =
-  'Firebase SDK upgrade required for AI Logic — bump `firebase` to ^12.5.0 in package.json, then re-enable src/services/ai.js (see commented activation block).';
-
 const DEFAULT_MODEL = 'gemini-2.5-flash';
 const LOCK_TTL_MS = 30000;
 const POLL_INTERVAL_MS = 1000;
@@ -31,17 +28,14 @@ let _modelCache = new Map();
 let _aiInstance = null;
 
 async function _getModel(modelName) {
-  // Activation block — uncomment after firebase >= 12.5.0 is installed.
-  //
-  // const { getAI, getGenerativeModel, GoogleAIBackend } = await import('firebase/ai');
-  // if (!_aiInstance) {
-  //   _aiInstance = getAI(app, { backend: new GoogleAIBackend() });
-  // }
-  // if (!_modelCache.has(modelName)) {
-  //   _modelCache.set(modelName, getGenerativeModel(_aiInstance, { model: modelName }));
-  // }
-  // return _modelCache.get(modelName);
-  throw new Error(SDK_UPGRADE_REQUIRED);
+  const { getAI, getGenerativeModel, GoogleAIBackend } = await import('firebase/ai');
+  if (!_aiInstance) {
+    _aiInstance = getAI(app, { backend: new GoogleAIBackend() });
+  }
+  if (!_modelCache.has(modelName)) {
+    _modelCache.set(modelName, getGenerativeModel(_aiInstance, { model: modelName }));
+  }
+  return _modelCache.get(modelName);
 }
 
 function _composePrompt(prompt, data) {
