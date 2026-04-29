@@ -6,8 +6,7 @@ import RideLeaderBadge from './RideLeaderBadge';
 import WeatherPanel from './WeatherPanel';
 import EventActions from './EventActions';
 import KudosCta from './KudosCta';
-import RsvpToggle from './RsvpToggle';
-import EventLeaderboard from './EventLeaderboard';
+import RsvpCrewPanel from './RsvpCrewPanel';
 import { getStatus, STATUS_LABEL, fmtCountdown, fmtTimeSince, fmtDateLong, fmtTime } from '../../hooks/useEventLifecycle';
 
 const pulse = keyframes`
@@ -48,9 +47,20 @@ const MapHeaderOverlay = styled.div`
   right: 8px;
   z-index: 30;
   display: flex;
-  justify-content: space-between;
+  flex-wrap: wrap;
+  justify-content: flex-start;
   align-items: flex-start;
-  gap: 10px;
+  gap: 6px;
+  pointer-events: none;
+
+  & > * { pointer-events: auto; }
+`;
+
+const MapBottomOverlay = styled.div`
+  position: absolute;
+  bottom: 10px;
+  left: 10px;
+  z-index: 30;
   pointer-events: none;
 
   & > * { pointer-events: auto; }
@@ -234,12 +244,15 @@ export default function EventFeatured({ event }) {
       }
 
       <MapHeaderOverlay>
+        <WeatherPills weather={liveWeather} />
+      </MapHeaderOverlay>
+
+      <MapBottomOverlay>
         <StatusChip className="event-status-chip" data-status={status}>
           <Dot />
           <span>{statusText(event, status)}</span>
         </StatusChip>
-        <WeatherPills weather={liveWeather} />
-      </MapHeaderOverlay>
+      </MapBottomOverlay>
 
       <RideLeaderBadge rideLeader={event.rideLeader} />
 
@@ -268,9 +281,7 @@ export default function EventFeatured({ event }) {
 
         <KudosCta event={event} isSheetContext={false} />
 
-        <RsvpToggle event={event} />
-
-        <EventLeaderboard event={event} />
+        <RsvpCrewPanel event={event} />
 
         <EventActions event={event} isSheetContext={false} />
       </Body>

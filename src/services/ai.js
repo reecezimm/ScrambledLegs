@@ -97,10 +97,15 @@ async function _readCache(sanitizedKey) {
 }
 
 async function _generate(prompt, options) {
-  const model = await _getModel(options.model || DEFAULT_MODEL);
+  const modelName = options.model || DEFAULT_MODEL;
+  const t0 = Date.now();
+  console.log('[ai.gen] →', modelName, '| input chars:', (options.system || '').length, '+', String(prompt || '').length);
+  const model = await _getModel(modelName);
   const request = _buildRequest(prompt, options);
   const result = await model.generateContent(request);
-  return result.response.text();
+  const text = result.response.text();
+  console.log('[ai.gen] ←', modelName, '| output chars:', (text || '').length, '| in', Date.now() - t0, 'ms');
+  return text;
 }
 
 function _isUsableCachedValue(v) {
@@ -117,15 +122,27 @@ async function _runCached(prompt, options) {
   }
   const sanitized = _sanitizeCacheKey(cacheKey);
   const cRef = _cacheRef(sanitized);
+  console.log('[ai.cache] read', sanitized);
 
   // 1. Read existing
   let entry = await _readCache(sanitized);
+  if (entry) {
+    const ageMin = entry.generatedAt ? Math.round((Date.now() - entry.generatedAt) / 60000) : '?';
+    const fresh = _isFresh(entry, ttlMs);
+    const usable = _isUsableCachedValue(entry.value);
+    const locked = _isLocked(entry);
+    console.log('[ai.cache] entry exists | age(min):', ageMin, '| fresh:', fresh, '| usable:', usable, '| locked:', locked);
+  } else {
+    console.log('[ai.cache] no entry — fresh generation');
+  }
   if (!forceRefresh && _isFresh(entry, ttlMs) && _isUsableCachedValue(entry && entry.value)) {
+    console.log('[ai.cache] HIT — serving cached value');
     return entry.value;
   }
 
   // 2. If another tab is currently generating, wait briefly for the result.
   if (!forceRefresh && _isLocked(entry)) {
+    console.log('[ai.cache] another tab locked — polling up to', POLL_MAX_MS, 'ms');
     const start = Date.now();
     while (Date.now() - start < POLL_MAX_MS) {
       await new Promise((r) => setTimeout(r, POLL_INTERVAL_MS));
@@ -136,10 +153,12 @@ async function _runCached(prompt, options) {
         _isUsableCachedValue(polled.value) &&
         !polled.lock
       ) {
+        console.log('[ai.cache] another tab finished — using their result');
         return polled.value;
       }
       if (!_isLocked(polled)) {
         // Lock expired without a write — fall through and generate ourselves.
+        console.log('[ai.cache] lock expired — generating ourselves');
         entry = polled;
         break;
       }
@@ -147,6 +166,7 @@ async function _runCached(prompt, options) {
   }
 
   // 3. Set lock and generate.
+  console.log('[ai.cache] MISS — acquiring lock + generating');
   try {
     await set(cRef, {
       ...(entry || {}),
@@ -154,7 +174,7 @@ async function _runCached(prompt, options) {
       lockedAt: Date.now(),
     });
   } catch (_) {
-    // Lock write failed (e.g. unauthenticated) — proceed without locking.
+    console.log('[ai.cache] lock write failed (probably unauthenticated) — proceeding without lock');
   }
 
   let value;
@@ -202,6 +222,7 @@ async function _runCached(prompt, options) {
   }
 
   // 4. Persist result.
+  console.log('[ai.cache] write', sanitized, '| value chars:', (value || '').length);
   await set(cRef, {
     value,
     prompt: typeof prompt === 'string' ? prompt.slice(0, 2000) : '',

@@ -82,14 +82,14 @@ const CrownOrbit = styled.div`
 
 const Crown = styled.span`
   position: absolute;
-  top: -31px;
+  top: -27px;
   left: 50%;
   transform: translateX(-50%);
   font-size: 24px;
   animation: ${crownShimmer} 1.8s ease-in-out infinite;
 
   @media (max-width: 380px) {
-    top: -28px;
+    top: -24px;
     font-size: 22px;
   }
 `;

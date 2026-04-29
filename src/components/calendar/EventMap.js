@@ -23,7 +23,7 @@ const MapContainer = styled.div`
     z-index: 2;
   }
 
-  .leaflet-tile-pane { filter: brightness(1.0) saturate(0.85) contrast(1.05); }
+  .leaflet-tile-pane { filter: saturate(1.40) contrast(1.18) brightness(1.05); }
   .leaflet-control-attribution { font-size: 9px !important; opacity: 0.5; }
 `;
 
@@ -59,7 +59,7 @@ export default function EventMap({ startLoc, endLoc }) {
         scrollWheelZoom: false,
         dragging: false,
         tap: false,
-      }).setView([sLat, sLng], 13);
+      }).setView([sLat, sLng], 14);
 
       L.tileLayer('https://{s}.basemaps.cartocdn.com/rastertiles/voyager/{z}/{x}/{y}{r}.png', {
         subdomains: 'abcd',

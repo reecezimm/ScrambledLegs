@@ -539,9 +539,11 @@ const MashOverlay = styled.div`
   flex-direction: column;
   align-items: center;
   justify-content: flex-end;
-  gap: 6px;
-  max-width: calc(100vw - 32px);
-  width: max-content;
+  gap: 4px;
+  /* Fit within the button (button is width:100%, padded 18px each side).
+     Leaving extra slack so 1.18x burn pulse + 1.06x idle pulse don't bleed. */
+  width: calc(100% - 28px);
+  max-width: calc(100% - 28px);
   text-align: center;
 
   /* Visible during mashing/saving/burning and idle */
@@ -591,18 +593,22 @@ const MashNum = styled.span`
     letter-spacing: 0.02em;
   }
 
-  /* Burning style */
+  /* Burning style — sized so the 1.18x burnFlash scale peak still fits the button */
   .is-burning ~ ${MashOverlay} & {
-    font-size: clamp(22px, 6.5vw, 34px) !important;
+    font-size: clamp(15px, 4.6vw, 22px) !important;
     font-style: italic;
     font-weight: 700;
     color: #fff;
-    letter-spacing: 0.05em;
+    letter-spacing: 0.04em;
     text-transform: uppercase;
     white-space: normal;
     text-align: center;
     line-height: 1.15;
     animation: burnFlash 4s cubic-bezier(.34,1.56,.64,1) forwards;
+    max-width: 100%;
+    word-wrap: break-word;
+    overflow-wrap: break-word;
+    hyphens: auto;
   }
 `;
 
@@ -638,9 +644,9 @@ const MashSub = styled.span`
   font-family: 'Fredoka', sans-serif;
   font-weight: 700;
   font-style: italic;
-  font-size: 24px;
-  line-height: 1.1;
-  letter-spacing: 0.04em;
+  font-size: clamp(13px, 4vw, 19px);
+  line-height: 1.15;
+  letter-spacing: 0.03em;
   text-transform: uppercase;
   color: #FFE66D;
   text-shadow: 0 0 12px rgba(255,199,44,0.55), 0 0 24px rgba(255,107,107,0.4), 0 2px 8px rgba(0,0,0,0.8);
@@ -651,7 +657,7 @@ const MashSub = styled.span`
   word-wrap: break-word;
   overflow-wrap: break-word;
   hyphens: auto;
-  max-width: calc(100vw - 32px);
+  max-width: 100%;
   text-align: center;
 
   .is-mashing ~ ${MashOverlay} & { opacity: 1; }

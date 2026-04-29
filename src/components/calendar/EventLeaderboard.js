@@ -104,12 +104,13 @@ const RankBadge = styled.span`
 
 const LaurelSvg = styled.svg`
   position: absolute;
-  inset: -6px -8px -6px -8px;
-  width: 48px;
-  height: 44px;
+  inset: -8px -16px -8px -16px;
+  width: 64px;
+  height: 48px;
   pointer-events: none;
-  opacity: 0.4;
+  opacity: 0.85;
   z-index: 0;
+  filter: drop-shadow(0 0 4px rgba(120,200,80,0.45));
 `;
 
 const HeaderBtn = styled.button`
@@ -191,16 +192,25 @@ const Crown = styled.span`
   font-size: 14px;
 `;
 
-const TopMasherTag = styled.span`
+const TierTag = styled.span`
   font-family: 'Montserrat', sans-serif;
   font-size: 9px;
   font-weight: 700;
   letter-spacing: 0.12em;
   text-transform: uppercase;
-  color: #FFD24A;
   margin-left: 4px;
   white-space: nowrap;
+
+  &[data-medal="1"] { color: #FFD24A; }
+  &[data-medal="2"] { color: #D8D9DD; }
+  &[data-medal="3"] { color: #C98A55; }
 `;
+
+const TIER_LABEL = {
+  1: 'Top Masher',
+  2: 'Vice Masher',
+  3: 'Mash Cadet',
+};
 
 const goldShine = keyframes`
   0%, 100% { box-shadow: 0 0 8px rgba(255,210,74,0.50), 0 0 18px rgba(255,210,74,0.25), inset 0 1px 0 rgba(255,255,255,0.45); }
@@ -523,15 +533,11 @@ export default function EventLeaderboard({ event }) {
                   </AvatarWrap>
                   <NameWrap className="crew-name">
                     <Name>{row.displayName}</Name>
-                    {i === 0 && row.mashes > 0 && (
-                      <>
-                        <Crown>👑</Crown>
-                        <TopMasherTag>Top Masher</TopMasherTag>
-                      </>
+                    {i < 3 && row.mashes > 0 && (
+                      <TierTag data-medal={medal}>{TIER_LABEL[i + 1]}</TierTag>
                     )}
                   </NameWrap>
                   <Stat>🌭 {row.mashes}</Stat>
-                  <Stat style={{ color: '#6FCF97', fontSize: 18, fontWeight: 700 }}>✓</Stat>
                 </Row>
               );
             })
@@ -554,9 +560,8 @@ export default function EventLeaderboard({ event }) {
                         <RottenAvatar $photo={photo}>
                           {!photo && initialFor(dn)}
                         </RottenAvatar>
-                        <RottenName>{dn}</RottenName>
+                        <RottenName>🤢 {dn}</RottenName>
                         <RottenStat>🌭 {row.mashes}</RottenStat>
-                        <RottenEmoji>🤢</RottenEmoji>
                       </Row>
                     );
                   })}

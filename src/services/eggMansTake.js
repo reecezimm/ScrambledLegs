@@ -103,10 +103,10 @@ function ttlForProximity(eventStart) {
 // Human-readable proximity label for the AI.
 function proximityLabel(eventStart) {
   if (!eventStart) return 'unknown';
-  const ms = eventStart - Date.now();
-  if (-ms > ARCHIVE_AFTER_MS) {
+  if (isArchived(eventStart)) {
     return "the ride is IN THE BOOKS — it happened. Recap mood: who showed up, who survived, who flaked. They did the thing. Or they didn't. Either way, it's history. You suffered. They suffered. Talk about it like a war story.";
   }
+  const ms = eventStart - Date.now();
   if (ms < -2 * 60 * 60 * 1000) return 'just wrapped — post-ride beers vibe, recovery talk';
   if (ms < 0) return 'happening RIGHT NOW — currently in progress';
   const min = Math.floor(ms / 60000);
@@ -238,11 +238,19 @@ function _buildCacheKey({ event, rsvpedUsers, weather }) {
 const USER_TRIGGER = 'Generate Eggman\'s take for this ride right now. Follow the system instructions exactly.';
 
 export async function getEggMansTake({ event, rsvpedUsers, weather, forceRefresh = false } = {}) {
-  if (!event || !event.id) return null;
+  if (!event || !event.id) {
+    console.log('[eggman] skip — no event.id');
+    return null;
+  }
+  const t0 = Date.now();
+  console.log('[eggman] →', event.id, '|', (rsvpedUsers || []).length, 'RSVPs |', weather ? 'wx ✓' : 'wx ✗', forceRefresh ? '| forceRefresh' : '');
   try {
     const systemPrompt = buildSystemPrompt({ event, rsvpedUsers, weather });
     const cacheKey = _buildCacheKey({ event, rsvpedUsers, weather });
+    const archived = isArchived(event.start);
+    const proxBucket = proximityBucket(event.start);
     const ttlMs = ttlForProximity(event.start);
+    console.log('[eggman]   cacheKey:', cacheKey, '| proximity:', proxBucket, '| archived:', archived, '| TTL(min):', Math.round(ttlMs / 60000));
     const text = await runPrompt(USER_TRIGGER, {
       system: systemPrompt,
       cacheKey,
@@ -253,16 +261,13 @@ export async function getEggMansTake({ event, rsvpedUsers, weather, forceRefresh
       forceRefresh,
     });
     if (!text || typeof text !== 'string' || !text.trim()) {
-      if (typeof console !== 'undefined' && console.warn) {
-        console.warn('[eggMansTake] empty/non-string result for', event.id, 'cacheKey=', cacheKey);
-      }
+      console.warn('[eggman] ✗ empty/non-string result for', event.id, '| cacheKey=', cacheKey, '| in', Date.now() - t0, 'ms');
       return null;
     }
+    console.log('[eggman] ✓', event.id, '| chars:', text.length, '| in', Date.now() - t0, 'ms |', text.slice(0, 60).replace(/\n/g, ' '), '…');
     return text.trim();
   } catch (err) {
-    if (typeof console !== 'undefined' && console.warn) {
-      console.warn('[eggMansTake] generation failed for', event && event.id, ':', err && (err.message || err));
-    }
+    console.warn('[eggman] ✗ failed for', event && event.id, '| in', Date.now() - t0, 'ms |', err && (err.message || err));
     return null;
   }
 }

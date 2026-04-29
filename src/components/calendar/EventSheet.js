@@ -7,8 +7,7 @@ import RideLeaderBadge from './RideLeaderBadge';
 import WeatherPanel from './WeatherPanel';
 import EventActions from './EventActions';
 import KudosCta from './KudosCta';
-import RsvpToggle from './RsvpToggle';
-import EventLeaderboard from './EventLeaderboard';
+import RsvpCrewPanel from './RsvpCrewPanel';
 import { logEvent } from '../../services/analytics';
 import { fmtDateLong, fmtTime, getStatus, STATUS_LABEL, fmtCountdown, fmtTimeSince } from '../../hooks/useEventLifecycle';
 
@@ -121,11 +120,21 @@ const MapHeaderOverlay = styled.div`
   right: 8px;
   z-index: 30;
   display: flex;
-  justify-content: space-between;
+  flex-wrap: wrap;
+  justify-content: flex-start;
   align-items: flex-start;
-  gap: 10px;
+  gap: 6px;
   pointer-events: none;
 
+  & > * { pointer-events: auto; }
+`;
+
+const MapBottomOverlay = styled.div`
+  position: absolute;
+  bottom: 10px;
+  left: 10px;
+  z-index: 30;
+  pointer-events: none;
   & > * { pointer-events: auto; }
 `;
 
@@ -314,12 +323,15 @@ function SheetContent({ event, onClose }) {
         }
 
         <MapHeaderOverlay>
+          <WeatherPills weather={liveWeather} />
+        </MapHeaderOverlay>
+
+        <MapBottomOverlay>
           <SheetStatusChip data-status={getStatus(event)}>
             <SheetDot />
             <span>{sheetStatusText(event, getStatus(event))}</span>
           </SheetStatusChip>
-          <WeatherPills weather={liveWeather} />
-        </MapHeaderOverlay>
+        </MapBottomOverlay>
 
         <RideLeaderBadge rideLeader={event.rideLeader} />
 
@@ -348,9 +360,7 @@ function SheetContent({ event, onClose }) {
 
           <KudosCta event={event} isSheetContext={true} />
 
-          <RsvpToggle event={event} />
-
-          <EventLeaderboard event={event} />
+          <RsvpCrewPanel event={event} />
 
           <EventActions event={event} isSheetContext={true} />
         </Body>
