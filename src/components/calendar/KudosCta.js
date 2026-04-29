@@ -514,9 +514,18 @@ const CtaTop = styled.div`
   }
 `;
 
+const iconFade = keyframes`
+  0%   { opacity: 0; transform: scale(0.85); }
+  18%  { opacity: 1; transform: scale(1); }
+  82%  { opacity: 1; transform: scale(1); }
+  100% { opacity: 0; transform: scale(0.85); }
+`;
+
 const CtaEmoji = styled.span`
   font-size: 30px;
   line-height: 1;
+  display: inline-block;
+  animation: ${iconFade} 2.5s ease-in-out infinite;
 
   ${HdCta}.is-idle & { font-size: 17px; }
 `;
@@ -688,10 +697,20 @@ const MashSub = styled.span`
 `;
 
 // ─── Component ────────────────────────────────────────────────────────────────
+const MASH_ICONS = ['🌭', '🥚', '🚴'];
+
 export default function KudosCta({ event, isSheetContext }) {
   const { displayCount, mash } = useEventKudos(event.id, event.hotdogs);
   const { user } = useCurrentUser();
   const [showNudge, setShowNudge] = useState(false);
+  const [iconIdx, setIconIdx] = useState(0);
+
+  useEffect(() => {
+    const id = setInterval(() => {
+      setIconIdx((i) => (i + 1) % MASH_ICONS.length);
+    }, 2500);
+    return () => clearInterval(id);
+  }, []);
   const nudgeTimerRef = useRef(null);
   const anonMashCountRef = useRef(0);
   const btnRef = useRef(null);
@@ -996,7 +1015,7 @@ export default function KudosCta({ event, isSheetContext }) {
         type="button"
       >
         <CtaTop className="hd-cta-top">
-          <CtaEmoji className="hd-cta-emoji">🌭</CtaEmoji>
+          <CtaEmoji className="hd-cta-emoji">{MASH_ICONS[iconIdx]}</CtaEmoji>
           <CtaCount className="hd-cta-count">{fmtCount(displayCount)}</CtaCount>
         </CtaTop>
         <CtaText className="hd-cta-text">Mash me</CtaText>

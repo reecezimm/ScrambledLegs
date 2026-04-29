@@ -23,7 +23,7 @@ const MapContainer = styled.div`
     z-index: 2;
   }
 
-  .leaflet-tile-pane { filter: saturate(1.40) contrast(1.18) brightness(1.05); }
+  /* No filter — CartoDB Voyager is designed to be readable at native colors. */
   .leaflet-control-attribution { font-size: 9px !important; opacity: 0.5; }
 `;
 
