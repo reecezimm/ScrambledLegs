@@ -187,7 +187,9 @@ export async function clearCache(cacheKey) {
   await remove(ref(database, 'aiCache'));
 }
 
-if (typeof window !== 'undefined' && process.env.NODE_ENV !== 'production') {
+// Exposed in production too — the AI calls are auth-bound via Firebase App
+// config (apiKey is public anyway), and console access lets admins debug.
+if (typeof window !== 'undefined') {
   window.__sl_ai = { runPrompt, streamPrompt, getCachedPrompt, clearCache };
 }
 
