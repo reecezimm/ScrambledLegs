@@ -88,11 +88,44 @@ const Loading = styled.div`
   animation: ${pulse} 1.4s ease-in-out infinite;
 `;
 
+const ToggleBtn = styled.button`
+  margin-top: 8px;
+  margin-left: 14px;
+  background: none;
+  border: none;
+  padding: 4px 0;
+  font-family: 'Montserrat', sans-serif;
+  font-size: 10px;
+  font-weight: 700;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+  color: #FFC72C;
+  cursor: pointer;
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+
+  &:hover { color: #FFE66D; }
+`;
+
+function splitFirstTwoSentences(text) {
+  if (!text) return { preview: '', rest: '' };
+  // Match end of first 2 sentences. Look for ". " or "! " or "? " endings.
+  const re = /([^.!?]+[.!?]+\s+){2}/;
+  const m = text.match(re);
+  if (!m) return { preview: text, rest: '' };
+  const preview = m[0].trim();
+  const rest = text.slice(m[0].length).trim();
+  if (!rest) return { preview, rest: '' };
+  return { preview, rest };
+}
+
 export default function EggMansTake({ event, weather }) {
   const [text, setText] = useState(null);
   const [loading, setLoading] = useState(false);
   const [rsvps, setRsvps] = useState({});
   const [totals, setTotals] = useState({});
+  const [expanded, setExpanded] = useState(false);
 
   const eventId = event && event.id;
 
@@ -140,6 +173,9 @@ export default function EggMansTake({ event, weather }) {
   if (!event) return null;
   if (!loading && !text) return null;
 
+  const { preview, rest } = splitFirstTwoSentences(text || '');
+  const hasMore = !!rest;
+
   return (
     <Box>
       <Header>
@@ -149,7 +185,16 @@ export default function EggMansTake({ event, weather }) {
       {loading && !text ? (
         <Loading>Eggman is thinking…</Loading>
       ) : (
-        <Quote>{text}</Quote>
+        <>
+          <Quote>
+            {expanded || !hasMore ? text : `${preview}…`}
+          </Quote>
+          {hasMore && (
+            <ToggleBtn type="button" onClick={() => setExpanded((e) => !e)}>
+              {expanded ? '▴ Show less' : '▾ Read more'}
+            </ToggleBtn>
+          )}
+        </>
       )}
     </Box>
   );

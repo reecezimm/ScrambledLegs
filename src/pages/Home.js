@@ -578,19 +578,21 @@ function Home() {
                 />
               </InputGroup>
 
-              <InputGroup>
-                <InputLabel htmlFor="password">Password</InputLabel>
-                <Input
-                  id="password"
-                  type="password"
-                  value={password}
-                  onChange={(e) => setPassword(e.target.value)}
-                  placeholder="Choose a password (6+ characters)"
-                  autoComplete="new-password"
-                  required
-                  minLength={6}
-                />
-              </InputGroup>
+              {name.trim() && email.trim() && (
+                <InputGroup>
+                  <InputLabel htmlFor="password">Gotcha — now choose a password</InputLabel>
+                  <Input
+                    id="password"
+                    type="password"
+                    value={password}
+                    onChange={(e) => setPassword(e.target.value)}
+                    placeholder="6+ characters"
+                    autoComplete="new-password"
+                    required
+                    minLength={6}
+                  />
+                </InputGroup>
+              )}
 
               {signupError && (
                 <div style={{

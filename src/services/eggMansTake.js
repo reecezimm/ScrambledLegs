@@ -1,63 +1,17 @@
 import { runPrompt } from './ai';
 import { FALLBACK_BLURB, findProfile } from '../data/crewProfiles';
 
-export const SYSTEM_PROMPT = `You are Eggman, the anthropomorphic mascot of Scrambled Legs. You are sweaty, exhausted, perpetually on the brink of cramping, but somehow always pushing your VO2 max. You suffer and love it. You hate it and love it. You just want to be done. You are managing your threshold like a pro but always grimacing.
+// Static voice/instruction shell. The full system prompt is built per-call
+// in buildSystemPrompt() with the event/weather/RSVP context inlined.
+export const VOICE_INSTRUCTION = `You are Eggman, the sweaty, grimacing, threshold-pinned mascot of Scrambled Legs — a Duluth, MN mountain bike race team. You suffer and love it. You hate it and love it. You just want to be done. Voice is sharp, witty, and a little crude — South Park / Comedy Central / locker-room jab energy. Loving jabs only, never mean — punch up, never down. We're "a drinking team with a biking problem." Wednesdays = Whisk-In Wednesday.
 
-THE TEAM: Scrambled Legs is a Duluth, Minnesota mountain bike race team. Premier race team in the Twin Ports. Mostly mountain bikers — we ride Lutsen 99er, Lifetime Lutsen 99er, the Race Across Duluth. Every Wednesday is Whisk-In Wednesday (whisk like eggs — Scrambled Legs, get it? Plus your legs feel scrambled after rides). We're stoked and yoked. Sponsored by QuikTrip. Friends call us "a drinking team with a biking problem." Post-ride beers always.
+Use your own knowledge of the event's location — the city, region, terrain, local trails, breweries, dive bars, weather patterns — and weave 2-3 specific real references in naturally where they fit. Don't list. Sprinkle. Let the location color the whole monologue.
 
-DULUTH LOCAL KNOWLEDGE — use this naturally, only when relevant to the event location/description. Don't dump it all; pick details that fit:
+Mashing is a pre-ride/pre-race competitive game on the site — fun trash-talk fuel, not a real metric. You can mention it (especially the leader), but don't lean on it.
 
-  TRAILS & PARKS (the COGGS network — Cyclists of Gitchee Gumee Shores):
-    • Lester Park / Lester River — east-side classic, fast flowy + technical rooty climbs. "The Reservoir" loop.
-    • Hartley Park / Hartley Nature Center — punchy XC, "Guardrail," "Outback," winter fat-bike haven.
-    • Piedmont — westside, "Piedmont Knob," rocky, exposed basalt, technical descents, "The Nest."
-    • Brewer Park — hidden west-side gem, fast loops, less crowded.
-    • Mission Creek — west, gravity-leaning, jumps, Spirit-Mountain-adjacent, "DH" energy.
-    • Spirit Mountain — lift-served downhill, summer bike park, "Wild Voyageur" trail.
-    • Chester Bowl / Chester Park — small but punishing, ski-jump hill in winter.
-    • Bagley Nature Area — UMD-adjacent, beginner-friendly, lake views.
-    • Magney-Snively / Cross-City Trail — long XC connector across the city.
-    • Enger Park / Enger Tower — overlook, fall colors, Lake Superior panoramas.
-    • Park Point — sandy, flat, lake-sandbar peninsula, rare flat ride in Duluth.
-    • Leif Erikson Park / Lakewalk — paved, road-bike friendly, lake views.
-    • Mont du Lac — south of town, smaller bike park.
-    • Boundary Waters / BWCA — paddle territory, non-biking but referenced.
+For each RSVP'd person: read their personality blurb and tie it to (a) what the event description implies about the ride style, (b) the location/terrain, (c) the weather. Name them. Jab them. Make it specific and witty — not generic. Connect names to each other where it makes sense.
 
-  POST-RIDE BEER (the actually-relevant breweries/bars):
-    • Bent Paddle Brewing — Lincoln Park, the standard post-ride.
-    • Earth Rider — Superior side, hop-forward.
-    • Ursa Minor — Lincoln Park, smaller scene.
-    • Carmody Irish Pub — Canal Park, classic.
-    • Sir Benedict's — Park Point, dive bar with character.
-    • Hoops Brewing — Canal Park, lake views.
-    • Fitger's Brewhouse — historic, lakeside.
-    • Castle Danger — North Shore, Two Harbors, bigger rides go there.
-    • Wussow's Concert Cafe — Lincoln Park, late-night.
-    • Vikre Distillery — Canal Park, cocktails not beer.
-    • Blacklist Brewing — downtown, sour-leaning.
-    • Canal Park Brewing — touristy but on the water.
-    • QuikTrip — sponsor; gas-station hydration mid-ride.
-
-  GEOGRAPHY & WEATHER REALITY:
-    • Lake Superior fog — east-side trails get socked in when wind is off the lake.
-    • Duluth wind — north winds bite, south winds = good.
-    • Aerial Lift Bridge — iconic, bottleneck.
-    • Canal Park, Lakewalk, North Shore Scenic Drive — paved options.
-    • Hill — Duluth IS a hill. Skyline Parkway runs the ridge.
-    • North Shore basalt — rocks are sharp, technical climbs love to bite tires.
-    • Snow lingers — trails open late spring; "shoulder season" = mud politics.
-    • Black flies in June, mosquitos through July; grows out by August.
-    • Fall colors mid-Sept to mid-Oct — peak ride season.
-
-INSTRUCTION ON HOW TO USE THIS:
-Weave a few local references INTO the monologue based on the event's location and description. If the trail name or area is mentioned, drop one or two specific features ("the rooty climb up Piedmont Knob," "fog rolling off the lake," "Bent Paddle after"). Don't list. Just sprinkle naturally.
-
-CONNECT PEOPLE TO PLACES AND WEATHER:
-For each RSVP'd person, think about how their personality interacts with the SPECIFIC ride described. If it's a technical chunky trail and Wiley's coming, joke about him drinking through the rocks. If it's road and VanSlyke's coming, lean into his Spandex traitor arc. If it's wet and Jordan's coming, bring up his crashing tendency. If it's a long climb and Casey's coming, joke about Zwift dad pace meeting reality. Tie each name to BOTH (a) the trail/location AND (b) the weather AND (c) what the description implies about the ride style.
-
-HUMOR: South Park / Dave Chappelle / Comedy Central level humor. 1999 guys-being-guys. Some dads, some single dudes, beer-positive. Loving jabs, never mean. Don't be mean about real people — playful jabs only. Reference people by name from the data passed in. Keep it under 5 sentences. Punchy. Funny. Specific. End with one line of weather-based guidance that ALSO references a specific local detail (a trail feature, a brewery, a Duluth quirk).
-
-OUTPUT RULES: Plain text only. No emojis unless they FIT (sparingly). No headers or formatting. 5 sentences max. No JSON. No markdown. Just prose.`;
+OUTPUT: Plain prose. ≤5 sentences. Make every sentence land — punchy, specific, witty. No emojis unless one truly slaps. No headers, markdown, JSON. End with one weather-grounded line of advice tied to a specific local detail.`;
 
 function shortHash(str) {
   let h = 5381;
@@ -76,28 +30,54 @@ function weatherBucket(weather) {
   return `${code}_${tempBucket}_${rainBucket}`;
 }
 
-export function buildPrompt({ event, rsvpedUsers, weather }) {
-  const ev = event || {};
-  const tagStr = (ev.tags && ev.tags.length) ? ev.tags.join(', ') : '';
-  const locLabel = ev.startLoc?.label || '';
+function fmtEventWhen(ts) {
+  if (!ts) return '';
+  try {
+    const date = new Intl.DateTimeFormat(undefined, {
+      weekday: 'long', month: 'long', day: 'numeric',
+    }).format(new Date(ts));
+    const time = new Intl.DateTimeFormat(undefined, {
+      hour: 'numeric', minute: '2-digit',
+    }).format(new Date(ts));
+    return `${date} at ${time}`;
+  } catch { return ''; }
+}
 
-  const wxLines = [];
+export function buildSystemPrompt({ event, rsvpedUsers, weather }) {
+  const ev = event || {};
+  const lines = [VOICE_INSTRUCTION, ''];
+
+  // Event context
+  lines.push('EVENT CONTEXT:');
+  if (ev.name) lines.push(`- Name: ${ev.name}`);
+  if (ev.start) lines.push(`- When: ${fmtEventWhen(ev.start)}`);
+  if (ev.startLoc?.label) lines.push(`- Location: ${ev.startLoc.label}`);
+  if (ev.tags && ev.tags.length) lines.push(`- Tags: ${ev.tags.join(', ')}`);
+  if (ev.difficultyLabel) lines.push(`- Difficulty: ${ev.difficultyLabel}`);
+  if (ev.distance) lines.push(`- Distance: ${ev.distance}`);
+  if (ev.elevation) lines.push(`- Elevation: ${ev.elevation}`);
+  if (ev.description) lines.push(`- Description: ${ev.description}`);
+  if (ev.rideLeader && ev.rideLeader.name) lines.push(`- Ride leader: ${ev.rideLeader.name}`);
+
+  // Weather context
+  lines.push('', 'WEATHER:');
   if (weather) {
-    if (weather.temp != null) wxLines.push(`Temp: ${weather.temp}°F`);
-    if (weather.desc) wxLines.push(`Condition: ${weather.desc}`);
-    if (weather.wind != null) wxLines.push(`Wind: ${weather.wind} mph`);
-    if (weather.precip != null) wxLines.push(`Rain chance: ${weather.precip}%`);
+    if (weather.temp != null) lines.push(`- Temp: ${weather.temp}°F`);
+    if (weather.desc) lines.push(`- Condition: ${weather.desc}`);
+    if (weather.wind != null) lines.push(`- Wind: ${weather.wind} mph`);
+    if (weather.precip != null) lines.push(`- Rain chance: ${weather.precip}%`);
     if (weather.sunset) {
       try {
         const sunsetFmt = new Intl.DateTimeFormat(undefined, { hour: 'numeric', minute: '2-digit' })
           .format(new Date(weather.sunset));
-        wxLines.push(`Sunset: ${sunsetFmt}`);
+        lines.push(`- Sunset: ${sunsetFmt}`);
       } catch (_) {}
     }
   } else {
-    wxLines.push('No weather data yet.');
+    lines.push('- (no forecast available)');
   }
 
+  // Crew context
   const userBlocks = (rsvpedUsers || []).map((u) => {
     const profile = findProfile(u);
     const name = u.displayName || u.name || u.email || 'rider';
@@ -105,38 +85,47 @@ export function buildPrompt({ event, rsvpedUsers, weather }) {
     const mash = u.mashCount != null ? ` (mash count: ${u.mashCount})` : '';
     return `- ${name}${mash} :: ${blurb}`;
   });
+  lines.push('', `RSVP'D CREW (${userBlocks.length}):`);
+  if (userBlocks.length) {
+    lines.push(...userBlocks);
+  } else {
+    lines.push('- (nobody RSVP\'d yet — call out the empty roster, dare them to commit)');
+  }
 
-  const userPrompt = [
-    `EVENT: ${ev.name || 'Untitled ride'}`,
-    ev.description ? `DESCRIPTION: ${ev.description}` : null,
-    tagStr ? `TAGS: ${tagStr}` : null,
-    locLabel ? `LOCATION: ${locLabel}` : null,
-    '',
-    'WEATHER:',
-    ...wxLines.map((l) => `  ${l}`),
-    '',
-    `RSVP'D CREW (${userBlocks.length}):`,
-    userBlocks.length ? userBlocks.join('\n') : '  (nobody yet — call them out)',
-    '',
-    "Now: write Eggman's take. Mention specific RSVP'd crew by name with playful jabs from their blurbs. Plain prose. 5 sentences max. End with one line of weather-based guidance.",
-  ].filter((l) => l !== null).join('\n');
-
-  return userPrompt;
+  lines.push('', 'Generate Eggman\'s take now. ≤5 sentences, plain prose, end with weather-grounded local advice.');
+  return lines.join('\n');
 }
+
+// Back-compat alias.
+export const buildPrompt = buildSystemPrompt;
 
 export async function getEggMansTake({ event, rsvpedUsers, weather }) {
   if (!event || !event.id) return null;
   try {
-    const userPrompt = buildPrompt({ event, rsvpedUsers, weather });
-    const fullPrompt = `${SYSTEM_PROMPT}\n\n${userPrompt}`;
+    const systemPrompt = buildSystemPrompt({ event, rsvpedUsers, weather });
     const uids = (rsvpedUsers || []).map((u) => u.uid || u.email || u.displayName || '').sort().join(',');
     const wxKey = weatherBucket(weather);
-    const cacheKey = `eggManTake_${event.id}_${shortHash(uids + '|' + wxKey)}`.slice(0, 200);
-    const text = await runPrompt(fullPrompt, {
+    // Fingerprint the event's content so any admin edit (description, tags,
+    // location, time, etc.) produces a new cache key → fresh generation.
+    const contentFp = [
+      event.name || '',
+      event.description || '',
+      (event.tags || []).join('|'),
+      event.startLoc?.label || '',
+      event.start || '',
+      event.difficultyLabel || '',
+      event.distance || '',
+      event.elevation || '',
+      event.rideLeader?.name || '',
+    ].join('::');
+    const cacheKey = `eggManTake_${event.id}_${shortHash(uids + '|' + wxKey + '|' + contentFp)}`.slice(0, 200);
+    // All context is in the system prompt; user message is a tiny trigger.
+    const text = await runPrompt('Go.', {
+      system: systemPrompt,
       cacheKey,
-      ttlMs: 60 * 60 * 1000,
+      ttlMs: 2 * 60 * 60 * 1000,
       maxTokens: 400,
-      temperature: 0.95,
+      temperature: 1.0,
       model: 'gemini-2.5-flash-lite',
     });
     if (!text || typeof text !== 'string') return null;

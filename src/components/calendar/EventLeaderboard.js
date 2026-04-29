@@ -116,6 +116,53 @@ const Crown = styled.span`
   font-size: 14px;
 `;
 
+const TopMasherTag = styled.span`
+  font-family: 'Montserrat', sans-serif;
+  font-size: 9px;
+  font-weight: 700;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+  color: #FFD24A;
+  margin-left: 4px;
+  white-space: nowrap;
+`;
+
+const Rank = styled.div`
+  width: 26px;
+  height: 26px;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-family: 'Fredoka', sans-serif;
+  font-weight: 700;
+  font-size: 12px;
+  flex-shrink: 0;
+  background: rgba(255,255,255,0.06);
+  border: 1px solid rgba(255,255,255,0.10);
+  color: rgba(255,255,255,0.65);
+  font-variant-numeric: tabular-nums;
+
+  &[data-medal="1"] {
+    background: linear-gradient(135deg, #FFD24A, #C99417);
+    border-color: rgba(255,210,74,0.85);
+    color: #1a1a1a;
+    box-shadow: 0 0 10px rgba(255,210,74,0.45);
+  }
+  &[data-medal="2"] {
+    background: linear-gradient(135deg, #E0E0E5, #9FA0A4);
+    border-color: rgba(224,224,229,0.85);
+    color: #1a1a1a;
+    box-shadow: 0 0 8px rgba(224,224,229,0.35);
+  }
+  &[data-medal="3"] {
+    background: linear-gradient(135deg, #D89060, #8B5A2B);
+    border-color: rgba(216,144,96,0.85);
+    color: #1a1a1a;
+    box-shadow: 0 0 8px rgba(216,144,96,0.35);
+  }
+`;
+
 const Empty = styled.div`
   padding: 14px 4px;
   font-size: 12px;
@@ -327,11 +374,17 @@ export default function EventLeaderboard({ event }) {
           ) : (
             crew.map((row, i) => (
               <Row key={row.uid}>
+                <Rank data-medal={i < 3 ? String(i + 1) : undefined}>{i + 1}</Rank>
                 <Avatar $photo={row.photoURL}>
                   {!row.photoURL && initialFor(row.displayName)}
                 </Avatar>
                 <Name>
-                  {row.displayName} {i === 0 && row.mashes > 0 && <Crown>👑</Crown>}
+                  {row.displayName} {i === 0 && row.mashes > 0 && (
+                    <>
+                      <Crown>👑</Crown>
+                      <TopMasherTag>Top Masher</TopMasherTag>
+                    </>
+                  )}
                 </Name>
                 <Stat>🌭 {row.mashes}</Stat>
                 <Stat style={{ color: '#6FCF97', fontSize: 18, fontWeight: 700 }}>✓</Stat>
