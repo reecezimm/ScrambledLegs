@@ -282,6 +282,17 @@ export const MASH_TEXT_CREW = [
   "Brent has left the chat. He was never spiritually present.",
   "Brent hates this. You love it.",
   "Not Brent's fun — yours!",
+  // Alexa Mattson
+  "Alexa is on foot and already passed you. She runs marathons. You're on a bike.",
+  "Alexa has to get home to feed her dog. She's still ahead of you.",
+  "Alexa left to feed her dog, came back, and is still beating you.",
+  "Alexa stopped to help a homeless man tie his shoes. She's back. You're behind.",
+  "Alexa is telling you a full story about her dog right now. Mash through it.",
+  "Alexa trains for Grandma's Marathon. She does this for fun. What's your excuse?",
+  "Alexa just lapped you on foot. Mountain biking is her new hobby. This is week six.",
+  "Alexa's talking your ear off and still pulling away. Stop listening. Start mashing.",
+  "Alexa stopped, helped a stranger, called her mom, walked her dog, and is still faster than you.",
+  "Six weeks on a mountain bike and Alexa is doing this to you. Embarrassing.",
   // Alex Birno
   "Birno is on the back nine right now and thriving",
   "Alex drove his snowmobile to the golf course. In July.",

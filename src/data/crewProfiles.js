@@ -75,7 +75,7 @@ export const CREW_PROFILES = [
     name: 'Alexa Mattson',
     aliases: [],
     emails: ['alexamattson2@gmail.com'],
-    blurb: "Alexa is a runner first — Grandma's Marathon is her thing and she takes it seriously. New to mountain biking but already crushing it, which is annoying. Genuinely one of the best hangs on the team — super friendly, everyone likes her immediately. Loves her dog and her family more than she loves you, which is saying something.",
+    blurb: "Alexa is a runner first — Grandma's Marathon is her thing and she takes it seriously. New to mountain biking but already crushing it, which is annoying. Genuinely one of the best hangs on the team — super friendly, everyone likes her immediately. Loves her dog and her family more than she loves you, which is saying something. Her post-ride beverage of choice is a THC sparkling drink — the chill alternative crowd, fully committed.",
   },
   {
     name: 'Ashley Zimm',
