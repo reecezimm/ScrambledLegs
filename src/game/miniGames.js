@@ -290,6 +290,68 @@ const WARNING_AT_PRESS = 25;
 const FIRST_GAME_AT    = 30;
 const GAP_PRESSES      = 10;
 
+// ── Session-scoped difficulty progression ──────────────────────────────────
+// Each time a mini-game runs in the current session, the NEXT time the same
+// mini-game appears it gets harder. playCount is 0 for the first play of a
+// session, 1 for the second, etc. Scaling formula: factor = base × mult^playCount.
+// Counters are in-memory only and reset() is called when the session ends.
+//
+// Per-id rules (all multiplicative on top of the canonical config so existing
+// tuning is preserved at playCount=0):
+//   golden-egg     → flightDurMs × 0.95^playCount    (5% faster each play)
+//   twilight       → speedMult   = 1.05^playCount    (5% faster each play)
+//   mash-gauntlet  → target += 2 * playCount         (25 → 27 → 29 → …)
+//   pig-boy-attack → maxConcurrent += 2 * playCount  (initialSpawnCount mirrors)
+//   pong           → baseSpeedMult = 1.10^playCount  (10% faster each play)
+//
+// Returns a NEW mini-game object — the canonical exports are not mutated.
+function scaleDifficulty(mg, playCount) {
+  if (!playCount || playCount <= 0) return mg;
+  // Find the play phase (only one per mini-game in the current schema).
+  const phases = mg.phases.map((phase) => {
+    if (phase.kind !== 'play') return phase;
+    const cfg = { ...(phase.config || {}) };
+    switch (mg.id) {
+      case 'golden-egg': {
+        // flightDurMs is [min, max] in ms — multiply both by 0.95^playCount.
+        const factor = Math.pow(0.95, playCount);
+        if (Array.isArray(cfg.flightDurMs)) {
+          cfg.flightDurMs = [
+            Math.max(50, Math.round(cfg.flightDurMs[0] * factor)),
+            Math.max(50, Math.round(cfg.flightDurMs[1] * factor)),
+          ];
+        }
+        break;
+      }
+      case 'twilight': {
+        cfg.speedMult = Math.pow(1.05, playCount);
+        break;
+      }
+      case 'mash-gauntlet': {
+        const baseTarget = typeof cfg.target === 'number' ? cfg.target : 25;
+        cfg.target = baseTarget + 2 * playCount;
+        break;
+      }
+      case 'pig-boy-attack': {
+        const baseConc = typeof cfg.maxConcurrent === 'number' ? cfg.maxConcurrent : 3;
+        cfg.maxConcurrent = baseConc + 2 * playCount;
+        // initialSpawnCount tracks the rule "concurrent pigs" 2 → 4 → 6 → …
+        const baseInit = typeof cfg.initialSpawnCount === 'number' ? cfg.initialSpawnCount : 2;
+        cfg.initialSpawnCount = baseInit + 2 * playCount;
+        break;
+      }
+      case 'pong': {
+        cfg.baseSpeedMult = Math.pow(1.10, playCount);
+        break;
+      }
+      default:
+        break;
+    }
+    return { ...phase, config: cfg };
+  });
+  return { ...mg, phases };
+}
+
 export function createInfiniteSchedule({
   preamble = PREAMBLE,
   pool = ALL_MINI_GAMES,
@@ -299,6 +361,7 @@ export function createInfiniteSchedule({
 } = {}) {
   let yieldedCount = 0;
   let lastId = null;
+  const playCounts = new Map();
   return {
     next(currentPressCount /* , currentSessionMs */) {
       let pick;
@@ -322,12 +385,22 @@ export function createInfiniteSchedule({
         startAt = currentPressCount + gapPresses;
       }
       lastId = pick.id;
+      const isPreamble = yieldedCount === 0;
       yieldedCount++;
-      return { ...pick, startAtPress: startAt };
+      if (isPreamble) {
+        // Preamble has no play phase / no difficulty — skip scaling + log.
+        return { ...pick, startAtPress: startAt };
+      }
+      const playCount = playCounts.get(pick.id) || 0;
+      playCounts.set(pick.id, playCount + 1);
+      const scaled = scaleDifficulty(pick, playCount);
+      console.log(`[mg] strategy yields "${pick.id}" startAtPress=${startAt} playCount=${playCount} (scaled)`);
+      return { ...scaled, startAtPress: startAt };
     },
     reset() {
       yieldedCount = 0;
       lastId = null;
+      playCounts.clear();
     },
   };
 }

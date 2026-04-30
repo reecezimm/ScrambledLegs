@@ -42,6 +42,10 @@ const twilight = {
     let totalScore = 0;
     let spawnedCount = 0;
     let hitCount = 0;
+    // Session-scoped difficulty: 1.0 default; 1.05^playCount per session.
+    const speedMult = (ctx.config && typeof ctx.config.speedMult === 'number')
+      ? ctx.config.speedMult
+      : 1.0;
     const inFlight = new Set();
     const staggerTimers = [];
     let endTimer = null;
@@ -109,8 +113,8 @@ const twilight = {
       const idx = spawnedCount;
 
       const { x, y, dirX, dirY, edge } = makeSpawn();
-      const baseSpeed = rand(BASE_SPEED_MIN, BASE_SPEED_MAX);
-      console.log(`[mg] twilight spawn #${idx} edge=${edge} baseSpeed=${baseSpeed.toFixed(0)}px/s`);
+      const baseSpeed = rand(BASE_SPEED_MIN, BASE_SPEED_MAX) * speedMult;
+      console.log(`[mg] twilight spawn #${idx} edge=${edge} baseSpeed=${baseSpeed.toFixed(0)}px/s mult=${speedMult.toFixed(2)}`);
 
       const star = document.createElement('div');
       star.className = 'flying-twilight-star';

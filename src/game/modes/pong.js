@@ -27,7 +27,12 @@ const pong = {
     let endTimer = null;
     let lastTime = performance.now();
 
-    const BASE_SPEED   = 380;   // px/s at spawn
+    // Session-scoped difficulty: scales the BASE_SPEED only. The MAX_SPEED
+    // cap still holds — at high playCount the initial speed is bounded by it.
+    const baseSpeedMult = (ctx.config && typeof ctx.config.baseSpeedMult === 'number')
+      ? ctx.config.baseSpeedMult
+      : 1.0;
+    const BASE_SPEED   = 380 * baseSpeedMult;   // px/s at spawn
     const SPEED_MULT   = 1.10;  // per paddle hit
     const MAX_SPEED    = 1100;  // cap
     const BALL_SIZE    = 36;    // px (font-size of emoji)
@@ -41,7 +46,7 @@ const pong = {
     // off vertical in [-60°, +60°].
     const offsetDeg = (Math.random() * 120) - 60;
     const offsetRad = (offsetDeg * Math.PI) / 180;
-    let speed = BASE_SPEED;
+    let speed = Math.min(MAX_SPEED, BASE_SPEED);
     let vx = Math.sin(offsetRad) * speed;
     let vy = Math.cos(offsetRad) * speed; // positive = downward (screen coords)
 
@@ -51,8 +56,8 @@ const pong = {
     let hits = 0;
 
     console.log(
-      `[mg] mode pong start | base=${BASE_SPEED}px/s mult=${SPEED_MULT} ` +
-      `max=${MAX_SPEED}px/s ball=${BALL_SIZE}px timeout=${ctx.timeoutMs}ms`
+      `[mg] mode pong start | base=${BASE_SPEED.toFixed(0)}px/s baseSpeedMult=${baseSpeedMult.toFixed(2)} ` +
+      `mult=${SPEED_MULT} max=${MAX_SPEED}px/s ball=${BALL_SIZE}px timeout=${ctx.timeoutMs}ms`
     );
 
     ctx.setStatus('PONG');
