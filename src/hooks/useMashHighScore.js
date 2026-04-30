@@ -49,6 +49,17 @@ export function emitSessionStart({ eventId, uid }) {
   notify('sessionStart', _session);
 }
 
+// Set the event context BEFORE a press happens — lets the HUD subscribe to
+// the global high score for the visible event as soon as KudosCta mounts.
+// Does not flip session.active. Idempotent: a no-op if context already matches.
+export function emitEventContext({ eventId, uid }) {
+  const nextEv = eventId || null;
+  const nextUid = uid || null;
+  if (_session.eventId === nextEv && _session.uid === nextUid) return;
+  _session = { eventId: nextEv, uid: nextUid, active: _session.active };
+  notify('sessionStart', _session);
+}
+
 export function emitSessionEnd() {
   _session = { ..._session, active: false };
   notify('sessionEnd', _session);
@@ -138,10 +149,7 @@ export function useMashHighScore() {
   useEffect(() => {
     setCumulative(null);
     if (!sessionInfo.eventId || !sessionInfo.uid) return undefined;
-    const r = dbRef(
-      database,
-      `mashHighScores/${sessionInfo.eventId}/${sessionInfo.uid}/best`,
-    );
+    const r = dbRef(database, `mashHighScores/${sessionInfo.eventId}/${sessionInfo.uid}/best`);
     const unsub = onValue(r, (snap) => {
       const val = snap.val();
       setCumulative(typeof val === 'number' ? val : 0);

@@ -78,6 +78,18 @@
         }
       }
     },
+    "mashHighScores": {
+      ".read": true,
+      "$eventId": {
+        ".indexOn": ["best"],
+        "$uid": {
+          ".write": "auth != null && auth.uid == $uid",
+          "best": {
+            ".validate": "newData.isNumber() && newData.val() >= 0"
+          }
+        }
+      }
+    },
     "eventMashTotals": {
       ".read": true,
       "$eventId": {

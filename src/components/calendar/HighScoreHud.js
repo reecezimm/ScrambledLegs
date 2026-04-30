@@ -16,8 +16,8 @@ import { fmtCount } from '../../hooks/useEventLifecycle';
 
 const Wrap = styled.div`
   position: fixed;
-  top: 16px;
-  right: 16px;
+  top: calc(16px + env(safe-area-inset-top, 0px));
+  right: calc(16px + env(safe-area-inset-right, 0px));
   z-index: 9050;
   pointer-events: none;
   font-family: 'Fredoka', sans-serif;
@@ -96,7 +96,9 @@ export default function HighScoreHud() {
     current, cumulative, globalBest, isHoldingGlobal, uid,
   } = useMashHighScore();
 
-  // Hide when no active session.
+  // Visible only during an active mash session. Subscriptions are
+  // pre-warmed via emitEventContext on KudosCta mount, so globalBest /
+  // cumulative are already loaded by the time the first press fires.
   if (!current || current <= 0) return null;
 
   return (

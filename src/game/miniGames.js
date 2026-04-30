@@ -21,9 +21,7 @@ export const GOLDEN_EGG = {
   presentation: { accentColor: '#FFD700' },
   phases: [
     { kind: 'status',    text: 'GOLDEN EGG\nINCOMING',                  presses: 5 },
-    { kind: 'status',    text: 'KEEP MASHING.',                         presses: 5 },
     { kind: 'status',    text: 'TAP THE GOLDEN EGG\nFOR EXTRA POINTS',  presses: 5 },
-    { kind: 'countdown', from: 5,                                       presses: 5 },
     { kind: 'play',
       mode: 'goldenEgg',
       timeout: { kind: 'ms', value: 10000, outcome: 'win' },
@@ -58,8 +56,7 @@ export const MASH_GAUNTLET = {
   presentation: { accentColor: '#FF6B6B' },
   phases: [
     { kind: 'status', text: 'MASH GAUNTLET',                presses: 5 },
-    { kind: 'status', text: 'MASH 25 IN 5 SECONDS\nOR DIE', presses: 8 },
-    { kind: 'countdown', from: 3,                           presses: 3 },
+    { kind: 'status', text: 'MASH FAST OR DIE\n5 SECONDS',  presses: 5 },
     { kind: 'play',
       mode: 'thresholdMash',
       // Timeout = lose (failed to hit threshold in time). thresholdMash
@@ -110,7 +107,6 @@ export const TWILIGHT = {
   phases: [
     { kind: 'status',    text: "SOMETHING'S BREWING…",               presses: 5 },
     { kind: 'status',    text: 'TAP THE BEERS\nKEEP MASHING',        presses: 5 },
-    { kind: 'countdown', from: 5,                                    presses: 5 },
     { kind: 'play',
       mode: 'twilight',
       timeout: { kind: 'ms', value: 18000, outcome: 'win' },
@@ -156,7 +152,6 @@ export const PIG_BOY_ATTACK = {
   phases: [
     { kind: 'status',    text: 'PIG BOY ATTACK\nINCOMING',                 presses: 5 },
     { kind: 'status',    text: 'PROTECT THE GIRL\nDRAG HER TO SAFETY',     presses: 5 },
-    { kind: 'countdown', from: 5,                                          presses: 5 },
     { kind: 'play',
       mode: 'pigDodge',
       timeout: { kind: 'ms', value: 10000, outcome: 'win' },
@@ -208,7 +203,7 @@ export const PONG = {
   id: 'pong',
   label: 'Pong',
   startAtPress: FIRST_START,
-  rules: { canLose: true, onWin: { bonus: 0 }, onLose: { bonus: 0 } },
+  rules: { canLose: true, onWin: { bonus: 0 }, onLose: { bonus: 0, endsMashSession: true } },
   // Heartbeat killed only at the play phase. During intros / countdown /
   // outro the heartbeat fires so the user knows to keep mashing.
   ambient: { challengeText: 'frozen' },
@@ -217,7 +212,6 @@ export const PONG = {
   phases: [
     { kind: 'status',    text: 'PONG',                                 presses: 5 },
     { kind: 'status',    text: 'KEEP THE BALL ALIVE\nWITH THE BUTTON', presses: 5 },
-    { kind: 'countdown', from: 5,                                      presses: 5 },
     { kind: 'play',
       mode: 'pong',
       timeout: { kind: 'ms', value: 10000, outcome: 'win' },
@@ -300,7 +294,7 @@ const GAP_PRESSES      = 10;
 // tuning is preserved at playCount=0):
 //   golden-egg     → flightDurMs × 0.95^playCount    (5% faster each play)
 //   twilight       → speedMult   = 1.05^playCount    (5% faster each play)
-//   mash-gauntlet  → target += 2 * playCount         (25 → 27 → 29 → …)
+//   mash-gauntlet  → target += 5 * playCount         (25 → 30 → 35 → …)
 //   pig-boy-attack → maxConcurrent += 2 * playCount  (initialSpawnCount mirrors)
 //   pong           → baseSpeedMult = 1.10^playCount  (10% faster each play)
 //
@@ -329,7 +323,7 @@ function scaleDifficulty(mg, playCount) {
       }
       case 'mash-gauntlet': {
         const baseTarget = typeof cfg.target === 'number' ? cfg.target : 25;
-        cfg.target = baseTarget + 2 * playCount;
+        cfg.target = baseTarget + 5 * playCount;
         break;
       }
       case 'pig-boy-attack': {
@@ -360,8 +354,22 @@ export function createInfiniteSchedule({
   firstGameAtPress = FIRST_GAME_AT,
 } = {}) {
   let yieldedCount = 0;
-  let lastId = null;
+  // Track the LAST TWO real mini-game ids picked. Neither can be picked
+  // for the next slot, so a game has to wait at least 2 turns before it
+  // can repeat (e.g. Twilight → GoldenEgg → not-Twilight, then Twilight
+  // is eligible again on the 4th slot).
+  const recentIds = [];
   const playCounts = new Map();
+  const pickFromPool = () => {
+    let candidates = pool.filter((mg) => !recentIds.includes(mg.id));
+    // Fallback: if filtering left no options (tiny pool), relax to last-1.
+    if (candidates.length === 0 && recentIds.length > 0) {
+      const last = recentIds[recentIds.length - 1];
+      candidates = pool.filter((mg) => mg.id !== last);
+    }
+    if (candidates.length === 0) candidates = pool;
+    return candidates[Math.floor(Math.random() * candidates.length)];
+  };
   return {
     next(currentPressCount /* , currentSessionMs */) {
       let pick;
@@ -370,22 +378,17 @@ export function createInfiniteSchedule({
         pick = preamble;
         startAt = warningAtPress;
       } else if (yieldedCount === 1) {
-        // First real mini-game at the firstGameAtPress click.
-        const candidates = pool.filter((mg) => mg.id !== lastId);
-        pick = candidates.length > 0
-          ? candidates[Math.floor(Math.random() * candidates.length)]
-          : pool[0];
+        pick = pickFromPool();
         startAt = firstGameAtPress;
       } else {
-        // Subsequent: random, no repeats, gap from current press count.
-        const candidates = pool.filter((mg) => mg.id !== lastId);
-        pick = candidates.length > 0
-          ? candidates[Math.floor(Math.random() * candidates.length)]
-          : pool[0];
+        pick = pickFromPool();
         startAt = currentPressCount + gapPresses;
       }
-      lastId = pick.id;
       const isPreamble = yieldedCount === 0;
+      if (!isPreamble) {
+        recentIds.push(pick.id);
+        if (recentIds.length > 2) recentIds.shift();
+      }
       yieldedCount++;
       if (isPreamble) {
         // Preamble has no play phase / no difficulty — skip scaling + log.
@@ -394,12 +397,12 @@ export function createInfiniteSchedule({
       const playCount = playCounts.get(pick.id) || 0;
       playCounts.set(pick.id, playCount + 1);
       const scaled = scaleDifficulty(pick, playCount);
-      console.log(`[mg] strategy yields "${pick.id}" startAtPress=${startAt} playCount=${playCount} (scaled)`);
+      console.log(`[mg] strategy yields "${pick.id}" startAtPress=${startAt} playCount=${playCount} recent=[${recentIds.join(',')}]`);
       return { ...scaled, startAtPress: startAt };
     },
     reset() {
       yieldedCount = 0;
-      lastId = null;
+      recentIds.length = 0;
       playCounts.clear();
     },
   };

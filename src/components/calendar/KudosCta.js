@@ -17,6 +17,7 @@ import {
   emitSessionStart as emitMashSessionStart,
   emitSessionEnd as emitMashSessionEnd,
   emitCumulativeWritten as emitMashCumulativeWritten,
+  emitEventContext as emitMashEventContext,
 } from '../../hooks/useMashHighScore';
 
 // Spawn a "+N" or "-N" floater at (x, y). Single source of truth for bonus
@@ -559,30 +560,12 @@ const CtaTop = styled.div`
   }
 `;
 
-const iconFade = keyframes`
-  0%   { opacity: 0; transform: scale(0.85); }
-  18%  { opacity: 1; transform: scale(1); }
-  82%  { opacity: 1; transform: scale(1); }
-  100% { opacity: 0; transform: scale(0.85); }
-`;
-
-const CtaEmoji = styled.span`
-  font-size: 30px;
-  line-height: 1;
-  display: inline-block;
-  animation: ${iconFade} 2.5s ease-in-out infinite;
-
-  ${HdCta}.is-idle & { font-size: 17px; }
-`;
-
 const CtaCount = styled.span`
-  font-size: 22px;
+  font-size: clamp(11px, 3.2vw, 22px);
   font-weight: 700;
   line-height: 1;
   font-variant-numeric: tabular-nums;
-  transition: font-size 0.2s;
-
-  ${HdCta}.is-idle & { font-size: 12px; font-weight: 600; }
+  text-align: left;
 `;
 
 const CtaText = styled.span`
@@ -742,20 +725,10 @@ const MashSub = styled.span`
 `;
 
 // ─── Component ────────────────────────────────────────────────────────────────
-const MASH_ICONS = ['🌭', '🥚', '🚴'];
-
 export default function KudosCta({ event, isSheetContext }) {
   const { displayCount, mash } = useEventKudos(event.id, event.hotdogs);
   const { user } = useCurrentUser();
   const [showNudge, setShowNudge] = useState(false);
-  const [iconIdx, setIconIdx] = useState(0);
-
-  useEffect(() => {
-    const id = setInterval(() => {
-      setIconIdx((i) => (i + 1) % MASH_ICONS.length);
-    }, 2500);
-    return () => clearInterval(id);
-  }, []);
   const nudgeTimerRef = useRef(null);
   const anonMashCountRef = useRef(0);
   const btnRef = useRef(null);
@@ -786,6 +759,13 @@ export default function KudosCta({ event, isSheetContext }) {
     if (isSheetContext) {
       document.body.dataset.sheetOpen = '1';
     }
+    // Publish the event context so HighScoreHud can subscribe to globalBest
+    // immediately — without waiting for a press. Re-fires when event/user
+    // changes via the deps below.
+    emitMashEventContext({
+      eventId: event && event.id,
+      uid: user ? user.uid : null,
+    });
     // Ensure idle state on mount
     enterIdleState();
     updateMashFocus();
@@ -813,7 +793,7 @@ export default function KudosCta({ event, isSheetContext }) {
       if (hdResetTimerRef.current) clearTimeout(hdResetTimerRef.current);
       if (nudgeTimerRef.current) clearTimeout(nudgeTimerRef.current);
     };
-  }, [isSheetContext, updateMashFocus]); // eslint-disable-line react-hooks/exhaustive-deps
+  }, [isSheetContext, updateMashFocus, event && event.id, user && user.uid]); // eslint-disable-line react-hooks/exhaustive-deps
 
   const enterIdleState = useCallback(() => {
     const btn = btnRef.current;
@@ -1509,8 +1489,7 @@ export default function KudosCta({ event, isSheetContext }) {
         type="button"
       >
         <CtaTop className="hd-cta-top">
-          <CtaEmoji className="hd-cta-emoji">{MASH_ICONS[iconIdx]}</CtaEmoji>
-          <CtaCount className="hd-cta-count">{fmtCount(displayCount)}</CtaCount>
+          <CtaCount className="hd-cta-count">+{fmtCount(displayCount)}</CtaCount>
         </CtaTop>
         <CtaText className="hd-cta-text">Mash me</CtaText>
       </HdCta>

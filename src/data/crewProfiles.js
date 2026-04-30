@@ -93,7 +93,7 @@ export const CREW_PROFILES = [
     name: 'Reece Zimm',
     aliases: ['REECEZIMM', 'reecezimm', 'Calf Daddy'],
     emails: ['zimm.reece@gmail.com', 'gm@thescrambledlegs.com'],
-    blurb: "GM Reece Zimm — aka Calf Daddy. No fun, no talking, no laughing. All business. Just hammers. Tried-and-true navigator. Coach Lyall reports to him. Be on time.",
+    blurb: "GM Reece Zimm — aka Calf Daddy. Used to be fast. Now thoroughly average. No fun, no talking, no laughing. All business. Just hammers. Tried-and-true navigator. Coach Lyall reports to him. Be on time.",
   },
   {
     name: 'Reece Hickman',

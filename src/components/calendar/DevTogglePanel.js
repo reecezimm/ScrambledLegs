@@ -140,7 +140,12 @@ export default function DevTogglePanel() {
   });
 
   // On mount + on choice change, push schedule into the store.
+  // GUARD: only when actually in dev. In prod the panel returns null below,
+  // but useEffect still fires — without this guard it would race CalendarWidget's
+  // canonical strategy and (if the cached choice was a single-game) silently
+  // clear the auto-refill, leaving the user with no mini-games.
   useEffect(() => {
+    if (!IS_DEV) return;
     gameStore.setSchedule(buildScheduleSpec(choice));
     try { localStorage.setItem(STORAGE_KEY, choice); } catch (_) {}
   }, [choice]);
