@@ -171,7 +171,7 @@ Shows one number per press, counting down from `from`. The status zone renders i
 |---|---|---|
 | `overrides.mashing` | `'normal'` \| `'paused'` \| `'inverted'` | Sets `data-mash-mode`. `'paused'` ignores presses for pressCount; `'inverted'` lets the mode treat any press as failure. |
 | `overrides.button` | `'visible'` \| `'hidden'` \| `'roaming'` | Sets `data-button-state`. Lets a mode hide or move the mash button. |
-| `overrides.gameClock` | `'run'` \| `'paused'` | **Reusable primitive.** `'paused'` freezes the canvas, the heartbeat, AND the save-timer in `KudosCta`. The whole world stops. Used by Freeze. |
+| `overrides.gameClock` | `'run'` \| `'paused'` | **Reusable primitive.** `'paused'` freezes the canvas, the heartbeat, AND the save-timer in `KudosCta`. The whole world stops. |
 
 ---
 
@@ -214,7 +214,7 @@ The function returned from `start(ctx)` MUST:
 - Despawn any DOM elements it created.
 - Clear sub-status: `ctx.setSubStatus(null)`.
 - Clear status override if set: `ctx.setStatus(null)`.
-- Optionally call `ctx.endPhase(...)` — this is how `goldenEgg` and `doNotPress` report a final score on natural exit. Safe because `endPhase` is idempotent.
+- Optionally call `ctx.endPhase(...)` — this is how `goldenEgg` reports a final score on natural exit. Safe because `endPhase` is idempotent.
 
 ### 3.3 The hard timeout
 
@@ -228,7 +228,7 @@ Two top-level reusable primitives have been explicitly built so that any new min
 
 | feature | flag | what it gives you |
 |---|---|---|
-| **Pause the world** | `phase.overrides.gameClock: 'paused'` | The canvas, the heartbeat, AND the save-timer in `KudosCta` all freeze. The mash button visually halts. Used by **Freeze**. |
+| **Pause the world** | `phase.overrides.gameClock: 'paused'` | The canvas, the heartbeat, AND the save-timer in `KudosCta` all freeze. The mash button visually halts. |
 | **Fail ends the run** | `rules.onLose: { endsMashSession: true }` | A `'lose'` outcome immediately triggers the existing save→burn→reset flow in `KudosCta`. The user loses their session. Used by **Mash Gauntlet**. |
 
 ### Example: a new mini-game that uses both
@@ -250,8 +250,12 @@ export const SUDDEN_DEATH = {
     { kind: 'status',    text: 'HOLD STILL\nFOR 6 SECONDS',   presses: 6 },
     { kind: 'countdown', from: 3,                             presses: 3 },
     { kind: 'play',
-      mode: 'doNotPress',
-      timeout: { kind: 'ms', value: 6000 },
+      // `holdStill` is a hypothetical mode you'd implement (~30 lines):
+      // listen on ctx.onPress; first press → ctx.endPhase('lose'); on
+      // timeout → ctx.endPhase('win'). See "Path B" above for the mode
+      // skeleton.
+      mode: 'holdStill',
+      timeout: { kind: 'ms', value: 6000, outcome: 'win' },
       overrides: {
         mashing:   'inverted',
         button:    'visible',
@@ -388,13 +392,11 @@ Register it in `src/game/modes/index.js`:
 ```js
 import goldenEgg from './goldenEgg';
 import thresholdMash from './thresholdMash';
-import doNotPress from './doNotPress';
 import myMode from './myMode';        // ← add
 
 export const MODES = {
   goldenEgg,
   thresholdMash,
-  doNotPress,
   myMode,                              // ← add
 };
 ```
@@ -409,7 +411,6 @@ For the new mini-game to actually run, it needs to be in `gameStore.setSchedule(
 export const CANONICAL_SCHEDULE = [
   GOLDEN_EGG,
   { ...MASH_GAUNTLET, startAtPress: 0 },
-  { ...FREEZE,        startAtPress: 0 },
   { ...CANOE_DRIFT,   startAtPress: 0 },   // ← add (back-to-back ⇒ startAtPress: 0)
 ];
 ```
@@ -418,10 +419,9 @@ export const CANONICAL_SCHEDULE = [
 
 ```js
 const CHOICES = [
-  { id: 'auto',           label: 'Auto (all 4)' },
+  { id: 'auto',           label: 'Auto' },
   { id: 'golden-egg',     label: 'Golden Egg' },
   { id: 'mash-gauntlet',  label: 'Mash Gauntlet' },
-  { id: 'freeze',         label: 'Freeze' },
   { id: 'canoe-drift',    label: "Reed's Canoe Drift" },   // ← add
 ];
 
@@ -429,7 +429,6 @@ function buildSchedule(choiceId) {
   if (choiceId === 'auto')         return CANONICAL_SCHEDULE;
   if (choiceId === 'golden-egg')   return [GOLDEN_EGG];
   if (choiceId === 'mash-gauntlet')return [MASH_GAUNTLET];
-  if (choiceId === 'freeze')       return [FREEZE];
   if (choiceId === 'canoe-drift')  return [CANOE_DRIFT];   // ← add
   return CANONICAL_SCHEDULE;
 }
@@ -438,7 +437,7 @@ function buildSchedule(choiceId) {
 Don't forget the import:
 
 ```js
-import { GOLDEN_EGG, MASH_GAUNTLET, FREEZE, CANOE_DRIFT, CANONICAL_SCHEDULE } from '../../game/miniGames';
+import { GOLDEN_EGG, MASH_GAUNTLET, CANOE_DRIFT, CANONICAL_SCHEDULE } from '../../game/miniGames';
 ```
 
 ### Step 4: Test via the dev panel
@@ -475,7 +474,6 @@ The three working mini-games each demonstrate a different reusable pattern. Read
 |---|---|---|
 | **`golden-egg`** | `goldenEgg` | Flying tappable spawns; positional `awardBonus` with `+N` burst at the tap point; 15-second time-based play phase; ambient `flyingEmojis: 'off'` during play. Bonus-only — `canLose: false`. |
 | **`mash-gauntlet`** | `thresholdMash` | Press counting during a fixed window; live `setSubStatus` counter; threshold win condition; **`endsMashSession: true`** on fail (kills the session). |
-| **`freeze`** | `doNotPress` | **`gameClock: 'paused'`** — the reusable "pause the world" pattern; `mashing: 'inverted'` with a press-equals-fail rule; multi-line outcome status text (`'COLD-BLOODED\n+75'`). |
 
 ---
 
@@ -681,7 +679,6 @@ Walk through a normal session top-to-bottom:
    [mg] goldenEgg HIT #2 +25 | total=50
    [mg] thresholdMash press 12/50
    [mg] thresholdMash → WIN (50/50)
-   [mg] doNotPress press → penalty -10 | total -30
    ```
 5. **Bonus applied (from store, then from host):**
    ```
@@ -744,5 +741,5 @@ An earlier `dumpMashLayout` / `dumpMashLayers` system snapshotted the button pos
   - they should NOT mutate body classes/data-attrs (that's `applyAmbient`'s remit) or call into `KudosCta`/`useMashEffects` directly.
 - **Z-index discipline.** Spawned game elements need `z-index: 9100+` and `pointer-events: auto` to land **above** the input-blocker layer (z 8999) and the canvas (z 9000), but **below** the bonus-burst layer (z 9200). The status zone sits at 9050; tappables should be 9100, particles 9099 or 9200.
 - **Cleanup must clear sub-status.** If your mode set `ctx.setSubStatus('0 / 50')`, the cleanup fn must call `ctx.setSubStatus(null)` or the next phase's status block will inherit your stale text.
-- **Press listeners fire even when mashing is paused/inverted.** That's by design — `doNotPress` needs to hear the forbidden tap. Don't assume `ctx.onPress` is gated by mashingMode.
+- **Press listeners fire even when mashing is paused/inverted.** That's by design — a "don't tap" mini-game still needs to hear the forbidden tap to penalize / fail it. Don't assume `ctx.onPress` is gated by mashingMode.
 - **Wall-clock timeouts run independently of the mode.** Even after your mode "wins" via `ctx.endPhase('win', score)`, the store cancels the pending timeout. But if you `setTimeout` your own deadlines inside the mode, you must clear them in cleanup yourself.

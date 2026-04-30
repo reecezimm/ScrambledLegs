@@ -69,7 +69,7 @@ export const CREW_PROFILES = [
     name: 'Reed Peer',
     aliases: ['REED', 'Reid'],
     emails: [],
-    blurb: "Reed Peer with DBS here — Duluth Basement Services, sales guy, will pitch you a basement remodel mid-climb. Outdoor everything: ice fishing, hunting, mountain biking, Boundary Waters. Self-admitted fattest he's ever been but somehow still pedaling. Probably has a sales call in 10 minutes.",
+    blurb: "Reed Peer with DBS here — Duluth Basement Services, sales guy, will pitch you a basement remodel mid-climb. Outdoor everything: ice fishing, hunting, mountain biking, Boundary Waters. Rides a Trek Rumblefish — calls it the best mountain bike he's ever owned, and won't shut up about it. Probably has a sales call in 10 minutes.",
   },
   {
     name: 'Alexa Mattson',

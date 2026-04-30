@@ -335,17 +335,90 @@ export function clearMashEnergy() {
   document.body.style.removeProperty('--mash-overdrive');
   document.body.style.removeProperty('--canvas-radius');
   document.body.style.removeProperty('--migration-progress');
+  document.body.style.removeProperty('--migration-fast');
   document.body.style.removeProperty('--btn-start-x');
   document.body.style.removeProperty('--btn-start-y');
   document.body.style.removeProperty('--btn-w');
   document.body.style.removeProperty('--btn-dx');
   document.body.style.removeProperty('--btn-dy');
+  document.body.style.removeProperty('--btn-drag-x');
+  document.body.style.removeProperty('--btn-drag-y');
   document.body.style.removeProperty('--sub-out');
   document.body.style.removeProperty('--btn-h');
+  document.body.style.removeProperty('--game-accent');
   delete document.body.dataset.mashing;
   delete document.body.dataset.eggsRainbow;
   delete document.body.dataset.mashLevel;
   delete document.body.dataset.mashLocked;
+  delete document.body.dataset.snapBack;
+  delete document.body.dataset.subOut;
+  delete document.body.dataset.pigAvatar;
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
+// purgeMashWorld — comprehensive end-of-session cleanup. Removes every
+// spawned DOM node from any mode, restores body + canvas backgrounds, and
+// resets every CSS var / data attribute the mash system writes. Called from
+// KudosCta.enterIdleState() after the save/burn cycle finishes.
+//
+// This is the safety net for: animations that didn't finish naturally,
+// modes that crashed mid-cleanup, leftover floaters, drag offsets, sky-
+// takeover backgrounds, etc. After this runs, the page should be visually
+// indistinguishable from a fresh load — no orphaned stars, eggs, beers,
+// pigs, balls, avatars, ripples, or text floaters.
+// ─────────────────────────────────────────────────────────────────────────────
+export function purgeMashWorld() {
+  if (typeof document === 'undefined') return;
+  // 1. Remove every spawned DOM node — every class the mash system uses
+  //    for a transient floating element.
+  const PURGE_SELECTORS = [
+    '.flying-hot-dog',
+    '.flying-egg',
+    '.flying-golden-egg',
+    '.flying-twilight-star',
+    '.phrase-char',
+    '.pig-attacker',
+    '.pig-target-avatar',
+    '.pong-ball',
+    '.flying-rare',
+    '.level-up-overlay',
+  ];
+  let purged = 0;
+  PURGE_SELECTORS.forEach((sel) => {
+    document.querySelectorAll(sel).forEach((el) => {
+      try { el.getAnimations && el.getAnimations().forEach((a) => a.cancel()); } catch (_) {}
+      try { el.remove(); purged += 1; } catch (_) {}
+    });
+  });
+  // Active hot-dog / egg counter — reset so the spawn cap is honoured cleanly.
+  activeHotDogs = 0;
+
+  // 2. Restore body + canvas backgrounds (Twilight overrides them; if its
+  //    cleanup didn't run for any reason, restore here).
+  document.body.style.background = '';
+  const canvas = document.getElementById('mash-canvas');
+  if (canvas) canvas.style.background = '';
+
+  // 3. Force-clear any leftover director-side body data attrs that
+  //    applyAmbient might not have cleared (defensive — applyAmbient
+  //    already handles the idle path, but in case state is inconsistent).
+  delete document.body.dataset.mashMode;
+  delete document.body.dataset.buttonState;
+  delete document.body.dataset.gameClock;
+  delete document.body.dataset.ambFlying;
+  delete document.body.dataset.ambBubble;
+  delete document.body.dataset.ambChallenge;
+  delete document.body.dataset.ambHeartbeat;
+  delete document.body.dataset.ambFlash;
+  delete document.body.dataset.ambShockwave;
+  delete document.body.dataset.miniGameId;
+  delete document.body.dataset.phaseKind;
+  delete document.body.dataset.mashPhase;
+
+  // 4. Console summary so we can see if there was anything to purge.
+  if (purged > 0) {
+    console.log(`[mash-game] purgeMashWorld | removed ${purged} stray DOM nodes`);
+  }
 }
 
 const SHOCKWAVE_SELECTOR = [

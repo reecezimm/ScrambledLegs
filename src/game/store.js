@@ -35,6 +35,13 @@ function emit() { listeners.forEach((fn) => fn(state)); }
 // mode-driven awards (golden egg taps, freeze penalty taps). Director-driven
 // bonuses (onWin/onLose rule application) leave it null.
 let pendingBonusOpts = null;
+// One-shot flag set by gameStore.reset() so setState's bonus-delta detector
+// can skip firing listeners on the bonusCount → 0 transition that happens
+// at session reset. Otherwise users see a phantom red "-N" floater equal
+// to whatever bonus they accumulated this session (winning Twilight with
+// +175 then saving used to spawn a "-175" reset floater — that's NOT a
+// punishment, it's just state cleanup).
+let suppressBonusDelta = false;
 
 function setState(next) {
   if (next === state) return;
@@ -47,9 +54,21 @@ function setState(next) {
     const delta = next.bonusCount - prev.bonusCount;
     const opts = pendingBonusOpts;
     pendingBonusOpts = null;
-    console.log('[mg] bonus', (delta > 0 ? '+' : '') + delta, '→ total bonusCount', next.bonusCount, opts ? `(at ${opts.x|0},${opts.y|0})` : '(director-applied)');
-    bonusListeners.forEach((fn) => { try { fn(delta, opts); } catch (_) {} });
+    if (suppressBonusDelta) {
+      // Reset path — log it but don't notify listeners. Eats the phantom
+      // negative delta that would otherwise spawn a punishing red floater.
+      console.log('[mg] bonus delta', (delta > 0 ? '+' : '') + delta, '→ total bonusCount', next.bonusCount, '(SUPPRESSED — session reset)');
+    } else {
+      console.log('[mg] bonus', (delta > 0 ? '+' : '') + delta, '→ total bonusCount', next.bonusCount, opts ? `(at ${opts.x|0},${opts.y|0})` : '(director-applied)');
+      bonusListeners.forEach((fn) => { try { fn(delta, opts); } catch (_) {} });
+    }
   }
+  // Always clear the suppress flag at the end of setState. If reset() set
+  // the flag but bonusCount didn't actually change (e.g. reset called when
+  // bonusCount was already 0), the flag would otherwise persist and eat the
+  // NEXT legitimate bonus award — bug surfaced as "Pig Boy +250 didn't
+  // appear in score." One-shot semantics enforced here.
+  suppressBonusDelta = false;
   if (next.sessionEndPulse > prev.sessionEndPulse) {
     console.log('[mg] SESSION END pulse — onLose.endsMashSession triggered');
     sessionEndListeners.forEach((fn) => { try { fn(); } catch (_) {} });
@@ -65,9 +84,14 @@ function maybeRefillSchedule() {
   if (!scheduleStrategy) return;
   if (state.active) return;
   if (state.scheduleIndex < state.schedule.length) return;
-  const next = scheduleStrategy.next(state.pressCount);
+  // Pass current session-elapsed ms so wall-clock-gated strategies can
+  // compute relative-to-session times for "next mini-game in N seconds."
+  const sessionMs = state.sessionStartMs != null
+    ? Date.now() - state.sessionStartMs
+    : 0;
+  const next = scheduleStrategy.next(state.pressCount, sessionMs);
   if (!next) return;
-  console.log(`[mg] strategy yields "${next.id}" startAtPress=${next.startAtPress}`);
+  console.log(`[mg] strategy yields "${next.id}" startAtPress=${next.startAtPress} startAtMs=${next.startAtMs || '-'}`);
   setState(reduce(state, { type: 'appendSchedule', item: next }));
 }
 
@@ -176,6 +200,7 @@ function startMode(s) {
     const outcome = phase.timeout.outcome || 'timeout';
     phaseTimeoutId = setTimeout(() => {
       phaseTimeoutId = null;
+      console.log(`[mg] HARD TIMEOUT fired | mode=${phase.mode} outcome=${outcome} deadline=${deadline}ms`);
       ctx.endPhase(outcome, null);
     }, deadline);
   }
@@ -262,6 +287,13 @@ export const gameStore = {
     if (scheduleStrategy && typeof scheduleStrategy.reset === 'function') {
       scheduleStrategy.reset();
     }
+    // Suppress the bonus listener ONLY if the reset will actually produce
+    // a delta (i.e. bonusCount is currently nonzero). If bonusCount is
+    // already 0, setting the flag would just leak — there's no transition
+    // for the bonus detector to consume — and the flag would eat the next
+    // legitimate bonus award. The setState end-of-loop also clears the
+    // flag as a belt-and-suspenders guard.
+    if (state.bonusCount !== 0) suppressBonusDelta = true;
     console.log('[mg] reset');
     setState(reduce(state, { type: 'reset' }));
     // After reset, refill from strategy so the next session starts with

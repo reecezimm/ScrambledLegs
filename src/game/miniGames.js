@@ -26,11 +26,12 @@ export const GOLDEN_EGG = {
     { kind: 'countdown', from: 5,                                       presses: 5 },
     { kind: 'play',
       mode: 'goldenEgg',
-      timeout: { kind: 'ms', value: 20000, outcome: 'win' },
+      timeout: { kind: 'ms', value: 10000, outcome: 'win' },
       overrides: { mashing: 'normal', button: 'visible', gameClock: 'run' },
       ambient: { flyingEmojis: 'off', bubbleText: 'off', challengeText: 'frozen' },
-      // Triple-size egg, 3× slower flight (was 54px / 1700–2300ms).
-      config: { reward: 25, sizePx: 162, flightDurMs: [5100, 6900] },
+      // Triple-size egg, flight 5% slower than prior tuning so it reads
+      // across the screen. showTimer renders the top-left countdown.
+      config: { reward: 25, sizePx: 162, flightDurMs: [4284, 5796], showTimer: true },
     },
     { kind: 'status',
       text: ({ score }) => score > 0 ? `+${score} BONUS\nNICE TAPS.` : 'WHIFF.',
@@ -82,66 +83,19 @@ export const MASH_GAUNTLET = {
   ],
 };
 
-// ── 3. Freeze ─ pause the world, penalize taps ─────────────────────────────
-// rules.pauseMashGame: true pauses save-timer + canvas/heartbeat across the
-// alert/instruction/countdown/play phases. The tail phases (UNFREEZE, START
-// MASHING) explicitly OPT OUT via overrides.gameClock: 'run' so the world
-// resumes — save timer re-arms and the user is auto-saved if idle.
-//
-// Heartbeat is suppressed at the mini-game level (ambient.heartbeat: 'off')
-// so the about-to-burn animation doesn't run during freeze and confuse the
-// user about whether they should be clicking.
-export const FREEZE = {
-  id: 'freeze',
-  label: 'Freeze',
-  startAtPress: FIRST_START,
-  rules: {
-    canLose: false,
-    onWin: { bonus: 0 },
-    onLose: { bonus: 0 },
-    pauseMashGame: true,
-  },
-  ambient: {
-    challengeText: 'frozen',
-    heartbeat: 'off',         // kill the burn ring during intros + play
-  },
-  presentation: { accentColor: '#5FB3FF' },
-  phases: [
-    // Alert (auto-advances; no pressing required)
-    { kind: 'status', text: 'FREEZE GAME\nCOMING UP', ms: 1500 },
-    // Countdown — press-counted so the user paces it (5,4,3,2,1).
-    { kind: 'countdown', from: 5, presses: 5 },
-    // Play — "DON'T TOUCH" shows here, when the game actually starts.
-    // doNotPress mode reads playStatus from config and pushes it to the
-    // GameStatus zone via ctx.setStatus.
-    { kind: 'play',
-      mode: 'doNotPress',
-      timeout: { kind: 'ms', value: 4000, outcome: 'win' },
-      overrides: { mashing: 'inverted', button: 'visible', gameClock: 'paused' },
-      ambient: {
-        flyingEmojis: 'off', bubbleText: 'off',
-        challengeText: 'frozen', heartbeat: 'off', flash: 'off',
-      },
-      config: { penaltyPerPress: 10, playStatus: "DON'T TOUCH", showTimer: true },
-    },
-    // Release the pause AND turn the heartbeat ring back on. Without the
-    // explicit ambient.heartbeat: 'on' override, the mg-level 'off' would
-    // leak through and the button would stay dead post-freeze.
-    { kind: 'status', text: 'UNFREEZE',
-      ms: 1200,
-      overrides: { gameClock: 'run' },
-      ambient: { heartbeat: 'on', flash: 'on' } },
-    { kind: 'status', text: 'START MASHING',
-      presses: 3,
-      overrides: { gameClock: 'run' },
-      ambient: { heartbeat: 'on', flash: 'on' } },
-  ],
-};
+// ── (removed: Freeze mini-game — feature deleted) ──────────────────────────
+// The Freeze mini-game and its `doNotPress` mode have been removed. If you
+// need the "pause the world / penalize taps" pattern back, the building
+// blocks are still in the schema:
+//   - rules.pauseMashGame: true
+//   - phase.overrides.mashing: 'inverted'
+//   - phase.overrides.gameClock: 'paused' / 'run'
+//   - phase.ambient.heartbeat / flash overrides
 
-// ── 4. Twilight ─ tap shooting stars in a darkened night sky ───────────────
+// ── 4. Twilight ─ tap floating beers in a darkened night sky ───────────────
 // The whole canvas turns into a near-uniform night-sky gradient during play
-// while the mash button stays its normal color and fully interactable. White
-// stars with glittery shooting-star tails streak across; tap them for +25.
+// while the mash button stays its normal color and fully interactable. Beer
+// mugs with warm amber foam trails float across; tap them for +25.
 // Bonus-only — canLose: false. The mode itself paints the sky takeover by
 // overriding the #mash-canvas background and body background during play,
 // then restores them on cleanup.
@@ -154,8 +108,8 @@ export const TWILIGHT = {
   // No accentColor override — preserve the mash button's normal color.
   presentation: {},
   phases: [
-    { kind: 'status',    text: 'TWILIGHT\nINCOMING',                 presses: 5 },
-    { kind: 'status',    text: 'KEEP MASHING\nAND TAP THE STARS',    presses: 5 },
+    { kind: 'status',    text: "SOMETHING'S BREWING…",               presses: 5 },
+    { kind: 'status',    text: 'TAP THE BEERS\nKEEP MASHING',        presses: 5 },
     { kind: 'countdown', from: 5,                                    presses: 5 },
     { kind: 'play',
       mode: 'twilight',
@@ -169,10 +123,10 @@ export const TWILIGHT = {
     { kind: 'status',
       text: ({ score }) => {
         const s = score || 0;
-        if (s > 100) return "YOU'RE MY SHOOTING STAR. ALSO BLOCK ME ON STRAVA.";
-        if (s > 50)  return 'DECENT TWINKLE. STILL SLOWER THAN YOUR LAST KOM.';
-        if (s > 0)   return 'CAUGHT A FEW. NOT ENOUGH TO MATTER.';
-        return 'ZERO STARS. EVEN THE NIGHT SKY GAVE UP ON YOU.';
+        if (s > 100) return 'PERFECT POUR. CHEERS.';
+        if (s > 50)  return 'DECENT FOAM. STILL THIRSTY?';
+        if (s > 0)   return 'FOAMY. NOT GREAT.';
+        return 'EMPTY GLASS. EMBARRASSING.';
       },
       ms: 2500,
     },
@@ -191,67 +145,124 @@ export const PIG_BOY_ATTACK = {
   id: 'pig-boy-attack',
   label: 'Pig Boy Attack',
   startAtPress: FIRST_START,
-  rules: { canLose: true, onWin: { bonus: +250 }, onLose: { bonus: 0 } },
-  ambient: { challengeText: 'frozen', heartbeat: 'off' },
+  rules: { canLose: true, onWin: { bonus: +75 }, onLose: { bonus: 0 } },
+  // Heartbeat is killed only at the play phase (where mashing is paused
+  // and the burn ring would be misleading). During intros + countdown +
+  // outro the heartbeat fires normally so the user gets the usual press-
+  // and-mash feedback.
+  ambient: { challengeText: 'frozen' },
   presentation: { accentColor: '#FFB3D9' },
   input: { dragHold: 'on' },
   phases: [
     { kind: 'status',    text: 'PIG BOY ATTACK\nINCOMING',                 presses: 5 },
-    { kind: 'status',    text: 'TAP AND HOLD TO DRAG\nRELEASE TO PARK',    presses: 5 },
+    { kind: 'status',    text: 'PROTECT THE GIRL\nDRAG HER TO SAFETY',     presses: 5 },
     { kind: 'countdown', from: 5,                                          presses: 5 },
     { kind: 'play',
       mode: 'pigDodge',
-      timeout: { kind: 'ms', value: 20000, outcome: 'win' },
+      timeout: { kind: 'ms', value: 10000, outcome: 'win' },
       overrides: { mashing: 'paused', button: 'draggable', gameClock: 'run' },
       ambient: { flyingEmojis: 'off', bubbleText: 'off', heartbeat: 'off', flash: 'off' },
       config: {
         pigSize: 40,
-        gravity: 800,
-        thrust: 480,         // pigs blow past faster
-        maxSpeed: 850,
-        spawnEveryMs: 1200,
-        maxConcurrent: 2,    // never more than 2 pigs on screen at once
+        // Slowed to ~1/3 of the prior values so motion reads on mobile and
+        // orbital arcs are visible rather than blipping across the screen.
+        // Tangential thrust is now strong relative to gravity so pigs orbit
+        // longer before being pulled in.
+        gravity: 280,
+        thrust: 220,         // tangential weight — orbital feel
+        maxSpeed: 320,
+        spawnEveryMs: 1600,
+        maxConcurrent: 3,
+        initialSpawnCount: 2, // exactly 2 pigs at start, both from top
         showTimer: true,
         statusText: 'DODGE THE PIGS',
-        // Button visually transforms into a pulsing pretty-blonde emoji
-        // (pigs are chasing the cute girl). She's ~4× pig size. The mode
-        // tracks the button center every frame and re-positions her there.
-        avatar: { emoji: '👱‍♀️', sizePx: 160, pulse: true },
+        // Avatar is the actual touch target (the mode attaches pointer
+        // listeners directly to it). 40px visual; CSS padding extends the
+        // hit area to ~72px square for finger-friendly dragging.
+        avatar: { emoji: '👱‍♀️', sizePx: 40, pulse: true },
       },
     },
-    // Branched outcome: win → "+250 SURVIVED. START MASHING.";
-    // lose → "PIG BOY GOT YOU." Both ms-timed so the message is always seen.
+    // Branched outcome: win → "+75 SURVIVED. START MASHING.";
+    // lose → "PIG BOY GOT YOU." Both ms-timed so the message is always
+    // seen. Heartbeat + flash explicitly turned BACK ON here so the burn
+    // ring resumes the moment the game ends — without this override, the
+    // mg-level ambient could leak into the outcome phase.
     { kind: 'status',
       text: ({ outcome }) => outcome === 'win'
-        ? '+250 SURVIVED.\nSTART MASHING.'
+        ? '+75 SURVIVED.\nSTART MASHING.'
         : 'PIG BOY GOT YOU.',
+      ms: 2400,
+      ambient: { heartbeat: 'on', flash: 'on' },
+    },
+  ],
+};
+
+// ── 6. Pong ─ single-player wall-bounce; paddle = the draggable button ────
+// Ball bounces off top/left/right walls. The bottom is the player's goal:
+// intercept with the paddle (the mash button) for +1 hit and a 10% speed
+// boost; miss and the game ends. Score = number of paddle hits, mirrored
+// to bonusCount via awardBonus(25) per hit. Survive 10s for a win outcome.
+// Mashing is paused (drag is the only input) and ambient noise is muted so
+// the ball reads cleanly.
+export const PONG = {
+  id: 'pong',
+  label: 'Pong',
+  startAtPress: FIRST_START,
+  rules: { canLose: true, onWin: { bonus: 0 }, onLose: { bonus: 0 } },
+  // Heartbeat killed only at the play phase. During intros / countdown /
+  // outro the heartbeat fires so the user knows to keep mashing.
+  ambient: { challengeText: 'frozen' },
+  presentation: { accentColor: '#E8FF6B' },
+  input: { dragHold: 'on' },
+  phases: [
+    { kind: 'status',    text: 'PONG',                                 presses: 5 },
+    { kind: 'status',    text: 'KEEP THE BALL ALIVE\nWITH THE BUTTON', presses: 5 },
+    { kind: 'countdown', from: 5,                                      presses: 5 },
+    { kind: 'play',
+      mode: 'pong',
+      timeout: { kind: 'ms', value: 10000, outcome: 'win' },
+      // dragAxis: 'horizontal' = the paddle (button) is locked to its
+      // anchored Y, can only slide left/right, and gets viewport-clamped
+      // so it never goes off-screen.
+      overrides: {
+        mashing: 'paused',
+        button: 'draggable',
+        gameClock: 'run',
+        dragAxis: 'horizontal',
+      },
+      ambient: { flyingEmojis: 'off', bubbleText: 'off', heartbeat: 'off', flash: 'off' },
+      config: { showTimer: true },
+    },
+    // Branched outcome status. Score is the running paddle-hit count.
+    { kind: 'status',
+      text: ({ outcome, score }) => outcome === 'win'
+        ? `${score || 0} HITS. NICE.`
+        : `MISSED IT.\n${score || 0} HITS.`,
       ms: 2400,
     },
   ],
 };
 
 // ── Preamble ─ shows BEFORE the first real mini-game ──────────────────────
-// Not part of the random pool — only ever used as the strategy's first
-// yield. Just a status phase that hands the user a heads-up, then the
-// queue advances to the first real (random) mini-game. By design its
-// `presses: 9` ends right at press 10 so the first mini-game starts there.
+// Press-counted: appears at click 25, runs for 5 presses, exits at click 30
+// when the first real (random) mini-game activates. Not in the random pool.
 export const PREAMBLE = {
   id: 'preamble',
   label: 'Preamble',
-  startAtPress: 1,
+  startAtPress: 25,
   rules: { canLose: false, onWin: { bonus: 0 }, onLose: { bonus: 0 } },
   ambient: { challengeText: 'frozen' },
   phases: [
     { kind: 'status',
-      text: 'MINI GAMES APPROACHING\nDON\'T FORGET TO MASH',
-      presses: 9,
+      text: 'MINI GAMES APPROACHING\nDON\'T STOP MASHING THE BUTTON',
+      presses: 5,
     },
   ],
 };
 
 // ── Registry + canonical schedule ──────────────────────────────────────────
 // PREAMBLE is intentionally NOT in this list — it's strategy-only.
-export const ALL_MINI_GAMES = [GOLDEN_EGG, MASH_GAUNTLET, FREEZE, TWILIGHT, PIG_BOY_ATTACK];
+export const ALL_MINI_GAMES = [GOLDEN_EGG, MASH_GAUNTLET, TWILIGHT, PIG_BOY_ATTACK, PONG];
 
 export function findById(id) {
   return ALL_MINI_GAMES.find((g) => g.id === id) || null;
@@ -260,43 +271,55 @@ export function findById(id) {
 // ─────────────────────────────────────────────────────────────────────────────
 // Schedule strategies
 // ─────────────────────────────────────────────────────────────────────────────
-// A strategy is a stateful object with .next(currentPressCount) → miniGameDef
-// and .reset() → void. The store calls strategy.next() whenever its queue
-// empties and pushes the result onto the queue. The director picks it up at
-// its declared startAtPress and runs it. When the mini-game completes, the
-// queue empties, the store calls .next() again, and the cycle continues.
+// A strategy is a stateful object with .next() → miniGameDef and .reset() →
+// void. The store calls strategy.next() whenever its queue empties and pushes
+// the result onto the queue. The director activates each item once BOTH its
+// `startAtPress` and (if set) its `startAtMs` gates clear.
+//
+// Press-count gates:
+//   - WARNING_AT_PRESS = 25 → preamble appears (5-press warning)
+//   - FIRST_GAME_AT    = 30 → first real mini-game starts at click 30
+//   - GAP_PRESSES      = 10 → click gap between games (between prior end
+//                              and next start)
 //
 // Yield order:
-//   1. PREAMBLE — status warning, starts at press 1, runs through press 9.
-//   2. First real mini-game — RANDOM from pool, starts at press 10
-//      (zero-gap right after the preamble exits).
-//   3+ Subsequent — random from pool excluding the just-played one
-//      (no two in a row), each with a `gapPresses` gap from the prior end.
+//   1. PREAMBLE — startAtPress: 25, runs 5 presses (warning visible 25–29).
+//   2. First real mini-game — random from pool, startAtPress: 30.
+//   3+ Subsequent — random, no repeats, startAtPress: prevEnd + GAP_PRESSES.
+const WARNING_AT_PRESS = 25;
+const FIRST_GAME_AT    = 30;
+const GAP_PRESSES      = 10;
+
 export function createInfiniteSchedule({
   preamble = PREAMBLE,
   pool = ALL_MINI_GAMES,
-  gapPresses = 10,
-  preambleStartAt = 1,
-  firstGameGap = 0,         // gap between preamble end and first real game
+  gapPresses = GAP_PRESSES,
+  warningAtPress = WARNING_AT_PRESS,
+  firstGameAtPress = FIRST_GAME_AT,
 } = {}) {
   let yieldedCount = 0;
   let lastId = null;
   return {
-    next(currentPressCount) {
+    next(currentPressCount /* , currentSessionMs */) {
       let pick;
       let startAt;
       if (yieldedCount === 0) {
         pick = preamble;
-        startAt = preambleStartAt;
-      } else {
+        startAt = warningAtPress;
+      } else if (yieldedCount === 1) {
+        // First real mini-game at the firstGameAtPress click.
         const candidates = pool.filter((mg) => mg.id !== lastId);
         pick = candidates.length > 0
           ? candidates[Math.floor(Math.random() * candidates.length)]
           : pool[0];
-        // First real game: zero-gap so it kicks off right when preamble ends.
-        // Subsequent: gapPresses (default 10) of normal mashing between games.
-        const gap = yieldedCount === 1 ? firstGameGap : gapPresses;
-        startAt = currentPressCount + gap;
+        startAt = firstGameAtPress;
+      } else {
+        // Subsequent: random, no repeats, gap from current press count.
+        const candidates = pool.filter((mg) => mg.id !== lastId);
+        pick = candidates.length > 0
+          ? candidates[Math.floor(Math.random() * candidates.length)]
+          : pool[0];
+        startAt = currentPressCount + gapPresses;
       }
       lastId = pick.id;
       yieldedCount++;
@@ -309,14 +332,13 @@ export function createInfiniteSchedule({
   };
 }
 
-// Canonical default: preamble runs presses 1–9, first random mini-game at
-// press 10, 10-press gap between subsequent games. No two in a row.
+// Canonical default: 25-press warning, 30-press first game, 12-press gaps.
 export function createDefaultInfiniteStrategy() {
   return createInfiniteSchedule({
     preamble: PREAMBLE,
     pool: ALL_MINI_GAMES,
-    gapPresses: 10,
-    preambleStartAt: 1,
-    firstGameGap: 0,
+    gapPresses: GAP_PRESSES,
+    warningAtPress: WARNING_AT_PRESS,
+    firstGameAtPress: FIRST_GAME_AT,
   });
 }

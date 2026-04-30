@@ -7,6 +7,8 @@ import './services/openTracking';
 import './services/ai';
 // Cache-mismatch self-heal + new-version detection.
 import './services/freshness';
+// Stale-session guard — soft/hard refresh after long away periods.
+import './services/staleSessionGuard';
 // Capture and log uncaught errors / promise rejections to RTDB.
 import './services/errorLogger';
 // Per-tab session tracking — writes to sessions/{sid}, attributes events.
@@ -394,10 +396,10 @@ const GlobalStyle = createGlobalStyle`
     transition: transform 0.42s cubic-bezier(.22,.61,.36,1);
   }
   /* While draggable, kill the transition so the button tracks the finger
-     1:1. The button-state attribute is cleared by applyAmbient when the
-     play phase exits — at which point the transition kicks back in and
-     the button smoothly slides back to its migration anchor. */
-  body[data-button-state="draggable"] .kudos-row {
+     1:1. data-snap-back is a one-frame override that mode cleanup uses
+     to force the button to teleport back to anchor rather than glide. */
+  body[data-button-state="draggable"] .kudos-row,
+  body[data-snap-back="1"] .kudos-row {
     transition: none;
   }
   body[data-button-state="draggable"] .hd-cta {
@@ -409,29 +411,45 @@ const GlobalStyle = createGlobalStyle`
     cursor: grabbing;
   }
 
-  /* Pig Boy Attack avatar: when active, the mode renders a large emoji
-     that tracks the button center. Hide the button's interior visuals so
-     they don't peek through underneath, and shrink the button itself to
-     a small disc-shaped hit target so the avatar dominates visually. */
+  /* Pig Boy Attack avatar: when active, the mode renders a small emoji
+     that tracks the button center. The avatar itself is the touch target
+     (pointer-events: auto + direct pointer listeners in the mode), so we
+     hide the underlying button visuals and shrink it to a tiny invisible
+     disc that just provides positional anchoring for the avatar. */
+  /* Pig Boy: the button stays full-sized and fully interactable for drag
+     input — but it's visually INVISIBLE. Only the girl emoji (avatar
+     overlay) is visible. The button is still the drag target (KudosCta's
+     drag wiring handles pointerdown on .hd-cta), but its background /
+     border / shadow are transparent and its content is hidden, so the
+     player only sees the girl. Pig collision uses the avatar's bounding
+     rect (in the mode), not the button's, so pigs only "touch" the
+     visible girl, never an invisible button edge. */
   body[data-pig-avatar="1"] .hd-cta {
-    width: 90px !important;
-    min-width: 90px;
-    padding: 0 !important;
-    border-radius: 50%;
-    background: radial-gradient(circle, rgba(255,179,217,0.25), rgba(0,0,0,0.0)) !important;
-    box-shadow: 0 0 18px rgba(255,179,217,0.35) !important;
+    background: transparent !important;
+    border-color: transparent !important;
+    box-shadow: none !important;
+    color: transparent !important;
   }
   body[data-pig-avatar="1"] .hd-cta-mash,
   body[data-pig-avatar="1"] .hd-cta-top,
   body[data-pig-avatar="1"] .hd-cta-text,
   body[data-pig-avatar="1"] .hd-cta.hd-heartbeat::before,
   body[data-pig-avatar="1"] .hd-cta.hd-heartbeat::after {
-    display: none !important;
+    display: none;
   }
   /* Avatar pulse — slow, subtle, signals "she's still the target." */
   @keyframes pigAvatarPulse {
     0%, 100% { filter: drop-shadow(0 4px 12px rgba(0,0,0,0.55)) brightness(1.0); }
     50%      { filter: drop-shadow(0 6px 16px rgba(255,179,217,0.85)) brightness(1.10); }
+  }
+  /* Pure visual overlay — pointer-events: none so taps go through to the
+     button below. KudosCta's drag wiring captures pointerdown on .hd-cta
+     just like Pong does. */
+  .pig-target-avatar {
+    pointer-events: none;
+    user-select: none;
+    -webkit-user-select: none;
+    -webkit-tap-highlight-color: transparent;
   }
   .pig-target-avatar.is-pulsing {
     animation: pigAvatarPulse 1.4s ease-in-out infinite;

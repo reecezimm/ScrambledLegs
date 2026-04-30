@@ -8,7 +8,8 @@
 //   apex inside a "playable rectangle" (10–90% width, 18–55% height).
 // ─────────────────────────────────────────────────────────────────────────────
 
-const SPAWN_GAP_MS = 220;        // brief beat before the next egg spawns
+const SPAWN_GAP_MS = 60;         // shortened so the next egg flies in fast
+const SPAWN_OFFSCREEN_PX = 24;   // small offset so the egg pops into view almost instantly
 
 const goldenEgg = {
   id: 'goldenEgg',
@@ -30,17 +31,39 @@ const goldenEgg = {
     function spawn() {
       if (cancelled) return;
       spawnedCount++;
-      console.log(`[mg] goldenEgg spawn #${spawnedCount}`);
       const vp = { w: window.innerWidth, h: window.innerHeight };
-      const fromLeft = Math.random() < 0.5;
-      const startX = fromLeft ? -60 : vp.w + 60;
-      const startY = vp.h * (0.55 + Math.random() * 0.20);
-      // Apex constrained to playable rect
+
+      // Pick a spawn edge: LEFT, RIGHT, or TOP (anywhere along that edge).
+      // Bottom is excluded because eggs lobbing UP from below feels weird.
+      const edges = ['left', 'right', 'top'];
+      const edge = edges[Math.floor(Math.random() * edges.length)];
+      const off = SPAWN_OFFSCREEN_PX;
+      let startX, startY, endX, endY;
+      // Apex constrained to a playable interior rect so the user always
+      // has a window to tap the egg as it crosses the screen.
       const apexX = vp.w * (0.15 + Math.random() * 0.70);
-      const apexY = vp.h * (0.18 + Math.random() * 0.30);
-      const endX = fromLeft ? vp.w + 60 : -60;
-      const endY = vp.h * (0.62 + Math.random() * 0.20);
+      const apexY = vp.h * (0.18 + Math.random() * 0.40);
+
+      if (edge === 'left') {
+        startX = -off;
+        // Anywhere down the left edge — bottom 90% so it's visible.
+        startY = vp.h * (0.05 + Math.random() * 0.85);
+        endX = vp.w + off;
+        endY = vp.h * (0.10 + Math.random() * 0.80);
+      } else if (edge === 'right') {
+        startX = vp.w + off;
+        startY = vp.h * (0.05 + Math.random() * 0.85);
+        endX = -off;
+        endY = vp.h * (0.10 + Math.random() * 0.80);
+      } else {
+        // top — drops into view from above, exits along the bottom edge
+        startX = vp.w * (0.10 + Math.random() * 0.80);
+        startY = -off;
+        endX = vp.w * (0.10 + Math.random() * 0.80);
+        endY = vp.h + off;
+      }
       const dur = flightMin + Math.random() * (flightMax - flightMin);
+      console.log(`[mg] goldenEgg spawn #${spawnedCount} edge=${edge} dur=${dur.toFixed(0)}ms`);
 
       const egg = document.createElement('div');
       egg.className = 'flying-golden-egg';
@@ -101,15 +124,41 @@ const goldenEgg = {
         console.log(`[mg] goldenEgg HIT #${hitCount} +${reward} | total=${totalScore}`);
         ctx.awardBonus(reward, { x: cx, y: cy });
         spawnRipple(cx, cy);
-        cleanupEgg();
-        scheduleNext();
+
+        // Stop motion immediately, but keep the egg in place to play the crack.
+        try { shimmer.cancel(); } catch (_) {}
+        try { flight.cancel(); } catch (_) {}
+        // Pin the egg at its tap-time position (cancel() reverts left/top
+        // to start values, so re-anchor here).
+        egg.style.left = `${cx}px`;
+        egg.style.top = `${cy}px`;
+        // Swap to cracked-egg emoji.
+        egg.textContent = '🐣';
+
+        const crack = egg.animate(
+          [
+            { transform: 'translate(-50%,-50%) scale(1) translateY(0)',     opacity: 1, offset: 0 },
+            { transform: 'translate(-50%,-50%) scale(1.4) translateY(0)',   opacity: 1, offset: 0.375 },
+            { transform: 'translate(-50%,-50%) scale(1.1) translateY(-30px)', opacity: 0, offset: 1 },
+          ],
+          { duration: 320, easing: 'ease-out', fill: 'forwards' }
+        );
+        const finishCrack = () => {
+          if (cancelled) return;
+          egg.remove();
+          if (inFlight === handle) inFlight = null;
+          scheduleNext();
+        };
+        crack.onfinish = finishCrack;
+        crack.oncancel = () => { try { egg.remove(); } catch (_) {} };
       };
       egg.addEventListener('click', onTap, { once: true });
 
       function cleanupEgg() {
         try { shimmer.cancel(); } catch (_) {}
         try { flight.cancel(); } catch (_) {}
-        egg.remove();
+        try { egg.getAnimations().forEach((a) => a.cancel()); } catch (_) {}
+        try { egg.remove(); } catch (_) {}
         if (inFlight === handle) inFlight = null;
       }
 

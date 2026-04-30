@@ -78,14 +78,33 @@ export async function fetchWeather(lat, lng, eventStartMs) {
 export function useWeather(lat, lng, timestamp) {
   const [data, setData] = useState(null);
   const [isLoading, setIsLoading] = useState(false);
+  // Bumped by `staleSession:soft` to force a re-fetch after a long away period.
+  const [refreshTick, setRefreshTick] = useState(0);
 
   useEffect(() => {
     if (!lat || !lng || !timestamp || !weatherInRange(timestamp)) return;
     setIsLoading(true);
+    // If the stale-session guard tripped, clear our cache key for this
+    // lat/lng/date/hour combo so fetchWeather hits the network.
+    if (refreshTick > 0) {
+      try {
+        const startDate = new Date(timestamp);
+        const dateStr = `${startDate.getFullYear()}-${String(startDate.getMonth() + 1).padStart(2, '0')}-${String(startDate.getDate()).padStart(2, '0')}`;
+        const cacheKey = `sl_wx_${lat.toFixed(3)}_${lng.toFixed(3)}_${dateStr}_${startDate.getHours()}`;
+        localStorage.removeItem(cacheKey);
+      } catch (_) { /* ignore */ }
+    }
     fetchWeather(lat, lng, timestamp)
       .then(w => { setData(w); setIsLoading(false); })
       .catch(() => setIsLoading(false));
-  }, [lat, lng, timestamp]);
+  }, [lat, lng, timestamp, refreshTick]);
+
+  // Listen for the stale-session soft-refresh event and bump refreshTick.
+  useEffect(() => {
+    const onSoft = () => setRefreshTick((t) => t + 1);
+    window.addEventListener('staleSession:soft', onSoft);
+    return () => window.removeEventListener('staleSession:soft', onSoft);
+  }, []);
 
   return { data, isLoading };
 }

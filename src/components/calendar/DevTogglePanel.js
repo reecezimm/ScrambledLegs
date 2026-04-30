@@ -7,7 +7,7 @@
 import React, { useEffect, useState } from 'react';
 import styled from 'styled-components';
 import { gameStore } from '../../game/store';
-import { GOLDEN_EGG, MASH_GAUNTLET, FREEZE, TWILIGHT, PIG_BOY_ATTACK, createDefaultInfiniteStrategy } from '../../game/miniGames';
+import { GOLDEN_EGG, MASH_GAUNTLET, TWILIGHT, PIG_BOY_ATTACK, PONG, createDefaultInfiniteStrategy } from '../../game/miniGames';
 
 const STORAGE_KEY = 'sl_dev_minigame_choice';
 const PANEL_OPEN_KEY = 'sl_dev_panel_open';
@@ -16,9 +16,9 @@ const CHOICES = [
   { id: 'auto',          label: 'Auto (infinite loop)' },
   { id: 'golden-egg',    label: 'Golden Egg only' },
   { id: 'mash-gauntlet', label: 'Mash Gauntlet only' },
-  { id: 'freeze',        label: 'Freeze only' },
   { id: 'twilight',      label: 'Twilight only' },
   { id: 'pig-boy-attack', label: 'Pig Boy Attack only' },
+  { id: 'pong',          label: 'Pong only' },
 ];
 
 // Returns a schedule spec for gameStore.setSchedule. "auto" yields the
@@ -29,9 +29,9 @@ function buildScheduleSpec(choiceId) {
   if (choiceId === 'auto') return { strategy: createDefaultInfiniteStrategy() };
   if (choiceId === 'golden-egg') return [GOLDEN_EGG];
   if (choiceId === 'mash-gauntlet') return [MASH_GAUNTLET];
-  if (choiceId === 'freeze') return [FREEZE];
   if (choiceId === 'twilight') return [TWILIGHT];
   if (choiceId === 'pig-boy-attack') return [PIG_BOY_ATTACK];
+  if (choiceId === 'pong') return [PONG];
   return { strategy: createDefaultInfiniteStrategy() };
 }
 

@@ -1,7 +1,7 @@
 // ─────────────────────────────────────────────────────────────────────────────
-// twilight — the sky takes over. White stars with glittery shooting-star tails
-// streak across a darkened night-sky canvas. Tap stars for +reward bonus.
-// At least 5 stars on screen at any time; respawn immediately on hit/exit.
+// twilight — the sky takes over. Floating beer mugs with warm amber foam tails
+// streak across a darkened night-sky canvas. Tap beers for +reward bonus.
+// At least 5 beers on screen at any time; respawn immediately on hit/exit.
 // Mash button stays interactable (mashing: 'normal'). Bonus-only — no fail.
 //
 // Movement is a manual rAF physics loop (not WAAPI keyframes) so each star
@@ -114,13 +114,23 @@ const twilight = {
 
       const star = document.createElement('div');
       star.className = 'flying-twilight-star';
-      star.textContent = '⭐';
+      star.textContent = '🍺';
+      // Compute initial transform BEFORE append so the element never paints
+      // a frame at (0,0). Previously the manual-loop version baked
+      // `left:0; top:0` into cssText and relied on the next rAF tick to
+      // write the real transform, which on mobile produced a brief
+      // flashing artifact in the upper-left corner. Setting transform
+      // pre-append eliminates that 1-frame paint.
+      const initialTransform =
+        `translate(${(x - SIZE_PX / 2).toFixed(1)}px, ${(y - SIZE_PX / 2).toFixed(1)}px) ` +
+        `rotate(0rad)`;
       star.style.cssText = [
         'position:fixed', 'pointer-events:auto', 'cursor:pointer',
         'z-index:9100',
         `font-size:${SIZE_PX}px`,
         'will-change:transform,filter',
         'left:0', 'top:0',
+        `transform:${initialTransform}`,
         'user-select:none', '-webkit-user-select:none', 'touch-action:manipulation',
       ].join(';') + ';';
       document.body.appendChild(star);
@@ -145,13 +155,14 @@ const twilight = {
       // Glitter shimmer — independent of flight, just a brightness flicker.
       // Tail offsets are written each rAF tick from current velocity (so the
       // tail trails the direction of motion even after sharp turns).
+      // Toned down from 1.4 → 1.12 so the beer doesn't look like a strobe.
       const shimmer = star.animate(
         [
           { '--shimmer-mult': '1.0' },
-          { '--shimmer-mult': '1.4' },
+          { '--shimmer-mult': '1.12' },
           { '--shimmer-mult': '1.0' },
         ],
-        { duration: 380, iterations: Infinity, easing: 'ease-in-out' }
+        { duration: 720, iterations: Infinity, easing: 'ease-in-out' }
       );
       handle.shimmer = shimmer;
 
@@ -261,11 +272,12 @@ const twilight = {
         const t1 = 12 * burstBoost, t2 = 24 * burstBoost,
               t3 = 40 * burstBoost, t4 = 60 * burstBoost;
         const brightness = isBursting ? 1.6 : 1.0;
+        // Warm amber/gold foam trail — suggests beer foam streaming behind.
         h.el.style.filter =
-          `drop-shadow(${(ux * t1).toFixed(1)}px ${(uy * t1).toFixed(1)}px 8px rgba(255,255,255,${0.9 * brightness})) ` +
-          `drop-shadow(${(ux * t2).toFixed(1)}px ${(uy * t2).toFixed(1)}px 14px rgba(180,210,255,${0.6 * brightness})) ` +
-          `drop-shadow(${(ux * t3).toFixed(1)}px ${(uy * t3).toFixed(1)}px 22px rgba(120,150,255,${0.3 * brightness})) ` +
-          `drop-shadow(${(ux * t4).toFixed(1)}px ${(uy * t4).toFixed(1)}px 30px rgba(180,200,255,${0.18 * brightness}))`;
+          `drop-shadow(${(ux * t1).toFixed(1)}px ${(uy * t1).toFixed(1)}px 8px rgba(255,200,100,${0.85 * brightness})) ` +
+          `drop-shadow(${(ux * t2).toFixed(1)}px ${(uy * t2).toFixed(1)}px 14px rgba(255,180,80,${0.55 * brightness})) ` +
+          `drop-shadow(${(ux * t3).toFixed(1)}px ${(uy * t3).toFixed(1)}px 22px rgba(200,140,60,${0.3 * brightness})) ` +
+          `drop-shadow(${(ux * t4).toFixed(1)}px ${(uy * t4).toFixed(1)}px 30px rgba(220,170,90,${0.18 * brightness}))`;
 
         h.el.style.transform =
           `translate(${(h.x - SIZE_PX / 2).toFixed(1)}px, ${(h.y - SIZE_PX / 2).toFixed(1)}px) ` +
@@ -288,7 +300,7 @@ const twilight = {
     }
 
     // ── Initial burst spawn + start the rAF loop ────────────────────────────
-    ctx.setSubStatus('TAP THE STARS');
+    ctx.setSubStatus('TAP THE BEERS');
     const burst = () => { if (!cancelled) spawn(); };
     for (let i = 0; i < MIN_CONCURRENT; i++) {
       staggerTimers.push(setTimeout(burst, i * STAGGER_MS));

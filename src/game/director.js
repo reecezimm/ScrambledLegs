@@ -46,6 +46,11 @@ export const initialState = {
   // triggers a fail-out. The store watches for changes and notifies listeners
   // (KudosCta) which in turn fires the save→burn→reset flow immediately.
   sessionEndPulse: 0,
+  // Wall-clock timestamp of the first press in the current session.
+  // null until pressCount transitions 0 → 1. Used by mini-games that
+  // declare `startAtMs` so they can't fire too soon regardless of how
+  // fast the user is mashing.
+  sessionStartMs: null,
   resolved: resolveDefaults(),
 };
 
@@ -55,6 +60,7 @@ function resolveDefaults() {
     subStatus: null,
     mashingMode: DEFAULTS.mashingMode,
     buttonState: DEFAULTS.buttonState,
+    dragAxis: 'free',
     gameClockPaused: false,
     ambient: { ...DEFAULTS.ambient },
     presentation: { ...DEFAULTS.presentation },
@@ -82,8 +88,15 @@ export function reduce(state, action) {
       });
 
     case 'pressCount': {
-      const next = { ...state, pressCount: action.value };
-      return advance(next, action.now || Date.now());
+      // Stamp sessionStartMs on the 0→1+ transition so wall-clock gates
+      // (mg.startAtMs) start counting from the first real press, not from
+      // page load.
+      const now = action.now || Date.now();
+      const sessionStartMs = (state.pressCount === 0 && action.value > 0 && state.sessionStartMs == null)
+        ? now
+        : state.sessionStartMs;
+      const next = { ...state, pressCount: action.value, sessionStartMs };
+      return advance(next, now);
     }
 
     case 'tick':
@@ -107,7 +120,15 @@ export function reduce(state, action) {
         modeStatusOverride: null,
         modeSubStatus: null,
       };
-      return advancePhase(next, action.now || Date.now());
+      // Critical: re-resolve after advancePhase. Without this, state.resolved
+      // stays computed against the OLD phase (the one just ending), so any
+      // host that subscribes to state.resolved (KudosCta's pause-detector,
+      // ambient appliers, GameStatus) sees stale mashingMode / gameClockPaused
+      // / button-state values and misses the unpause flip after a mini-game
+      // play phase ends. Bug surfaced as "after Pig Boy/Freeze finishes the
+      // button just sits — no heartbeat, no save flow." Other reducer cases
+      // call resolve() at the end of advance(); this case bypassed that path.
+      return resolve(advancePhase(next, action.now || Date.now()));
     }
 
     case 'appendSchedule':
@@ -126,10 +147,10 @@ export function reduce(state, action) {
       return resolve({ ...state, modeSubStatus: action.text });
 
     case 'reset':
-      // Clear schedule, scheduleIndex, active, counters. Preserve
-      // sessionEndPulse so the listener doesn't see a phantom decrement.
-      // The store will refill the schedule from scheduleStrategy on the
-      // next press.
+      // Clear schedule, scheduleIndex, active, counters, sessionStartMs.
+      // Preserve sessionEndPulse so the listener doesn't see a phantom
+      // decrement. The store will refill the schedule from scheduleStrategy
+      // on the next press.
       return {
         ...initialState,
         sessionEndPulse: state.sessionEndPulse,
@@ -147,9 +168,16 @@ export function reduce(state, action) {
 function advance(state, now) {
   let s = state;
   // 1) Activate next mini-game if none active and queue head is ready.
+  //    Both gates must clear:
+  //      - pressCount >= mg.startAtPress (skill-paced gate)
+  //      - now - sessionStartMs >= mg.startAtMs (wall-clock floor; if
+  //        startAtMs is unset, this gate auto-passes)
   if (!s.active && s.scheduleIndex < s.schedule.length) {
     const head = s.schedule[s.scheduleIndex];
-    if (s.pressCount >= head.startAtPress) {
+    const pressOk = s.pressCount >= (head.startAtPress || 0);
+    const msOk = !head.startAtMs
+      || (s.sessionStartMs != null && (now - s.sessionStartMs) >= head.startAtMs);
+    if (pressOk && msOk) {
       s = startActive(s, s.scheduleIndex, now);
     }
   }
@@ -179,17 +207,37 @@ function advancePhase(state, now) {
   if (nextIdx >= mg.phases.length) {
     // Mini-game complete — apply rules.onWin/onLose deltas, advance schedule.
     const outcome = state.active.lastOutcome;
+    const score = state.active.lastScore;
     const rules = mg.rules || {};
     let bonus = state.bonusCount;
-    if (outcome === 'win' && rules.onWin && typeof rules.onWin.bonus === 'number')
-      bonus += rules.onWin.bonus;
-    if (outcome === 'lose' && rules.onLose && typeof rules.onLose.bonus === 'number')
-      bonus += rules.onLose.bonus;
+    let appliedDelta = 0;
+    let appliedSource = 'no-rule';
+    if (outcome === 'win' && rules.onWin && typeof rules.onWin.bonus === 'number') {
+      appliedDelta = rules.onWin.bonus;
+      appliedSource = 'onWin';
+      bonus += appliedDelta;
+    } else if (outcome === 'lose' && rules.onLose && typeof rules.onLose.bonus === 'number') {
+      appliedDelta = rules.onLose.bonus;
+      appliedSource = 'onLose';
+      bonus += appliedDelta;
+    }
     // Fire sessionEndPulse if rules.onLose.endsMashSession was triggered
     // (the lose outcome propagated all the way through any outcome status
     // phase). Host (KudosCta) listens and runs the save→burn→reset flow.
     const fireSessionEnd = outcome === 'lose'
       && rules.onLose && rules.onLose.endsMashSession;
+    // ── Diagnostic ────────────────────────────────────────────────────
+    // Log the EXACT outcome → bonus computation when a mini-game wraps up.
+    // If a user sees a -X bonus on what they thought was a win, this line
+    // tells you the recorded outcome and the source rule that fired.
+    /* eslint-disable no-console */
+    console.log(
+      `[mg] mini-game COMPLETE id=${mg.id} outcome=${outcome} score=${score == null ? '-' : score} ` +
+      `bonus=${appliedDelta >= 0 ? '+' : ''}${appliedDelta} via=${appliedSource} ` +
+      `bonusCount ${state.bonusCount} → ${Math.max(0, bonus)}` +
+      (fireSessionEnd ? ' | endsMashSession=TRUE' : '')
+    );
+    /* eslint-enable no-console */
     return {
       ...state,
       active: null,
@@ -273,6 +321,10 @@ function resolve(state) {
       if (phase.overrides.button) r.buttonState = phase.overrides.button;
       if (phase.overrides.gameClock === 'paused') r.gameClockPaused = true;
       if (phase.overrides.gameClock === 'run') r.gameClockPaused = false;
+      // dragAxis: 'horizontal' locks the button to left/right movement and
+      // clamps to viewport bounds (paddle behavior — used by Pong).
+      // 'free' (default) is full 2D drag (Pig Boy).
+      if (phase.overrides.dragAxis) r.dragAxis = phase.overrides.dragAxis;
     }
 
     if (phase.kind === 'status') {

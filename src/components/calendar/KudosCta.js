@@ -8,9 +8,16 @@ import { logEvent } from '../../services/analytics';
 import {
   setMashEnergy, clearMashEnergy, applyShockwave, clearShockwave,
   spawnHotDog, spawnRainbowEgg, flashBackground, spawnPhrase, rainbowChance,
+  purgeMashWorld,
 } from '../../hooks/useMashEffects';
 import { fmtCount } from '../../hooks/useEventLifecycle';
 import { gameStore } from '../../game/store';
+import {
+  emitCurrent as emitMashCurrent,
+  emitSessionStart as emitMashSessionStart,
+  emitSessionEnd as emitMashSessionEnd,
+  emitCumulativeWritten as emitMashCumulativeWritten,
+} from '../../hooks/useMashHighScore';
 
 // Spawn a "+N" or "-N" floater at (x, y). Single source of truth for bonus
 // visual feedback — both mode-driven (golden egg taps, freeze penalties) and
@@ -166,7 +173,7 @@ const HD_CHALLENGE_BANDS = [
    "Peer thinks this is too hard",
    "Boundary waters > your effort",
    "Reed's on a lake. What's your excuse?",
-   "Even the fattest Reed pedals harder",
+   "Reed's Rumblefish is faster than you",
    "\"Reed Peer with DBS here\" — even mid-climb",
    "Reed's pitching you a basement remodel right now",
    "Peer's ice-fishing harder than you're mashing",
@@ -276,7 +283,7 @@ const CREW_CHALLENGES = new Set([
   "Even Pig Boy remembers how to send it",
   "Reed is paddling right now","Peer thinks this is too hard",
   "Boundary waters > your effort","Reed's on a lake. What's your excuse?",
-  "Even the fattest Reed pedals harder",
+  "Reed's Rumblefish is faster than you",
   "\"Reed Peer with DBS here\" — even mid-climb",
   "Reed's pitching you a basement remodel right now",
   "Peer's ice-fishing harder than you're mashing",
@@ -383,14 +390,19 @@ const HD_FIRST_25 = [
   "DON'T STOP — TAP!",
   "TAP FASTER!",
   "NOW MASH!",
-  // 6-10: crescendo — they're committed, ramp the urgency.
+  // 6-9: crescendo — they're committed, ramp the urgency.
   "MASH HARDER!",
   "KEEP MASHING!",
   "BEAT THE HIGH SCORE!",
   "DON'T LET UP!",
-  "GO GO GO!",
-  // 11-25: same as before — challenge / hype.
-  "OTHERS DID BETTER", "DON'T QUIT NOW", "HAMMER DOWN!", "SEND IT!", "THEY'RE BEATING YOU",
+  // 10-12: critical mini-game warning. Mini-games show up at click 25; if
+  // the user stops mashing for >2.5s the session auto-saves out. Drill in
+  // the rule: pause the mash = end the run, even during a mini-game.
+  "DON'T STOP MASHING\nEVEN DURING MINI-GAMES",
+  "STOP MASHING = GAME OVER",
+  "WHEN IN DOUBT, MASH",
+  // 13-25: same as before — challenge / hype.
+  "HAMMER DOWN!", "SEND IT!", "THEY'RE BEATING YOU",
   "ALMOST THERE", "BEAST MODE", "UNHINGED YET?", "YOU GOT THIS", "MORE WATTS!",
   "FEEL THE BURN", "PROVE THEM WRONG", "CHAMPION ENERGY", "ALL IN!", "__HYPE__",
 ];
@@ -829,10 +841,23 @@ export default function KudosCta({ event, isSheetContext }) {
       clearTimeout(hdResetTimerRef.current);
       hdResetTimerRef.current = null;
     }
+    // Comprehensive world-purge: removes every stray spawned DOM node
+    // (eggs, beers, stars, pigs, balls, avatars, phrase floaters), restores
+    // the body + canvas backgrounds (Twilight overrides them), and force-
+    // clears every body data-attribute the mash system writes. Safety net
+    // so a session that ended mid-mini-game can't leave the screen looking
+    // empty / broken on the next session.
+    try { purgeMashWorld(); } catch (_) {}
     // Reset mini-game director so the next session starts clean. Director
     // clears its own timeouts (mode, status timeout) and resets the
     // strategy so the next session opens with Golden Egg again.
     try { gameStore.reset(); } catch (_) {}
+    // High-score bus: signal session end (HUD hides, celebration flags
+    // reset) and zero out the current value.
+    try {
+      emitMashCurrent(0);
+      emitMashSessionEnd();
+    } catch (_) {}
     if (vvCleanupRef.current) vvCleanupRef.current();
     // ── MASH GAME END ──
     // Release the page lock and restore scroll. clearMashEnergy already
@@ -861,6 +886,7 @@ export default function KudosCta({ event, isSheetContext }) {
   // listener (when a `endsMashSession: true` mini-game fails — fires
   // immediately, no delay).
   const runSaveFlow = useCallback(() => {
+    console.log('[mg-host] runSaveFlow ENTRY | pressCount=' + hdPressCountRef.current);
     const btn = btnRef.current;
     if (!btn) return;
     const row = btn.parentElement;
@@ -909,6 +935,22 @@ export default function KudosCta({ event, isSheetContext }) {
               dbRef(database, `eventMashTotals/${event.id}/${sessionUid}`),
               (cur) => (cur || 0) + finalCount,
             ).catch(() => {});
+            // Cumulative high-score: max-of-best transaction. Writing the
+            // numeric directly (not under a `best` child) keeps the txn
+            // simple. Path: mashHighScores/${eventId}/${uid}/best.
+            runTransaction(
+              dbRef(database, `mashHighScores/${event.id}/${sessionUid}/best`),
+              (cur) => Math.max(cur || 0, finalCount),
+            ).then((res) => {
+              if (res && res.committed) {
+                const committedBest = (res.snapshot && res.snapshot.val()) || finalCount;
+                emitMashCumulativeWritten({
+                  eventId: event.id,
+                  uid: sessionUid,
+                  best: committedBest,
+                });
+              }
+            }).catch(() => {});
             logEvent('mash_session_complete', {
               eventId: event.id,
               count: finalCount,
@@ -963,6 +1005,26 @@ export default function KudosCta({ event, isSheetContext }) {
     let cumDX = 0, cumDY = 0;
     let rafId = 0;
     let pendingX = 0, pendingY = 0;
+    // Captured at dragStart so we can clamp horizontal moves to viewport
+    // bounds (Pong paddle behavior). Anchor center = current button center
+    // minus current cumulative offset (i.e. where the button would be at
+    // cumDX=0). halfW/halfH come from the button's bounding box at
+    // dragStart so we keep the WHOLE button inside the viewport.
+    let anchorCx = 0, halfW = 0;
+
+    const clampForAxis = () => {
+      const r = gameStore.getState().resolved;
+      if (r && r.dragAxis === 'horizontal') {
+        // Lock vertical movement.
+        cumDY = 0;
+        // Clamp horizontal so the button stays fully on-screen.
+        const vw = window.innerWidth;
+        const minDx = halfW - anchorCx;          // anchorCx + cumDX - halfW >= 0
+        const maxDx = vw - anchorCx - halfW;     // anchorCx + cumDX + halfW <= vw
+        if (cumDX < minDx) cumDX = minDx;
+        if (cumDX > maxDx) cumDX = maxDx;
+      }
+    };
 
     const onMove = (e) => {
       if (e.pointerId !== pointerId) return;
@@ -970,6 +1032,7 @@ export default function KudosCta({ event, isSheetContext }) {
       const dy = e.clientY - lastY;
       lastX = e.clientX; lastY = e.clientY;
       cumDX += dx; cumDY += dy;
+      clampForAxis();
       pendingX = e.clientX; pendingY = e.clientY;
       if (rafId) return;
       rafId = requestAnimationFrame(() => {
@@ -995,6 +1058,11 @@ export default function KudosCta({ event, isSheetContext }) {
       e.preventDefault();
       pointerId = e.pointerId;
       lastX = e.clientX; lastY = e.clientY;
+      // Snapshot the natural anchor (current center minus current drag) so
+      // axis-clamp math works even after the user has dragged before.
+      const rect = btn.getBoundingClientRect();
+      halfW = rect.width / 2;
+      anchorCx = rect.left + halfW - cumDX;
       try { btn.setPointerCapture(pointerId); } catch (_) {}
       gameStore.handleDragStart({ x: e.clientX, y: e.clientY });
       window.addEventListener('pointermove', onMove);
@@ -1045,6 +1113,7 @@ export default function KudosCta({ event, isSheetContext }) {
       if (!delta) return;
       const before = hdPressCountRef.current;
       hdPressCountRef.current = Math.max(0, hdPressCountRef.current + delta);
+      emitMashCurrent(hdPressCountRef.current);
       const btn = btnRef.current;
       if (btn) {
         const row = btn.parentElement;
@@ -1076,20 +1145,68 @@ export default function KudosCta({ event, isSheetContext }) {
   // time to resume mashing before the save kicks in.
   useEffect(() => {
     let pausedSnapshot = false;
+    let activeIdSnapshot = null;
     const unsub = gameStore.subscribe((s) => {
-      const paused = !!(s.resolved && s.resolved.gameClockPaused);
+      // Pause the save timer in any state where the user CAN'T extend it:
+      //   - gameClockPaused
+      //   - mashing 'paused' (Pig Boy, Pong — drag-only mini-games)
+      //   - mashing 'inverted' (taps cost points; user supposed to NOT mash)
+      const r = s.resolved;
+      const paused = !!(r && (
+        r.gameClockPaused ||
+        r.mashingMode === 'paused' ||
+        r.mashingMode === 'inverted'
+      ));
+      const activeId = r ? r.miniGameId : null;
+
+      // Pause flip → clear the save timer. Don't re-arm on the unpause
+      // flip — the play-phase often unpauses during the outcome status
+      // phase (which still runs for 2400ms), and re-arming there means
+      // save fires ~100ms after the outcome message disappears, leaving
+      // the user no breathing room to resume mashing. Defer re-arm to
+      // mini-game END (active → null) below.
       if (paused && !pausedSnapshot) {
         pausedSnapshot = true;
         if (hdResetTimerRef.current) {
           clearTimeout(hdResetTimerRef.current);
           hdResetTimerRef.current = null;
+          console.log('[mg-host] save-timer PAUSED (gameClockPaused=' + !!r.gameClockPaused + ' mashingMode=' + r.mashingMode + ')');
         }
       } else if (!paused && pausedSnapshot) {
         pausedSnapshot = false;
-        if (hdPressCountRef.current > 0 && !hdResetTimerRef.current) {
-          hdResetTimerRef.current = setTimeout(runSaveFlow, KUDOS_SAVE_DELAY_MS);
+        console.log('[mg-host] unpause flip — deferring save-timer re-arm to mini-game end');
+      }
+
+      // Mini-game fully complete (active goes from non-null to null) —
+      // THIS is when we re-arm the save timer + flash the heartbeat. By
+      // now the outcome status phase has finished, so the user gets a
+      // full grace period AFTER the win/loss message disappears. Mini-
+      // games are designed to chain — the player wants to keep mashing
+      // through to the next one — so the post-mini-game grace is bumped
+      // longer than the normal 2.5s idle save (4s) and the heartbeat ring
+      // fires for visual feedback so the user knows to resume mashing.
+      const POST_MINI_GAME_GRACE_MS = 4000;
+      if (activeIdSnapshot != null && activeId == null) {
+        const press = hdPressCountRef.current;
+        if (press > 0 && !hdResetTimerRef.current) {
+          hdResetTimerRef.current = setTimeout(() => {
+            console.log('[mg-host] save-timer FIRED (post-mini-game idle ' + POST_MINI_GAME_GRACE_MS + 'ms)');
+            runSaveFlow();
+          }, POST_MINI_GAME_GRACE_MS);
+          console.log('[mg-host] save-timer RE-ARMED post-mini-game | from="' + activeIdSnapshot + '" pressCount=' + press + ' delay=' + POST_MINI_GAME_GRACE_MS + 'ms');
+          // Visual: trigger the heartbeat ring so the user sees the burn
+          // counting down. Mini-games are meant to chain, so this is the
+          // visual "keep going" cue between games.
+          const btn = btnRef.current;
+          if (btn && document.body.dataset.ambHeartbeat !== 'off') {
+            btn.classList.remove('hd-heartbeat');
+            // eslint-disable-next-line no-unused-expressions
+            btn.offsetWidth;
+            btn.classList.add('hd-heartbeat');
+          }
         }
       }
+      activeIdSnapshot = activeId;
     });
     return unsub;
   }, [runSaveFlow]);
@@ -1132,10 +1249,16 @@ export default function KudosCta({ event, isSheetContext }) {
     const pressCount = hdPressCountRef.current;
     // Push canonical press count to the mini-game director.
     gameStore.setPressCount(pressCount);
+    // Mirror to the high-score bus so HighScoreHud / Celebration can react.
+    emitMashCurrent(pressCount);
     console.log('[mash-game] press', pressCount);
     if (pressCount === 1) {
       sessionStartRef.current = Date.now();
       sessionUidRef.current = user ? user.uid : null;
+      emitMashSessionStart({
+        eventId: event && event.id,
+        uid: user ? user.uid : null,
+      });
       // ── MASH GAME START ──
       // Compute the DELTA needed to translate the row from its natural slot
       // to the viewport center-bottom anchor (50vw, 62vh top of row). Using
@@ -1356,11 +1479,22 @@ export default function KudosCta({ event, isSheetContext }) {
     // fires. Also called directly by gameStore.onSessionEnd on a mini-game
     // fail-out.
     if (hdResetTimerRef.current) clearTimeout(hdResetTimerRef.current);
-    // Don't arm a save timer while the world is paused (e.g. during Freeze).
-    // The pause subscription will re-arm it when the freeze ends.
-    const gsResolved = gameStore.getState().resolved;
-    if (!(gsResolved && gsResolved.gameClockPaused)) {
-      hdResetTimerRef.current = setTimeout(runSaveFlow, KUDOS_SAVE_DELAY_MS);
+    // Don't arm a save timer while the world is paused OR when the user
+    // can't physically extend it (mashing paused/inverted — Pig Boy, Pong,
+    // Freeze). The pause subscription re-arms it when the mini-game ends.
+    const r = gameStore.getState().resolved;
+    const cantExtend = r && (
+      r.gameClockPaused ||
+      r.mashingMode === 'paused' ||
+      r.mashingMode === 'inverted'
+    );
+    if (!cantExtend) {
+      hdResetTimerRef.current = setTimeout(() => {
+        console.log('[mg-host] save-timer FIRED (idle ' + KUDOS_SAVE_DELAY_MS + 'ms after press ' + pressCount + ')');
+        runSaveFlow();
+      }, KUDOS_SAVE_DELAY_MS);
+    } else {
+      console.log('[mg-host] save-timer NOT armed at press ' + pressCount + ' | gameClockPaused=' + !!(r && r.gameClockPaused) + ' mashingMode=' + (r && r.mashingMode));
     }
   }, [mash, updateMashFocus, user, event, runSaveFlow]);
 

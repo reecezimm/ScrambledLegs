@@ -1,17 +1,20 @@
 // ─────────────────────────────────────────────────────────────────────────────
-// pigDodge — small pig emojis spawn from the top third with downward initial
-// velocity, then experience two forces every frame:
-//   1. Gravity pulling toward the mash button's current center (configurable).
-//   2. A constant tangential thrust perpendicular to gravity (so they orbit
-//      rather than spiral straight in).
-// Pigs cap at maxSpeed; off-viewport pigs despawn. Collision with the button's
-// bounding box → ctx.endPhase('lose'). Surviving the timeout → ctx.endPhase
-// fires via the director's hard timeout (outcome from phase.timeout.outcome).
+// pigDodge — small pig emojis spawn from the top, gravitate toward the mash
+// button's center with a tangential thrust (orbital feel), and wrap off-edge.
+// Collision with the button's bounding box → endPhase('lose'). Survive the
+// timeout → endPhase('win').
 //
-// The button is in `draggable` mode for this mini-game; the user holds and
-// drags it to dodge. Release parks it. Pigs continuously re-aim at wherever
-// the button is right now.
+// Architecture mirrors Pong: the button itself is the drag target. KudosCta's
+// existing drag wiring (the same path every `button: 'draggable'` mini-game
+// uses) writes --btn-drag-x/y on pointermove. The avatar emoji is a PURE
+// VISUAL overlay (pointer-events: none) painted on top of the button center
+// each frame; taps pass through to the button. Cleanup just removes the
+// avatar element + the body attr — no pointer listeners to detach, no rAF
+// race conditions, no chance of leaving the button shrunk or disabled.
 // ─────────────────────────────────────────────────────────────────────────────
+
+const SPAWN_MARGIN = 30;
+const STUCK_OFFSCREEN_MS = 3500;
 
 const pigDodge = {
   id: 'pigDodge',
@@ -21,20 +24,22 @@ const pigDodge = {
     let spawnTimer = null;
     let lastTime = performance.now();
     let ended = false;
+    let initialBurstDone = false; // StrictMode-guard: don't double-spawn the burst
     const pigs = new Set();
 
     const config = {
       pigSize:        (ctx.config && ctx.config.pigSize)        || 40,
-      gravity:        (ctx.config && ctx.config.gravity)        || 800,
-      thrust:         (ctx.config && ctx.config.thrust)         || 480,    // higher = pigs blow past faster
-      maxSpeed:       (ctx.config && ctx.config.maxSpeed)       || 850,    // raised so the higher thrust isn't speed-capped immediately
-      spawnEveryMs:   (ctx.config && ctx.config.spawnEveryMs)   || 1200,
-      maxConcurrent:  (ctx.config && ctx.config.maxConcurrent)  || 2,      // cap on screen at any time
-      initialDownVy:  (ctx.config && ctx.config.initialDownVy)  || [120, 240],
-      initialSideVx:  (ctx.config && ctx.config.initialSideVx)  || 320,
+      gravity:        (ctx.config && ctx.config.gravity)        || 280,
+      thrust:         (ctx.config && ctx.config.thrust)         || 220,
+      maxSpeed:       (ctx.config && ctx.config.maxSpeed)       || 320,
+      spawnEveryMs:   (ctx.config && ctx.config.spawnEveryMs)   || 1600,
+      maxConcurrent:  (ctx.config && ctx.config.maxConcurrent)  || 3,
+      initialSpawnCount: (ctx.config && ctx.config.initialSpawnCount) || 2,
+      initialDownVy:  (ctx.config && ctx.config.initialDownVy)  || [80, 160],
+      initialSideVx:  (ctx.config && ctx.config.initialSideVx)  || 120,
       hitboxShrink:   (ctx.config && ctx.config.hitboxShrink)   || 8,
       statusText:     (ctx.config && ctx.config.statusText)     || 'DODGE THE PIGS',
-      avatar:         (ctx.config && ctx.config.avatar)         || null,   // {emoji, sizePx, pulse}
+      avatar:         (ctx.config && ctx.config.avatar)         || null,
     };
 
     console.log(
@@ -46,12 +51,15 @@ const pigDodge = {
     ctx.setStatus(config.statusText);
     ctx.setSubStatus('HOLD AND DRAG');
 
-    // ── Avatar overlay (optional) ────────────────────────────────────────
-    // When config.avatar is present, render an emoji visual that follows the
-    // mash button's center each frame. The button remains the actual hit
-    // target (drag captures pointerdown on .hd-cta), but visually the
-    // avatar takes over. body[data-pig-avatar="1"] hides the button's
-    // normal mash-num/mash-sub visuals so they don't peek through.
+    // ── Avatar overlay — PURE VISUAL, pointer-events: none ──────────────
+    // Mirrors Pong's architecture: the button itself is the drag target
+    // (KudosCta's existing drag wiring handles pointerdown on .hd-cta + the
+    // --btn-drag-x/y CSS vars). The avatar is a fixed-position emoji that
+    // tracks the button center each frame via the rAF tick below. Taps
+    // pass through the avatar (pointer-events: none) and land on the
+    // button. End-of-game just removes this element + the data-pig-avatar
+    // body attr — no pointer listeners to clean up, no race conditions
+    // with stale rAFs, no risk of leaving the button shrunk or disabled.
     let avatarEl = null;
     if (config.avatar && config.avatar.emoji) {
       avatarEl = document.createElement('div');
@@ -59,7 +67,7 @@ const pigDodge = {
       avatarEl.textContent = config.avatar.emoji;
       avatarEl.style.cssText = [
         'position:fixed', 'pointer-events:none', 'z-index:9101',
-        `font-size:${config.avatar.sizePx || 160}px`,
+        `font-size:${config.avatar.sizePx || 40}px`,
         'left:0', 'top:0',
         'will-change:transform',
         'filter:drop-shadow(0 4px 12px rgba(0,0,0,0.55))',
@@ -69,30 +77,7 @@ const pigDodge = {
       document.body.dataset.pigAvatar = '1';
     }
 
-    function spawnPig() {
-      if (cancelled || ended) return;
-      // Concurrent cap — only spawn if we're under it.
-      if (pigs.size >= config.maxConcurrent) return;
-      const vw = window.innerWidth;
-      const vh = window.innerHeight;
-      // Spawn primarily from top third, with random x across the viewport.
-      // Some chance of edge-spawn (left/right) for variety.
-      const fromEdge = Math.random() < 0.20;
-      let x, y, initialVx, initialVy;
-      if (fromEdge) {
-        const fromLeft = Math.random() < 0.5;
-        x = fromLeft ? -30 : vw + 30;
-        y = vh * (0.10 + Math.random() * 0.30);
-        initialVx = (fromLeft ? 1 : -1) * (180 + Math.random() * 200);
-        initialVy = (Math.random() - 0.3) * 200;
-      } else {
-        x = Math.random() * vw;
-        y = -30 - Math.random() * 60;
-        initialVx = (Math.random() - 0.5) * 2 * config.initialSideVx;
-        initialVy = config.initialDownVy[0] +
-          Math.random() * (config.initialDownVy[1] - config.initialDownVy[0]);
-      }
-
+    function makePig(opts) {
       const el = document.createElement('div');
       el.className = 'pig-attacker';
       el.textContent = '🐷';
@@ -104,16 +89,47 @@ const pigDodge = {
         'filter:drop-shadow(0 2px 6px rgba(0,0,0,0.6))',
       ].join(';') + ';';
       document.body.appendChild(el);
-
       const pig = {
-        el, x, y,
-        vx: initialVx, vy: initialVy,
+        el,
+        x: opts.x, y: opts.y,
+        vx: opts.vx, vy: opts.vy,
         thrustClockwise: Math.random() > 0.5,
         rotation: 0,
+        offscreenSince: 0,
       };
-      // Initial paint so it appears at spawn position immediately
-      el.style.transform = `translate(${x - config.pigSize / 2}px, ${y - config.pigSize / 2}px)`;
+      el.style.transform = `translate(${pig.x - config.pigSize / 2}px, ${pig.y - config.pigSize / 2}px)`;
       pigs.add(pig);
+      return pig;
+    }
+
+    function spawnFromTop() {
+      if (cancelled || ended) return null;
+      const vw = window.innerWidth;
+      const x = Math.random() * vw;
+      const y = -SPAWN_MARGIN;
+      const vx = (Math.random() - 0.5) * 2 * config.initialSideVx;
+      const vy = config.initialDownVy[0] +
+        Math.random() * (config.initialDownVy[1] - config.initialDownVy[0]);
+      return makePig({ x, y, vx, vy });
+    }
+
+    function spawnPig() {
+      if (cancelled || ended) return;
+      if (pigs.size >= config.maxConcurrent) return;
+      // Continuous spawn: mostly from top, occasional side variety.
+      const vw = window.innerWidth;
+      const vh = window.innerHeight;
+      const fromEdge = Math.random() < 0.20;
+      if (fromEdge) {
+        const fromLeft = Math.random() < 0.5;
+        const x = fromLeft ? -SPAWN_MARGIN : vw + SPAWN_MARGIN;
+        const y = vh * (0.10 + Math.random() * 0.30);
+        const vx = (fromLeft ? 1 : -1) * (60 + Math.random() * 80);
+        const vy = (Math.random() - 0.3) * 80;
+        makePig({ x, y, vx, vy });
+      } else {
+        spawnFromTop();
+      }
     }
 
     function tick(now) {
@@ -131,23 +147,33 @@ const pigDodge = {
       const btnCy = btnRect.top + btnRect.height / 2;
 
       // Reposition the avatar to track the button center each frame.
+      // Pure visual now (pointer-events: none, no padding hit area), so
+      // offset is just half the emoji's font-size.
       if (avatarEl && config.avatar) {
-        const av = config.avatar.sizePx || 160;
+        const av = config.avatar.sizePx || 40;
         avatarEl.style.transform = `translate(${btnCx - av / 2}px, ${btnCy - av / 2}px)`;
       }
 
-      // Slightly shrunk hitbox so visual edges can graze without triggering.
+      // Collision uses the AVATAR's bounding rect, not the (invisible)
+      // button's. So pigs only "touch" the visible girl emoji — never an
+      // invisible button edge that the player can't see.
+      const av = (config.avatar && config.avatar.sizePx) || 40;
+      const halfAvatar = av / 2;
       const shrink = config.hitboxShrink;
-      const hbLeft = btnRect.left + shrink;
-      const hbRight = btnRect.right - shrink;
-      const hbTop = btnRect.top + shrink;
-      const hbBottom = btnRect.bottom - shrink;
+      const hbLeft   = btnCx - halfAvatar + shrink;
+      const hbRight  = btnCx + halfAvatar - shrink;
+      const hbTop    = btnCy - halfAvatar + shrink;
+      const hbBottom = btnCy + halfAvatar - shrink;
 
       const halfPig = config.pigSize / 2;
       const dead = [];
+      const vw = window.innerWidth;
+      const vh = window.innerHeight;
 
       for (const pig of pigs) {
-        // Vector from pig → button (gravity direction)
+        // Gravity targets the AVATAR center (= button center, since avatar
+        // is positioned there). Pigs orbit the visible girl, not the
+        // invisible button outline.
         const gx = btnCx - pig.x;
         const gy = btnCy - pig.y;
         const dist = Math.hypot(gx, gy);
@@ -155,13 +181,12 @@ const pigDodge = {
         const gxN = gx / dist;
         const gyN = gy / dist;
 
-        // Gravity acceleration toward button
+        // Gravity (radial, toward button).
         let ax = gxN * config.gravity;
         let ay = gyN * config.gravity;
 
-        // Perpendicular thrust (tangential — creates an orbital feel rather
-        // than a straight pull-in). Sign per pig stays consistent so each
-        // pig swirls one way for its lifetime.
+        // Tangential thrust (perpendicular to gravity). Strong relative to
+        // gravity so pigs orbit at moderate distances.
         const thrustSign = pig.thrustClockwise ? 1 : -1;
         ax += -gyN * config.thrust * thrustSign;
         ay += gxN * config.thrust * thrustSign;
@@ -169,7 +194,6 @@ const pigDodge = {
         pig.vx += ax * dt;
         pig.vy += ay * dt;
 
-        // Cap speed
         const speed = Math.hypot(pig.vx, pig.vy);
         if (speed > config.maxSpeed) {
           pig.vx *= config.maxSpeed / speed;
@@ -178,40 +202,57 @@ const pigDodge = {
 
         pig.x += pig.vx * dt;
         pig.y += pig.vy * dt;
-        pig.rotation += dt * 4 * thrustSign;
+        pig.rotation += dt * 2 * thrustSign;
 
-        // Collision check (pig center inside slightly shrunk button rect)
+        // Collision (pig center inside slightly-shrunk avatar rect).
         if (
           pig.x + halfPig > hbLeft && pig.x - halfPig < hbRight &&
           pig.y + halfPig > hbTop  && pig.y - halfPig < hbBottom
         ) {
           if (!ended) {
             ended = true;
-            console.log('[mg] pigDodge HIT — pig collided with button');
+            console.log('[mg] pigDodge HIT — pig collided with the girl');
             ctx.endPhase('lose', 0);
           }
           return;
         }
 
-        // Despawn way-off-screen pigs (avoid runaway DOM)
-        if (
-          pig.x < -300 || pig.x > window.innerWidth + 300 ||
-          pig.y < -300 || pig.y > window.innerHeight + 300
-        ) {
-          dead.push(pig);
-          continue;
+        // Viewport wrapping — pig flies off one edge, reappears on the
+        // opposite edge with the same velocity. Track time spent fully
+        // off-screen as a stuck-pig fallback.
+        const off =
+          pig.x < -halfPig || pig.x > vw + halfPig ||
+          pig.y < -halfPig || pig.y > vh + halfPig;
+        if (off) {
+          // Wrap.
+          if (pig.x < -halfPig) pig.x += vw + halfPig * 2;
+          else if (pig.x > vw + halfPig) pig.x -= vw + halfPig * 2;
+          if (pig.y < -halfPig) pig.y += vh + halfPig * 2;
+          else if (pig.y > vh + halfPig) pig.y -= vh + halfPig * 2;
+          if (!pig.offscreenSince) pig.offscreenSince = now;
+          if (now - pig.offscreenSince > STUCK_OFFSCREEN_MS) {
+            dead.push(pig);
+            continue;
+          }
+        } else {
+          pig.offscreenSince = 0;
         }
 
         pig.el.style.transform =
           `translate(${pig.x - halfPig}px, ${pig.y - halfPig}px) rotate(${pig.rotation.toFixed(2)}rad)`;
       }
-      // Reap despawned
       for (const p of dead) { p.el.remove(); pigs.delete(p); }
 
       rafId = requestAnimationFrame(tick);
     }
 
-    spawnPig();
+    // Initial-burst guard: in StrictMode dev, start() may be invoked twice;
+    // the flag prevents a doubled initial burst.
+    if (!initialBurstDone) {
+      initialBurstDone = true;
+      const n = Math.max(1, config.initialSpawnCount | 0);
+      for (let i = 0; i < n; i += 1) spawnFromTop();
+    }
     spawnTimer = setInterval(spawnPig, config.spawnEveryMs);
     rafId = requestAnimationFrame(tick);
 
@@ -223,8 +264,68 @@ const pigDodge = {
       const finalCount = pigs.size;
       pigs.forEach((pig) => pig.el.remove());
       pigs.clear();
+
+      // ── Diagnostic snapshot BEFORE cleanup ─────────────────────────────
+      try {
+        const btnPre = document.querySelector('.hd-cta');
+        const rectPre = btnPre && btnPre.getBoundingClientRect();
+        const cs = getComputedStyle(document.body);
+        console.log('[mg] pigDodge END (pre-cleanup) | btn=' + (rectPre
+          ? `(x=${Math.round(rectPre.left)}, y=${Math.round(rectPre.top)}, w=${Math.round(rectPre.width)}, h=${Math.round(rectPre.height)})`
+          : 'NULL') +
+          ' | --btn-drag-x=' + (cs.getPropertyValue('--btn-drag-x').trim() || '0') +
+          ' --btn-drag-y=' + (cs.getPropertyValue('--btn-drag-y').trim() || '0') +
+          ' | data-button-state=' + (document.body.dataset.buttonState || '-') +
+          ' data-pig-avatar=' + (document.body.dataset.pigAvatar || '-'));
+      } catch (e) { console.warn('[mg] pigDodge log (pre) failed:', e); }
+
+      // Pure-visual avatar — just remove the element + clear the body attr.
+      // No pointer listeners to detach (KudosCta's drag wiring handles drag
+      // on the button itself, same as Pong). No race conditions possible.
       if (avatarEl) avatarEl.remove();
+      avatarEl = null;
       delete document.body.dataset.pigAvatar;
+
+      // ── Snap-back: explicitly force the button to its anchor position
+      // with NO animation. data-snap-back disables the row transition for
+      // one frame so the var clear teleports the button rather than gliding.
+      document.body.dataset.snapBack = '1';
+      document.body.style.removeProperty('--btn-drag-x');
+      document.body.style.removeProperty('--btn-drag-y');
+      // Force layout flush so the snap takes effect with transition: none.
+      // eslint-disable-next-line no-unused-expressions
+      document.body.offsetWidth;
+
+      // ── Diagnostic snapshot AFTER cleanup ───────────────────────────────
+      try {
+        const btnPost = document.querySelector('.hd-cta');
+        const rectPost = btnPost && btnPost.getBoundingClientRect();
+        const cs = getComputedStyle(document.body);
+        console.log('[mg] pigDodge END (post-cleanup) | btn=' + (rectPost
+          ? `(x=${Math.round(rectPost.left)}, y=${Math.round(rectPost.top)}, w=${Math.round(rectPost.width)}, h=${Math.round(rectPost.height)})`
+          : 'NULL') +
+          ' | --btn-drag-x=' + (cs.getPropertyValue('--btn-drag-x').trim() || '0') +
+          ' --btn-drag-y=' + (cs.getPropertyValue('--btn-drag-y').trim() || '0') +
+          ' | data-button-state=' + (document.body.dataset.buttonState || '-') +
+          ' data-snap-back=' + (document.body.dataset.snapBack || '-'));
+      } catch (e) { console.warn('[mg] pigDodge log (post) failed:', e); }
+
+      requestAnimationFrame(() => {
+        delete document.body.dataset.snapBack;
+        // ── Diagnostic snapshot ONE FRAME LATER ────────────────────────────
+        // If --btn-drag-x/y are nonzero here, something re-set them after
+        // cleanup (a stale rAF, a leftover listener, or another mode).
+        try {
+          const btn1 = document.querySelector('.hd-cta');
+          const rect1 = btn1 && btn1.getBoundingClientRect();
+          const cs = getComputedStyle(document.body);
+          console.log('[mg] pigDodge END (+1 frame) | btn=' + (rect1
+            ? `(x=${Math.round(rect1.left)}, y=${Math.round(rect1.top)}, w=${Math.round(rect1.width)}, h=${Math.round(rect1.height)})`
+            : 'NULL') +
+            ' | --btn-drag-x=' + (cs.getPropertyValue('--btn-drag-x').trim() || '0') +
+            ' --btn-drag-y=' + (cs.getPropertyValue('--btn-drag-y').trim() || '0'));
+        } catch (e) { console.warn('[mg] pigDodge log (+1 frame) failed:', e); }
+      });
       ctx.setStatus(null);
       ctx.setSubStatus(null);
       console.log(`[mg] pigDodge cleanup | despawned ${finalCount} pigs in flight`);

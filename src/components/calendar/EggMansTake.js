@@ -132,8 +132,16 @@ export default function EggMansTake({ event, weather }) {
   const [rsvps, setRsvps] = useState({});
   const [totals, setTotals] = useState({});
   const [expanded, setExpanded] = useState(false);
+  // Bumped by `staleSession:soft` to force a forceRefresh re-fetch.
+  const [staleTick, setStaleTick] = useState(0);
 
   const eventId = event && event.id;
+
+  useEffect(() => {
+    const onSoft = () => setStaleTick((t) => t + 1);
+    window.addEventListener('staleSession:soft', onSoft);
+    return () => window.removeEventListener('staleSession:soft', onSoft);
+  }, []);
 
   useEffect(() => {
     if (!eventId) return undefined;
@@ -160,7 +168,7 @@ export default function EggMansTake({ event, weather }) {
       email: (r && r.email) || null,
       mashCount: totals[uid] || 0,
     }));
-    getEggMansTake({ event, rsvpedUsers, weather })
+    getEggMansTake({ event, rsvpedUsers, weather, forceRefresh: staleTick > 0 })
       .then((result) => {
         if (cancelled) return;
         setText(result || null);
@@ -174,7 +182,7 @@ export default function EggMansTake({ event, weather }) {
       });
     return () => { cancelled = true; };
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [eventId, rsvpSig, wxSig]);
+  }, [eventId, rsvpSig, wxSig, staleTick]);
 
   if (!event) return null;
   if (!loading && !text) return null;

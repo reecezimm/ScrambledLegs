@@ -11,6 +11,8 @@ import EventSheet from './EventSheet';
 import LockToast from './LockToast';
 import GameStatus from './GameStatus';
 import TimerWidget from './TimerWidget';
+import HighScoreHud from './HighScoreHud';
+import HighScoreCelebration from './HighScoreCelebration';
 import DevTogglePanel from './DevTogglePanel';
 import { gameStore } from '../../game/store';
 import { createDefaultInfiniteStrategy } from '../../game/miniGames';
@@ -166,6 +168,8 @@ export default function CalendarWidget() {
       <MashOverlays />
       <GameStatus />
       <TimerWidget />
+      <HighScoreHud />
+      <HighScoreCelebration />
       <DevTogglePanel />
     </CalSection>
   );
