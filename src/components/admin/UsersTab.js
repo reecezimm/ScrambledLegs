@@ -4,6 +4,7 @@ import styled, { keyframes } from 'styled-components';
 import { ref as dbRef, onValue, update as dbUpdate, query as dbQuery, orderByChild, limitToLast } from 'firebase/database';
 import { database, auth } from '../../services/firebase';
 import { sendResetEmail, ADMIN_EMAILS } from '../../services/auth';
+import { findProfile } from '../../data/crewProfiles';
 
 const DELETE_USER_URL = 'https://us-central1-fundraiser-f0831.cloudfunctions.net/deleteUser';
 
@@ -402,6 +403,12 @@ function UserDetailSheet({ user, mashByEvent, rsvpsByEvent, eventsById, sessions
   const [nameSaving, setNameSaving] = useState(false);
   const [err, setErr] = useState('');
   const [info, setInfo] = useState('');
+  // Crew profile blurb — pre-populate from static crewProfiles if user has none yet
+  const suggestedBlurb = !user.blurb ? (findProfile(user) || {}).blurb || '' : '';
+  const [blurbDraft, setBlurbDraft] = useState(user.blurb || suggestedBlurb);
+  const [blurbSaving, setBlurbSaving] = useState(false);
+  const [genderDraft, setGenderDraft] = useState(user.gender || '');
+  const [genderSaving, setGenderSaving] = useState(false);
   const [resetBusy, setResetBusy] = useState(false);
   const [adminBusy, setAdminBusy] = useState(false);
   const [confirmDel, setConfirmDel] = useState(false);
@@ -528,6 +535,27 @@ function UserDetailSheet({ user, mashByEvent, rsvpsByEvent, eventsById, sessions
     }
   };
 
+  const onSaveBlurb = async () => {
+    setErr(''); setInfo('');
+    try {
+      setBlurbSaving(true);
+      await dbUpdate(dbRef(database, `userProfiles/${user.uid}`), { blurb: blurbDraft.trim() });
+      setInfo('Blurb saved.');
+    } catch (e) { setErr((e && e.message) || 'Save failed'); }
+    finally { setBlurbSaving(false); }
+  };
+
+  const onSaveGender = async (val) => {
+    setErr(''); setInfo('');
+    try {
+      setGenderSaving(true);
+      setGenderDraft(val);
+      await dbUpdate(dbRef(database, `userProfiles/${user.uid}`), { gender: val });
+      setInfo('Gender saved.');
+    } catch (e) { setErr((e && e.message) || 'Save failed'); }
+    finally { setGenderSaving(false); }
+  };
+
   const onRemoveDevice = async (tokenHash) => {
     setErr('');
     try {
@@ -626,6 +654,53 @@ function UserDetailSheet({ user, mashByEvent, rsvpsByEvent, eventsById, sessions
                   </div>
                 )}
               </div>
+            </div>
+          </Card>
+
+          <Card>
+            <CardLabel>Crew Profile</CardLabel>
+            {suggestedBlurb && !user.blurb && (
+              <div style={{ fontSize: 11, color: '#FFC72C', marginBottom: 8 }}>
+                ✦ Pre-filled from crew roster — save to confirm
+              </div>
+            )}
+            {/* Gender */}
+            <div style={{ marginBottom: 12 }}>
+              <div style={{ fontSize: 11, color: 'rgba(255,255,255,0.45)', textTransform: 'uppercase', letterSpacing: '0.08em', marginBottom: 6 }}>Gender</div>
+              <div style={{ display: 'flex', gap: 8 }}>
+                {['male', 'female', 'non-binary'].map((g) => (
+                  <button
+                    key={g}
+                    type="button"
+                    disabled={genderSaving}
+                    onClick={() => onSaveGender(g)}
+                    style={{
+                      padding: '5px 12px', borderRadius: 8, border: 'none', cursor: 'pointer',
+                      fontSize: 12, fontWeight: 600, textTransform: 'capitalize',
+                      background: genderDraft === g ? '#FFC72C' : 'rgba(255,255,255,0.08)',
+                      color: genderDraft === g ? '#000' : 'rgba(255,255,255,0.7)',
+                    }}
+                  >{g}</button>
+                ))}
+              </div>
+            </div>
+            {/* Blurb */}
+            <div style={{ fontSize: 11, color: 'rgba(255,255,255,0.45)', textTransform: 'uppercase', letterSpacing: '0.08em', marginBottom: 6 }}>Blurb (fed to Eggman)</div>
+            <textarea
+              rows={4}
+              value={blurbDraft}
+              onChange={(e) => setBlurbDraft(e.target.value)}
+              placeholder="Character description for Eggman's roasts…"
+              style={{
+                width: '100%', background: 'rgba(255,255,255,0.06)', border: '1px solid rgba(255,255,255,0.12)',
+                borderRadius: 8, color: '#fff', fontSize: 13, padding: '8px 10px',
+                resize: 'vertical', fontFamily: 'inherit', boxSizing: 'border-box',
+              }}
+            />
+            <div style={{ marginTop: 8 }}>
+              <PrimaryBtn type="button" disabled={blurbSaving} onClick={onSaveBlurb}>
+                {blurbSaving ? '…' : 'Save blurb'}
+              </PrimaryBtn>
             </div>
           </Card>
 
@@ -819,6 +894,8 @@ function UsersTab() {
         lastSeenAt: v.lastSeenAt || 0,
         isAdmin,
         devices: v.devices || null,
+        blurb: v.blurb || '',
+        gender: v.gender || '',
         mashTotal,
         rsvpCount,
         deviceCount,

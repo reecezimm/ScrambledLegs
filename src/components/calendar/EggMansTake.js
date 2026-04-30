@@ -1,6 +1,6 @@
 import React, { useEffect, useState } from 'react';
 import styled, { keyframes } from 'styled-components';
-import { ref, onValue, update, serverTimestamp } from 'firebase/database';
+import { ref, onValue, get, update, serverTimestamp } from 'firebase/database';
 import { database, auth } from '../../services/firebase';
 import { getEggMansTake } from '../../services/eggMansTake';
 import { logError } from '../../services/errorLogger';
@@ -131,6 +131,7 @@ export default function EggMansTake({ event, weather }) {
   const [loading, setLoading] = useState(false);
   const [rsvps, setRsvps] = useState({});
   const [totals, setTotals] = useState({});
+  const [profilesMap, setProfilesMap] = useState({});
   const [expanded, setExpanded] = useState(false);
   // Bumped by `staleSession:soft` to force a forceRefresh re-fetch.
   const [staleTick, setStaleTick] = useState(0);
@@ -152,8 +153,20 @@ export default function EggMansTake({ event, weather }) {
     return () => { u1(); u2(); };
   }, [eventId]);
 
-  // Stable signature for effect deps — avoids object identity churn.
-  const rsvpSig = Object.keys(rsvps).sort().join(',');
+  // Fetch userProfiles for each RSVP'd uid to get blurb + gender.
+  // Runs whenever the set of RSVP'd users changes.
+  const rsvpUids = Object.keys(rsvps).sort();
+  const rsvpSig = rsvpUids.join(',');
+  useEffect(() => {
+    if (!rsvpUids.length) { setProfilesMap({}); return; }
+    Promise.all(rsvpUids.map((uid) => get(ref(database, `userProfiles/${uid}`))))
+      .then((snaps) => {
+        const map = {};
+        snaps.forEach((snap, i) => { if (snap.val()) map[rsvpUids[i]] = snap.val(); });
+        setProfilesMap(map);
+      })
+      .catch(() => {});
+  }, [rsvpSig]); // eslint-disable-line react-hooks/exhaustive-deps
   const wxSig = weather
     ? `${weather.code ?? weather.desc ?? ''}_${weather.temp ?? ''}_${weather.precip >= 50 ? 'wet' : 'dry'}`
     : '';
@@ -167,6 +180,8 @@ export default function EggMansTake({ event, weather }) {
       displayName: (r && r.displayName) || null,
       email: (r && r.email) || null,
       mashCount: totals[uid] || 0,
+      blurb: (profilesMap[uid] && profilesMap[uid].blurb) || null,
+      gender: (profilesMap[uid] && profilesMap[uid].gender) || null,
     }));
     getEggMansTake({ event, rsvpedUsers, weather, forceRefresh: staleTick > 0 })
       .then((result) => {
@@ -182,7 +197,7 @@ export default function EggMansTake({ event, weather }) {
       });
     return () => { cancelled = true; };
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [eventId, rsvpSig, wxSig, staleTick]);
+  }, [eventId, rsvpSig, wxSig, staleTick, profilesMap]); // eslint-disable-line react-hooks/exhaustive-deps
 
   if (!event) return null;
   if (!loading && !text) return null;

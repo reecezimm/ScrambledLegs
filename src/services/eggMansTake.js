@@ -1,5 +1,5 @@
 import { runPrompt, clearCache, _readCacheRaw, sanitizeCacheKey } from './ai';
-import { FALLBACK_BLURB, findProfile } from '../data/crewProfiles';
+import { FALLBACK_BLURB } from '../data/crewProfiles';
 
 // Static voice/instruction shell. The full system prompt is built per-call
 // in buildSystemPrompt() with the event/weather/RSVP context inlined.
@@ -238,11 +238,11 @@ export function buildSystemPrompt({ event, rsvpedUsers, weather }) {
 
   // Crew context
   const userBlocks = (rsvpedUsers || []).map((u) => {
-    const profile = findProfile(u);
     const name = u.displayName || u.name || u.email || 'rider';
-    const blurb = profile ? profile.blurb : FALLBACK_BLURB;
+    const blurb = u.blurb || FALLBACK_BLURB;
     const mash = u.mashCount != null ? ` (mash count: ${u.mashCount})` : '';
-    return `- ${name}${mash} :: ${blurb}`;
+    const gender = u.gender ? ` [${u.gender}]` : '';
+    return `- ${name}${gender}${mash} :: ${blurb}`;
   });
   lines.push('', `RSVP'D CREW (${userBlocks.length}):`);
   if (userBlocks.length) {
