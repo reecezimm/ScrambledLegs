@@ -7,7 +7,7 @@
 import React, { useEffect, useState } from 'react';
 import styled from 'styled-components';
 import { gameStore } from '../../game/store';
-import { GOLDEN_EGG, MASH_GAUNTLET, TWILIGHT, PIG_BOY_ATTACK, PONG, createDefaultInfiniteStrategy } from '../../game/miniGames';
+import { GOLDEN_EGG, MASH_GAUNTLET, TWILIGHT, DODGE, PONG, createDefaultInfiniteStrategy } from '../../game/miniGames';
 
 const STORAGE_KEY = 'sl_dev_minigame_choice';
 const PANEL_OPEN_KEY = 'sl_dev_panel_open';
@@ -17,7 +17,7 @@ const CHOICES = [
   { id: 'golden-egg',    label: 'Golden Egg only' },
   { id: 'mash-gauntlet', label: 'Mash Gauntlet only' },
   { id: 'twilight',      label: 'Twilight only' },
-  { id: 'pig-boy-attack', label: 'Pig Boy Attack only' },
+  { id: 'dodge',         label: 'Dodge only' },
   { id: 'pong',          label: 'Pong only' },
 ];
 
@@ -30,7 +30,7 @@ function buildScheduleSpec(choiceId) {
   if (choiceId === 'golden-egg') return [GOLDEN_EGG];
   if (choiceId === 'mash-gauntlet') return [MASH_GAUNTLET];
   if (choiceId === 'twilight') return [TWILIGHT];
-  if (choiceId === 'pig-boy-attack') return [PIG_BOY_ATTACK];
+  if (choiceId === 'dodge') return [DODGE];
   if (choiceId === 'pong') return [PONG];
   return { strategy: createDefaultInfiniteStrategy() };
 }

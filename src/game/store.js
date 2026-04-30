@@ -10,6 +10,7 @@ import { useSyncExternalStore } from 'react';
 import { initialState, reduce } from './director';
 import { MODES } from './modes';
 import { applySideEffects } from './applyAmbient';
+import getAudioManager from '../services/AudioManager';
 
 let state = initialState;
 const listeners = new Set();
@@ -57,9 +58,7 @@ function setState(next) {
     if (suppressBonusDelta) {
       // Reset path — log it but don't notify listeners. Eats the phantom
       // negative delta that would otherwise spawn a punishing red floater.
-      console.log('[mg] bonus delta', (delta > 0 ? '+' : '') + delta, '→ total bonusCount', next.bonusCount, '(SUPPRESSED — session reset)');
     } else {
-      console.log('[mg] bonus', (delta > 0 ? '+' : '') + delta, '→ total bonusCount', next.bonusCount, opts ? `(at ${opts.x|0},${opts.y|0})` : '(director-applied)');
       bonusListeners.forEach((fn) => { try { fn(delta, opts); } catch (_) {} });
     }
   }
@@ -69,10 +68,28 @@ function setState(next) {
   // NEXT legitimate bonus award — bug surfaced as "Pig Boy +250 didn't
   // appear in score." One-shot semantics enforced here.
   suppressBonusDelta = false;
+
+  // ── Session End Pulse Detection ────────────────────────────────────────
   if (next.sessionEndPulse > prev.sessionEndPulse) {
-    console.log('[mg] SESSION END pulse — onLose.endsMashSession triggered');
-    sessionEndListeners.forEach((fn) => { try { fn(); } catch (_) {} });
+    console.log(`[store] ▼ Session end pulse detected`);
+    console.log(`[store]   sessionEndPulse: ${prev.sessionEndPulse} → ${next.sessionEndPulse}`);
+    console.log(`[store]   Active listeners count: ${sessionEndListeners.size}`);
+    let listenerIndex = 0;
+    sessionEndListeners.forEach((fn) => {
+      listenerIndex++;
+      console.log(`[store]   ▶ Invoking sessionEndListener #${listenerIndex}/${sessionEndListeners.size}`);
+      try {
+        fn();
+        console.log(`[store]   ✓ sessionEndListener #${listenerIndex} completed successfully`);
+      } catch (err) {
+        console.error(`[store]   ✗ sessionEndListener #${listenerIndex} threw error:`, err);
+      }
+    });
+    console.log(`[store] ✓ All sessionEndListeners invoked (total: ${sessionEndListeners.size})`);
+  } else if (prev.sessionEndPulse !== next.sessionEndPulse) {
+    console.log(`[store] ⚠ sessionEndPulse changed but not incrementing: ${prev.sessionEndPulse} → ${next.sessionEndPulse}`);
   }
+
   logPhaseTransition(prev, next);
   emit();
   // After every state transition, see if the queue needs a refill from the
@@ -91,7 +108,6 @@ function maybeRefillSchedule() {
     : 0;
   const next = scheduleStrategy.next(state.pressCount, sessionMs);
   if (!next) return;
-  console.log(`[mg] strategy yields "${next.id}" startAtPress=${next.startAtPress} startAtMs=${next.startAtMs || '-'}`);
   setState(reduce(state, { type: 'appendSchedule', item: next }));
 }
 
@@ -103,15 +119,11 @@ function logPhaseTransition(prev, next) {
 
   // Mini-game start
   if (!prev.active && next.active) {
-    const mg = next.schedule[next.active.miniGameIdx];
-    console.log(`[mg] ▶ START "${mg.id}" (${mg.label || mg.id}) | schedule ${next.active.miniGameIdx + 1}/${next.schedule.length} | rules:`, mg.rules || {});
     logPhase(next);
     return;
   }
   // Mini-game end (active → null)
   if (prev.active && !next.active) {
-    const mg = prev.schedule[prev.active.miniGameIdx];
-    console.log(`[mg] ■ END   "${mg.id}" | outcome=${prev.active.lastOutcome || '-'} score=${prev.active.lastScore == null ? '-' : prev.active.lastScore}`);
     return;
   }
   // Phase advanced within the same mini-game
@@ -121,16 +133,7 @@ function logPhaseTransition(prev, next) {
 }
 
 function logPhase(s) {
-  if (!s.active) return;
-  const mg = s.schedule[s.active.miniGameIdx];
-  const phase = mg.phases[s.active.phaseIndex];
-  if (!phase) return;
-  const total = mg.phases.length;
-  const idx = s.active.phaseIndex + 1;
-  const dur = phase.ms ? `${phase.ms}ms` : phase.presses ? `${phase.presses} presses` : phase.timeout ? `${phase.timeout.value}${phase.timeout.kind === 'ms' ? 'ms' : 'p'}` : '-';
-  const text = typeof phase.text === 'string' ? `"${phase.text.replace(/\n/g, '⏎')}"` : phase.text ? '<fn>' : '';
-  const mode = phase.mode ? ` mode=${phase.mode}` : '';
-  console.log(`[mg]   phase ${idx}/${total} kind=${phase.kind} dur=${dur}${mode} ${text}`);
+  // Phase logging removed — no-op
 }
 
 function syncStatusTimeout(prev, next) {
@@ -160,13 +163,47 @@ function syncModeLifecycle(prev, next) {
     && prev.active.phaseIndex === next.active.phaseIndex;
   if (sameMode) return;
 
-  // Exit prior play phase
-  if (prevPlay) {
+  const audioManager = getAudioManager();
+
+
+  // Exit prior play phase: transition back to main audio
+  if (prevPlay && !nextPlay) {
+    const prevMg = prev.schedule[prev.active.miniGameIdx];
+    const prevPhase = prevMg && prevMg.phases[prev.active.phaseIndex];
+    console.log(`[game] ▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬`);
+    console.log(`[game] ◀ EXITING mini-game play phase`);
+    console.log(`[game]   Game: ${prevMg ? prevMg.id : '?'}`);
+    console.log(`[game]   Current phase: ${prevPhase ? prevPhase.kind : '?'} → exiting to status/outcome`);
+    console.log(`[game] ▬ Triggering audio transition back to main track ▬`);
+    audioManager.transitionBackToMain(1000).catch(err => {
+      console.error('[game] ✗ Failed to transition back to main:', err.message || err);
+    });
     if (modeCleanup) { try { modeCleanup(); } catch (_) {} modeCleanup = null; }
     if (phaseTimeoutId) { clearTimeout(phaseTimeoutId); phaseTimeoutId = null; }
   }
-  // Enter new play phase
-  if (nextPlay) startMode(next);
+
+  // Enter new play phase: transition to mini-game audio
+  if (nextPlay) {
+    // Transition to mini-game audio (happens concurrently with startMode)
+    const mg = next.schedule[next.active.miniGameIdx];
+    const nextPhase = mg && mg.phases[next.active.phaseIndex];
+    if (mg && mg.backgroundMusic) {
+      const { filePath, volume } = mg.backgroundMusic;
+      console.log(`[game] ▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬`);
+      console.log(`[game] ► ENTERING mini-game play phase`);
+      console.log(`[game]   Game: ${mg.id} (${mg.label})`);
+      console.log(`[game]   Current phase: entering play (mode=${nextPhase ? nextPhase.mode : '?'})`);
+      console.log(`[game] ▬ Triggering audio transition to mini-game track ▬`);
+      console.log(`[game]   Audio file: ${filePath}`);
+      console.log(`[game]   Target volume: ${(volume || 0.7) * 100}%`);
+      audioManager.transitionToMiniGame(filePath, volume || 0.7, 1000).catch(err => {
+        console.error('[game] ✗ Failed to switch mini-game audio:', err.message || err);
+      });
+    } else {
+      console.log(`[game] ⚠ Mini-game ${mg ? mg.id : '?'} has no backgroundMusic config`);
+    }
+    startMode(next);
+  }
 }
 
 function isPlay(s) {
@@ -200,7 +237,6 @@ function startMode(s) {
     const outcome = phase.timeout.outcome || 'timeout';
     phaseTimeoutId = setTimeout(() => {
       phaseTimeoutId = null;
-      console.log(`[mg] HARD TIMEOUT fired | mode=${phase.mode} outcome=${outcome} deadline=${deadline}ms`);
       ctx.endPhase(outcome, null);
     }, deadline);
   }
@@ -240,7 +276,6 @@ function makeCtx(phase) {
     endPhase(outcome, score) {
       if (ended) return;
       ended = true;
-      console.log(`[mg] mode endPhase outcome=${outcome} score=${score == null ? '-' : score}`);
       gameStore.endPhase(outcome, score);
     },
   };
@@ -264,13 +299,11 @@ export const gameStore = {
   setSchedule(spec) {
     if (Array.isArray(spec)) {
       scheduleStrategy = null;
-      console.log(`[mg] schedule set (manual, ${spec.length} item${spec.length === 1 ? '' : 's'})`);
       setState(reduce(state, { type: 'setSchedule', schedule: spec }));
       return;
     }
     if (spec && spec.strategy && typeof spec.strategy.next === 'function') {
       scheduleStrategy = spec.strategy;
-      console.log('[mg] schedule set (strategy/auto-refill)');
       setState(reduce(state, { type: 'setSchedule', schedule: [] }));
       // Pull initial item from strategy now so first activation lines up.
       maybeRefillSchedule();
@@ -287,6 +320,11 @@ export const gameStore = {
     if (scheduleStrategy && typeof scheduleStrategy.reset === 'function') {
       scheduleStrategy.reset();
     }
+    // Stop audio session
+    const audioManager = getAudioManager();
+    audioManager.stopSession().catch(err => {
+      console.error('[audio] failed to stop session:', err);
+    });
     // Suppress the bonus listener ONLY if the reset will actually produce
     // a delta (i.e. bonusCount is currently nonzero). If bonusCount is
     // already 0, setting the flag would just leak — there's no transition
@@ -294,7 +332,6 @@ export const gameStore = {
     // legitimate bonus award. The setState end-of-loop also clears the
     // flag as a belt-and-suspenders guard.
     if (state.bonusCount !== 0) suppressBonusDelta = true;
-    console.log('[mg] reset');
     setState(reduce(state, { type: 'reset' }));
     // After reset, refill from strategy so the next session starts with
     // the strategy's initial pick (e.g. Golden Egg).

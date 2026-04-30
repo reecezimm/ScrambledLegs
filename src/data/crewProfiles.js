@@ -68,19 +68,19 @@ export const CREW_PROFILES = [
   {
     name: 'Reed Peer',
     aliases: ['REED', 'Reid'],
-    emails: [],
+    emails: ['reedpeer@gmail.com'],
     blurb: "Reed Peer with DBS here — Duluth Basement Services, sales guy, will pitch you a basement remodel mid-climb. Outdoor everything: ice fishing, hunting, mountain biking, Boundary Waters. Rides a Trek Rumblefish — calls it the best mountain bike he's ever owned, and won't shut up about it. Probably has a sales call in 10 minutes.",
   },
   {
     name: 'Alexa Mattson',
     aliases: [],
-    emails: [],
-    blurb: "Alexa runs more than she rides. Will talk your ear off about her dog and how much responsibility a dog is.",
+    emails: ['alexamattson2@gmail.com'],
+    blurb: "Alexa is a runner first — Grandma's Marathon is her thing and she takes it seriously. New to mountain biking but already crushing it, which is annoying. Genuinely one of the best hangs on the team — super friendly, everyone likes her immediately. Loves her dog and her family more than she loves you, which is saying something.",
   },
   {
     name: 'Ashley Zimm',
-    aliases: [],
-    emails: [],
+    aliases: ['zimm.ashley'],
+    emails: ['zimm.ashley@gmail.com'],
     blurb: "Ashley is an ultra-runner, dentist, and mom — certified smoke show outpacing everyone with zero notice.",
   },
   {
@@ -91,7 +91,7 @@ export const CREW_PROFILES = [
   },
   {
     name: 'Reece Zimm',
-    aliases: ['REECEZIMM', 'reecezimm', 'Calf Daddy'],
+    aliases: ['REECEZIMM', 'reecezimm', 'Calf Daddy', 'GM Zimm'],
     emails: ['zimm.reece@gmail.com', 'gm@thescrambledlegs.com'],
     blurb: "GM Reece Zimm — aka Calf Daddy. Used to be fast. Now thoroughly average. No fun, no talking, no laughing. All business. Just hammers. Tried-and-true navigator. Coach Lyall reports to him. Be on time.",
   },

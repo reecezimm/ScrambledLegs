@@ -39,7 +39,6 @@ const pong = {
     const BALL_RADIUS  = BALL_SIZE / 2;
 
     const vw = window.innerWidth;
-    const vh = window.innerHeight;
 
     // Initial direction: random downward angle within ±60° of straight down.
     // Straight-down is angle = π/2 (atan2 y/x with x=0,y=+1). We pick an angle
@@ -51,7 +50,7 @@ const pong = {
     let vy = Math.cos(offsetRad) * speed; // positive = downward (screen coords)
 
     let x = vw / 2;
-    let y = vh * 0.35;
+    let y = BALL_RADIUS + 4;
 
     let hits = 0;
 
@@ -60,7 +59,6 @@ const pong = {
       `mult=${SPEED_MULT} max=${MAX_SPEED}px/s ball=${BALL_SIZE}px timeout=${ctx.timeoutMs}ms`
     );
 
-    ctx.setStatus('PONG');
     ctx.setSubStatus('0 HITS');
 
     // ── Ball DOM — styled white sphere, not an emoji ──────────────────────
@@ -100,7 +98,6 @@ const pong = {
       hits += 1;
       ctx.awardBonus(25, { x, y });
       ctx.setSubStatus(`${hits} HIT${hits === 1 ? '' : 'S'}`);
-      console.log(`[mg] pong HIT #${hits} speed=${speed.toFixed(0)}`);
     }
 
     function tick(now) {
@@ -195,7 +192,11 @@ const pong = {
         if (y + BALL_RADIUS >= h && vy > 0) {
           if (!ended) {
             ended = true;
-            console.log(`[mg] pong MISS — game over | hits=${hits}`);
+            // CRITICAL: Cancel pending rAF immediately to stop game loop
+            if (rafId) {
+              cancelAnimationFrame(rafId);
+              rafId = 0;
+            }
             ctx.endPhase('lose', hits);
           }
           return;
@@ -226,9 +227,7 @@ const pong = {
       if (rafId) cancelAnimationFrame(rafId);
       if (endTimer) clearTimeout(endTimer);
       if (ball && ball.parentNode) ball.parentNode.removeChild(ball);
-      ctx.setStatus(null);
       ctx.setSubStatus(null);
-      console.log(`[mg] pong cleanup | hits=${hits} finalSpeed=${speed.toFixed(0)}`);
     };
   },
 };

@@ -250,10 +250,6 @@ const NudgeToast = styled.div`
 export function NotificationFab() {
   const [state, setState] = useState(() => {
     const s = getSubscriptionState();
-    console.log('[NotifFab] Initial subscription state:', s,
-      '| Notification.permission:', typeof Notification !== 'undefined' ? Notification.permission : 'N/A',
-      '| pushSupported:', typeof window !== 'undefined' && 'Notification' in window && 'serviceWorker' in navigator && 'PushManager' in window
-    );
     return s;
   });
   const [open, setOpen] = useState(false);
@@ -304,11 +300,9 @@ export function NotificationFab() {
   //   Previously dismissed                  → toast appears at 3s on every page load
   useEffect(() => {
     const currentState = getSubscriptionState();
-    console.log('[NotifFab] Nudge useEffect — state:', currentState);
 
     if (currentState === 'askable' || currentState === 'ios_needs_install') {
       // First-time visitor — skip the toast, go straight to the full ask
-      console.log('[NotifFab] New user — opening full sheet in 3s');
       const t = setTimeout(() => {
         if (getSubscriptionState() === 'askable' || getSubscriptionState() === 'ios_needs_install') {
           setOpen(true);
@@ -319,12 +313,10 @@ export function NotificationFab() {
 
     if (currentState === 'dismissed') {
       // Was dismissed before — just a persistent toast reminder on every load
-      console.log('[NotifFab] Dismissed user — showing toast in 3s');
       const t = setTimeout(() => setNudgeVisible(true), 3000);
       return () => clearTimeout(t);
     }
 
-    console.log('[NotifFab] No nudge — state:', currentState);
   }, []); // eslint-disable-line react-hooks/exhaustive-deps
 
   const handleNudgeDismiss = useCallback(() => {

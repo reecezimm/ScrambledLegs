@@ -1,6 +1,6 @@
 import React, { useEffect, useMemo, useState } from 'react';
 import styled, { keyframes, css } from 'styled-components';
-import { ref, onValue, set, remove, get, child, serverTimestamp } from 'firebase/database';
+import { ref, onValue, set, remove, update, get, child, serverTimestamp } from 'firebase/database';
 import { database } from '../../services/firebase';
 import { useCurrentUser } from '../../services/auth';
 import { logEvent } from '../../services/analytics';
@@ -538,6 +538,16 @@ export default function RsvpCrewPanel({ event }) {
     return () => unsub();
   }, [event, user]);
 
+  // Passive interaction: logged-in user viewing the panel → Bad Egg list candidate.
+  // Merges with any existing interaction fields (mashed, rsvped, etc.).
+  useEffect(() => {
+    if (!user || !event || !event.id) return;
+    update(ref(database, `eventInteractions/${event.id}/${user.uid}`), {
+      lastAt: serverTimestamp(),
+      viewed: true,
+    }).catch(() => {});
+  }, [user?.uid, event?.id]); // eslint-disable-line react-hooks/exhaustive-deps
+
   const doRsvp = async () => {
     if (!user || !event || !event.id) return;
     setBusy(true);
@@ -557,6 +567,10 @@ export default function RsvpCrewPanel({ event }) {
         photoURL: profilePhoto,
         email: user.email || null,
       });
+      update(ref(database, `eventInteractions/${event.id}/${user.uid}`), {
+        lastAt: serverTimestamp(),
+        rsvped: true,
+      }).catch(() => {});
       logEvent('rsvp_added', { eventId: event.id });
     } catch (_) {} finally {
       setBusy(false);
@@ -689,7 +703,15 @@ export default function RsvpCrewPanel({ event }) {
         <HeaderBtn
           type="button"
           $open={open}
-          onClick={() => (user ? setOpen((o) => !o) : handleSignInNudge())}
+          onClick={() => {
+            if (!user) { handleSignInNudge(); return; }
+            setOpen((o) => !o);
+            // Record "viewed crew list" as an interaction.
+            update(ref(database, `eventInteractions/${event.id}/${user.uid}`), {
+              lastAt: serverTimestamp(),
+              viewedCrew: true,
+            }).catch(() => {});
+          }}
         >
           <span>The Crew</span>
           <HeaderRight>

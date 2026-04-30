@@ -17,11 +17,15 @@ export const GOLDEN_EGG = {
   label: 'Golden Egg',
   startAtPress: FIRST_START,
   rules: { canLose: false, onWin: { bonus: 0 }, onLose: { bonus: 0 } },
-  ambient: { challengeText: 'frozen' },
+  ambient: { challengeText: 'frozen', bubbleText: 'off' },
   presentation: { accentColor: '#FFD700' },
+  backgroundMusic: {
+    filePath: '/audio/minigames/golden-egg.mp3',
+    volume: 0.7,
+  },
   phases: [
-    { kind: 'status',    text: 'GOLDEN EGG\nINCOMING',                  presses: 5 },
-    { kind: 'status',    text: 'TAP THE GOLDEN EGG\nFOR EXTRA POINTS',  presses: 5 },
+    { kind: 'status',    text: 'GOLDEN EGG',                            presses: 5 },
+    { kind: 'status',    text: 'TAP THE GOLDEN EGG\nBUT KEEP MASHING',  presses: 5 },
     { kind: 'play',
       mode: 'goldenEgg',
       timeout: { kind: 'ms', value: 10000, outcome: 'win' },
@@ -32,8 +36,8 @@ export const GOLDEN_EGG = {
       config: { reward: 25, sizePx: 162, flightDurMs: [4284, 5796], showTimer: true },
     },
     { kind: 'status',
-      text: ({ score }) => score > 0 ? `+${score} BONUS\nNICE TAPS.` : 'WHIFF.',
-      presses: 5,
+      text: 'GOOD JOB',
+      ms: 2500,
     },
   ],
 };
@@ -52,8 +56,12 @@ export const MASH_GAUNTLET = {
     onWin: { bonus: +100 },
     onLose: { bonus: -30, endsMashSession: true },
   },
-  ambient: { challengeText: 'frozen' },
+  ambient: { challengeText: 'frozen', bubbleText: 'off' },
   presentation: { accentColor: '#FF6B6B' },
+  backgroundMusic: {
+    filePath: '/audio/minigames/mash-gauntlet.mp3',
+    volume: 0.7,
+  },
   phases: [
     { kind: 'status', text: 'MASH GAUNTLET',                presses: 5 },
     { kind: 'status', text: 'MASH FAST OR DIE\n5 SECONDS',  presses: 5 },
@@ -70,12 +78,12 @@ export const MASH_GAUNTLET = {
     // Branched outcome status. WIN runs press-counted (5p). FAILED is
     // ms-timed (2s) so it shows even though the user might be panicking.
     { kind: 'status',
-      text: ({ outcome, score }) => outcome === 'win'
-        ? `${score} / 25\nSURVIVED. +100`
-        : `${score || 0} / 25\nFAILED.`,
+      text: ({ outcome }) => outcome === 'win'
+        ? `YOU SURVIVED.\n+100`
+        : `FAILED.`,
       // Both win and fail get a flash of feedback. Use ms so save-flow on
       // fail-out doesn't preempt the message before the user can read it.
-      ms: 2000,
+      ms: 2500,
     },
   ],
 };
@@ -101,91 +109,77 @@ export const TWILIGHT = {
   label: 'Twilight',
   startAtPress: FIRST_START,
   rules: { canLose: false, onWin: { bonus: 0 }, onLose: { bonus: 0 } },
-  ambient: { challengeText: 'frozen' },
+  ambient: { challengeText: 'frozen', bubbleText: 'off' },
   // No accentColor override — preserve the mash button's normal color.
   presentation: {},
+  backgroundMusic: {
+    filePath: '/audio/minigames/twilight.mp3',
+    volume: 0.7,
+  },
   phases: [
-    { kind: 'status',    text: "SOMETHING'S BREWING…",               presses: 5 },
+    { kind: 'status',    text: 'COLD BEERS',                         presses: 5 },
     { kind: 'status',    text: 'TAP THE BEERS\nKEEP MASHING',        presses: 5 },
     { kind: 'play',
       mode: 'twilight',
-      timeout: { kind: 'ms', value: 18000, outcome: 'win' },
+      timeout: { kind: 'ms', value: 10000, outcome: 'win' },
       overrides: { mashing: 'normal', button: 'visible', gameClock: 'run' },
       ambient: { flyingEmojis: 'off', bubbleText: 'off', challengeText: 'frozen' },
       presentation: { bodyBackground: '#040515' },
+      config: { showTimer: true },
     },
-    // Outro — cheesy + on-brand + slightly rude one-liner. ms-timed (2.5s)
-    // so it always shows even if the user freezes after the play window.
+    // Outro — ms-timed (2.5s) so it always shows even if the user freezes
+    // after the play window.
     { kind: 'status',
-      text: ({ score }) => {
-        const s = score || 0;
-        if (s > 100) return 'PERFECT POUR. CHEERS.';
-        if (s > 50)  return 'DECENT FOAM. STILL THIRSTY?';
-        if (s > 0)   return 'FOAMY. NOT GREAT.';
-        return 'EMPTY GLASS. EMBARRASSING.';
-      },
+      text: 'WELL DONE.',
       ms: 2500,
     },
   ],
 };
 
-// ── 5. Pig Boy Attack ─ orbital pigs lock onto a draggable button ──────────
-// First mini-game using the drag-and-hold input mechanic. The mash button
-// becomes a draggable target — user holds and drags it to dodge pigs that
-// fly in from the top, gravitate toward the button's current position, and
-// orbit around it on a constant tangential thrust. Survive 20s for +250.
-// Touching the button = lose. Mashing is paused throughout play (drag is the
-// only input). Heartbeat off so the burn ring doesn't compete with the
-// urgency of the dodge.
-export const PIG_BOY_ATTACK = {
-  id: 'pig-boy-attack',
-  label: 'Pig Boy Attack',
+// ── 5. Dodge the Obstacles ─ randomly-selected vehicles threaten a draggable biker ──────────
+// The biker (avatar) is draggable — user holds and drags to dodge obstacles
+// (randomly selected from car/truck emojis) that spawn from the top, gravitate
+// toward the biker's position, and orbit with tangential thrust. Survive 10s
+// for +75. Touching the biker = lose. Mashing is paused (drag is the only input).
+// Heartbeat off so the burn ring doesn't compete with dodge urgency.
+export const DODGE = {
+  id: 'dodge',
+  label: 'Dodge',
   startAtPress: FIRST_START,
-  rules: { canLose: true, onWin: { bonus: +75 }, onLose: { bonus: 0 } },
-  // Heartbeat is killed only at the play phase (where mashing is paused
-  // and the burn ring would be misleading). During intros + countdown +
-  // outro the heartbeat fires normally so the user gets the usual press-
-  // and-mash feedback.
-  ambient: { challengeText: 'frozen' },
+  rules: { canLose: true, onWin: { bonus: +75 }, onLose: { bonus: 0, endsMashSession: true } },
+  ambient: { challengeText: 'frozen', bubbleText: 'off' },
   presentation: { accentColor: '#FFB3D9' },
   input: { dragHold: 'on' },
+  backgroundMusic: {
+    filePath: '/audio/minigames/dodge.mp3',
+    volume: 0.7,
+  },
   phases: [
-    { kind: 'status',    text: 'PIG BOY ATTACK\nINCOMING',                 presses: 5 },
-    { kind: 'status',    text: 'PROTECT THE GIRL\nDRAG HER TO SAFETY',     presses: 5 },
+    { kind: 'status',    text: 'DODGE\nINCOMING',                          presses: 5 },
+    { kind: 'status',    text: 'PROTECT THE BIKER\nDRAG TO SAFETY',        presses: 5 },
     { kind: 'play',
       mode: 'pigDodge',
       timeout: { kind: 'ms', value: 10000, outcome: 'win' },
       overrides: { mashing: 'paused', button: 'draggable', gameClock: 'run' },
       ambient: { flyingEmojis: 'off', bubbleText: 'off', heartbeat: 'off', flash: 'off' },
       config: {
-        pigSize: 40,
-        // Slowed to ~1/3 of the prior values so motion reads on mobile and
-        // orbital arcs are visible rather than blipping across the screen.
-        // Tangential thrust is now strong relative to gravity so pigs orbit
-        // longer before being pulled in.
+        obstacleSize: 40,
         gravity: 280,
-        thrust: 220,         // tangential weight — orbital feel
+        thrust: 220,
         maxSpeed: 320,
         spawnEveryMs: 1600,
         maxConcurrent: 3,
-        initialSpawnCount: 2, // exactly 2 pigs at start, both from top
+        initialSpawnCount: 2,
         showTimer: true,
-        statusText: 'DODGE THE PIGS',
-        // Avatar is the actual touch target (the mode attaches pointer
-        // listeners directly to it). 40px visual; CSS padding extends the
-        // hit area to ~72px square for finger-friendly dragging.
-        avatar: { emoji: '👱‍♀️', sizePx: 40, pulse: true },
+        statusText: 'DODGE THE CARS',
+        obstacleEmojis: ['🚗', '🚕', '🚙', '🚚', '🏎️'],
+        avatar: { emoji: '🚴🏿‍♀️', sizePx: 44, pulse: true },
       },
     },
-    // Branched outcome: win → "+75 SURVIVED. START MASHING.";
-    // lose → "PIG BOY GOT YOU." Both ms-timed so the message is always
-    // seen. Heartbeat + flash explicitly turned BACK ON here so the burn
-    // ring resumes the moment the game ends — without this override, the
-    // mg-level ambient could leak into the outcome phase.
     { kind: 'status',
       text: ({ outcome }) => outcome === 'win'
         ? '+75 SURVIVED.\nSTART MASHING.'
-        : 'PIG BOY GOT YOU.',
+        : 'FAILURE.',
       ms: 2400,
       ambient: { heartbeat: 'on', flash: 'on' },
     },
@@ -206,9 +200,13 @@ export const PONG = {
   rules: { canLose: true, onWin: { bonus: 0 }, onLose: { bonus: 0, endsMashSession: true } },
   // Heartbeat killed only at the play phase. During intros / countdown /
   // outro the heartbeat fires so the user knows to keep mashing.
-  ambient: { challengeText: 'frozen' },
+  ambient: { challengeText: 'frozen', bubbleText: 'off' },
   presentation: { accentColor: '#E8FF6B' },
   input: { dragHold: 'on' },
+  backgroundMusic: {
+    filePath: '/audio/minigames/pong.mp3',
+    volume: 0.7,
+  },
   phases: [
     { kind: 'status',    text: 'PONG',                                 presses: 5 },
     { kind: 'status',    text: 'KEEP THE BALL ALIVE\nWITH THE BUTTON', presses: 5 },
@@ -228,11 +226,13 @@ export const PONG = {
       config: { showTimer: true },
     },
     // Branched outcome status. Score is the running paddle-hit count.
+    // Explicitly re-enable heartbeat + flash (were off during play phase).
     { kind: 'status',
       text: ({ outcome, score }) => outcome === 'win'
         ? `${score || 0} HITS. NICE.`
-        : `MISSED IT.\n${score || 0} HITS.`,
+        : 'FAILURE.',
       ms: 2400,
+      ambient: { heartbeat: 'on', flash: 'on' },
     },
   ],
 };
@@ -245,7 +245,7 @@ export const PREAMBLE = {
   label: 'Preamble',
   startAtPress: 25,
   rules: { canLose: false, onWin: { bonus: 0 }, onLose: { bonus: 0 } },
-  ambient: { challengeText: 'frozen' },
+  ambient: { challengeText: 'frozen', bubbleText: 'off' },
   phases: [
     { kind: 'status',
       text: 'MINI GAMES APPROACHING\nDON\'T STOP MASHING THE BUTTON',
@@ -256,7 +256,7 @@ export const PREAMBLE = {
 
 // ── Registry + canonical schedule ──────────────────────────────────────────
 // PREAMBLE is intentionally NOT in this list — it's strategy-only.
-export const ALL_MINI_GAMES = [GOLDEN_EGG, MASH_GAUNTLET, TWILIGHT, PIG_BOY_ATTACK, PONG];
+export const ALL_MINI_GAMES = [GOLDEN_EGG, MASH_GAUNTLET, TWILIGHT, DODGE, PONG];
 
 export function findById(id) {
   return ALL_MINI_GAMES.find((g) => g.id === id) || null;
@@ -326,10 +326,10 @@ function scaleDifficulty(mg, playCount) {
         cfg.target = baseTarget + 5 * playCount;
         break;
       }
-      case 'pig-boy-attack': {
+      case 'dodge': {
         const baseConc = typeof cfg.maxConcurrent === 'number' ? cfg.maxConcurrent : 3;
         cfg.maxConcurrent = baseConc + 2 * playCount;
-        // initialSpawnCount tracks the rule "concurrent pigs" 2 → 4 → 6 → …
+        // initialSpawnCount tracks the rule "concurrent obstacles" 2 → 4 → 6 → …
         const baseInit = typeof cfg.initialSpawnCount === 'number' ? cfg.initialSpawnCount : 2;
         cfg.initialSpawnCount = baseInit + 2 * playCount;
         break;
@@ -341,9 +341,25 @@ function scaleDifficulty(mg, playCount) {
       default:
         break;
     }
-    return { ...phase, config: cfg };
+    // Dodge and Pong grow 5 seconds longer each lap — more obstacles / faster
+    // ball need more screen time to stay fair.
+    const BASE_TIMEOUT_MS = phase.timeout && phase.timeout.value ? phase.timeout.value : 10000;
+    const scaledTimeout = (mg.id === 'dodge' || mg.id === 'pong')
+      ? { ...phase.timeout, value: BASE_TIMEOUT_MS + 5000 * playCount }
+      : phase.timeout;
+    return { ...phase, config: cfg, timeout: scaledTimeout };
   });
   return { ...mg, phases };
+}
+
+// Fisher-Yates shuffle — returns a new shuffled array, does not mutate input.
+function shuffleArray(arr) {
+  const a = [...arr];
+  for (let i = a.length - 1; i > 0; i--) {
+    const j = Math.floor(Math.random() * (i + 1));
+    [a[i], a[j]] = [a[j], a[i]];
+  }
+  return a;
 }
 
 export function createInfiniteSchedule({
@@ -354,22 +370,17 @@ export function createInfiniteSchedule({
   firstGameAtPress = FIRST_GAME_AT,
 } = {}) {
   let yieldedCount = 0;
-  // Track the LAST TWO real mini-game ids picked. Neither can be picked
-  // for the next slot, so a game has to wait at least 2 turns before it
-  // can repeat (e.g. Twilight → GoldenEgg → not-Twilight, then Twilight
-  // is eligible again on the 4th slot).
-  const recentIds = [];
   const playCounts = new Map();
+
+  // Shuffle-bag: every game in the pool is dealt once before any repeats.
+  // When the bag empties it is reshuffled — each lap is a different random
+  // order, but every game appears exactly once per lap.
+  let bag = [];
   const pickFromPool = () => {
-    let candidates = pool.filter((mg) => !recentIds.includes(mg.id));
-    // Fallback: if filtering left no options (tiny pool), relax to last-1.
-    if (candidates.length === 0 && recentIds.length > 0) {
-      const last = recentIds[recentIds.length - 1];
-      candidates = pool.filter((mg) => mg.id !== last);
-    }
-    if (candidates.length === 0) candidates = pool;
-    return candidates[Math.floor(Math.random() * candidates.length)];
+    if (bag.length === 0) bag = shuffleArray(pool);
+    return bag.pop();
   };
+
   return {
     next(currentPressCount /* , currentSessionMs */) {
       let pick;
@@ -384,25 +395,19 @@ export function createInfiniteSchedule({
         pick = pickFromPool();
         startAt = currentPressCount + gapPresses;
       }
-      const isPreamble = yieldedCount === 0;
-      if (!isPreamble) {
-        recentIds.push(pick.id);
-        if (recentIds.length > 2) recentIds.shift();
-      }
       yieldedCount++;
-      if (isPreamble) {
+      if (yieldedCount === 1) {
         // Preamble has no play phase / no difficulty — skip scaling + log.
         return { ...pick, startAtPress: startAt };
       }
       const playCount = playCounts.get(pick.id) || 0;
       playCounts.set(pick.id, playCount + 1);
       const scaled = scaleDifficulty(pick, playCount);
-      console.log(`[mg] strategy yields "${pick.id}" startAtPress=${startAt} playCount=${playCount} recent=[${recentIds.join(',')}]`);
       return { ...scaled, startAtPress: startAt };
     },
     reset() {
       yieldedCount = 0;
-      recentIds.length = 0;
+      bag = [];
       playCounts.clear();
     },
   };

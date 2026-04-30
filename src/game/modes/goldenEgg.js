@@ -26,7 +26,6 @@ const goldenEgg = {
     const flightMax = flightDurMs[1];
     let spawnedCount = 0;
     let hitCount = 0;
-    console.log(`[mg] mode goldenEgg start | reward=${reward} size=${sizePx}px flight=${flightMin}-${flightMax}ms timeout=${ctx.timeoutMs}ms`);
 
     function spawn() {
       if (cancelled) return;
@@ -63,7 +62,6 @@ const goldenEgg = {
         endY = vp.h + off;
       }
       const dur = flightMin + Math.random() * (flightMax - flightMin);
-      console.log(`[mg] goldenEgg spawn #${spawnedCount} edge=${edge} dur=${dur.toFixed(0)}ms`);
 
       const egg = document.createElement('div');
       egg.className = 'flying-golden-egg';
@@ -121,7 +119,6 @@ const goldenEgg = {
         const cy = rect.top + rect.height / 2;
         totalScore += reward;
         hitCount++;
-        console.log(`[mg] goldenEgg HIT #${hitCount} +${reward} | total=${totalScore}`);
         ctx.awardBonus(reward, { x: cx, y: cy });
         spawnRipple(cx, cy);
 
@@ -200,7 +197,6 @@ const goldenEgg = {
       if (nextSpawnTimer) clearTimeout(nextSpawnTimer);
       if (inFlight) inFlight.cleanupEgg();
       ctx.setSubStatus(null);
-      console.log(`[mg] goldenEgg cleanup | hits=${hitCount}/${spawnedCount} totalScore=${totalScore}`);
       // No endPhase here — director's hard timeout (outcome='win') already
       // fired. Score is communicated through ctx.awardBonus calls during
       // the play (each tap awards its reward in real time), so a final

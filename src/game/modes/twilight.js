@@ -18,6 +18,7 @@ const MIN_CONCURRENT = 5;
 const STAGGER_MS = 150;
 const REWARD = 25;
 const SIZE_PX = 69;          // 15% smaller (was 81)
+const HIT_PADDING = 5;       // extra tap padding each side (~15% larger hitbox; SIZE_PX * 0.075 ≈ 5px)
 
 // Base speed in viewport-px / second. With a 600–1000px viewport this
 // gives a star ~3–6s of total time on screen; matches the old WAAPI feel.
@@ -110,11 +111,9 @@ const twilight = {
     function spawn() {
       if (cancelled) return;
       spawnedCount++;
-      const idx = spawnedCount;
 
-      const { x, y, dirX, dirY, edge } = makeSpawn();
+      const { x, y, dirX, dirY } = makeSpawn();
       const baseSpeed = rand(BASE_SPEED_MIN, BASE_SPEED_MAX) * speedMult;
-      console.log(`[mg] twilight spawn #${idx} edge=${edge} baseSpeed=${baseSpeed.toFixed(0)}px/s mult=${speedMult.toFixed(2)}`);
 
       const star = document.createElement('div');
       star.className = 'flying-twilight-star';
@@ -136,6 +135,8 @@ const twilight = {
         'left:0', 'top:0',
         `transform:${initialTransform}`,
         'user-select:none', '-webkit-user-select:none', 'touch-action:manipulation',
+        `padding:${HIT_PADDING}px`,
+        `margin:-${HIT_PADDING}px`,
       ].join(';') + ';';
       document.body.appendChild(star);
 
@@ -186,7 +187,6 @@ const twilight = {
         const cy = rect.top + rect.height / 2;
         totalScore += REWARD;
         hitCount++;
-        console.log(`[mg] twilight HIT #${hitCount} +${REWARD} | total=${totalScore}`);
         ctx.awardBonus(REWARD, { x: cx, y: cy });
         spawnRipple(cx, cy);
         handle.cleanup();

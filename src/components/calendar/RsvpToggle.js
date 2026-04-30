@@ -1,6 +1,6 @@
 import React, { useEffect, useState } from 'react';
 import styled from 'styled-components';
-import { ref, onValue, set, remove, serverTimestamp } from 'firebase/database';
+import { ref, onValue, set, remove, update, serverTimestamp } from 'firebase/database';
 import { database } from '../../services/firebase';
 import { useCurrentUser } from '../../services/auth';
 import { logEvent } from '../../services/analytics';
@@ -128,6 +128,17 @@ export default function RsvpToggle({ event }) {
     return () => unsub();
   }, [event, user]);
 
+  // Passive interaction: logged-in user viewing the event → Bad Egg list candidate.
+  // Uses update() so it merges with any existing interaction fields (mashed, etc.)
+  // rather than overwriting them. Fires once per user+event combination.
+  useEffect(() => {
+    if (!user || !event || !event.id) return;
+    update(ref(database, `eventInteractions/${event.id}/${user.uid}`), {
+      lastAt: serverTimestamp(),
+      viewed: true,
+    }).catch(() => {});
+  }, [user?.uid, event?.id]); // eslint-disable-line react-hooks/exhaustive-deps
+
   // Replay pending RSVP after sign-in.
   useEffect(() => {
     if (!user || !event || !event.id) return;
@@ -163,6 +174,12 @@ export default function RsvpToggle({ event }) {
         photoURL: profilePhoto,
         email: user.email || null,
       });
+      // Record the RSVP as an interaction too — ensures user is always tracked
+      // in eventInteractions regardless of which path they came through.
+      update(ref(database, `eventInteractions/${event.id}/${user.uid}`), {
+        lastAt: serverTimestamp(),
+        rsvped: true,
+      }).catch(() => {});
       logEvent('rsvp_added', { eventId: event.id });
     } catch (_) {} finally {
       setBusy(false);

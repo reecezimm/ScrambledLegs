@@ -2,6 +2,7 @@ import React, { useCallback, useEffect, useRef, useState } from 'react';
 import styled, { keyframes } from 'styled-components';
 import { useEventKudos } from '../../hooks/useEventKudos';
 import { useCurrentUser } from '../../services/auth';
+import MashNowWarning from './MashNowWarning';
 import { ref as dbRef, push as dbPush, set as dbSet, runTransaction } from 'firebase/database';
 import { database } from '../../services/firebase';
 import { logEvent } from '../../services/analytics';
@@ -12,6 +13,8 @@ import {
 } from '../../hooks/useMashEffects';
 import { fmtCount } from '../../hooks/useEventLifecycle';
 import { gameStore } from '../../game/store';
+import { MASH_TEXT_POOL, CREW_TEXT_SET, pickMashText } from '../../game/mashText';
+import getAudioManager from '../../services/AudioManager';
 import {
   emitCurrent as emitMashCurrent,
   emitSessionStart as emitMashSessionStart,
@@ -92,6 +95,8 @@ const HD_BURN_MESSAGES = [
   "You're not getting yolked at this rate.",
 ];
 
+// Kept for button intensity dataset (btn.dataset.intensity). Text selection
+// now uses MASH_TEXT_POOL from mashText.js via pickMashText().
 const HD_CHALLENGE_BANDS = [
   ["Press for more stoke", "That's a start", "Keep mashing"],
   ["Mash me if you're ready", "Mash pedals next", "Drop the hammer", "Pace yourself"],
@@ -391,21 +396,27 @@ const HD_FIRST_25 = [
   "DON'T STOP — TAP!",
   "TAP FASTER!",
   "NOW MASH!",
-  // 6-9: crescendo — they're committed, ramp the urgency.
-  "MASH HARDER!",
-  "KEEP MASHING!",
-  "BEAT THE HIGH SCORE!",
-  "DON'T LET UP!",
-  // 10-12: critical mini-game warning. Mini-games show up at click 25; if
-  // the user stops mashing for >2.5s the session auto-saves out. Drill in
-  // the rule: pause the mash = end the run, even during a mini-game.
+  // 6-13: CRITICAL RULE — Don't stop mashing, even during mini-games.
+  // Repeated 8 times so it sinks in before mini-games appear at press 25.
   "DON'T STOP MASHING\nEVEN DURING MINI-GAMES",
+  "DON'T STOP MASHING\nEVEN DURING MINI-GAMES",
+  "DON'T STOP MASHING\nEVEN DURING MINI-GAMES",
+  "DON'T STOP MASHING\nEVEN DURING MINI-GAMES",
+  "DON'T STOP MASHING\nEVEN DURING MINI-GAMES",
+  "DON'T STOP MASHING\nEVEN DURING MINI-GAMES",
+  "DON'T STOP MASHING\nEVEN DURING MINI-GAMES",
+  "DON'T STOP MASHING\nEVEN DURING MINI-GAMES",
+  // 14-19: Consequence warning — stopping = game over.
+  // Repeated 6 times to drive the stakes home.
   "STOP MASHING = GAME OVER",
-  "WHEN IN DOUBT, MASH",
-  // 13-25: same as before — challenge / hype.
+  "STOP MASHING = GAME OVER",
+  "STOP MASHING = GAME OVER",
+  "STOP MASHING = GAME OVER",
+  "STOP MASHING = GAME OVER",
+  "STOP MASHING = GAME OVER",
+  // 20-25: final hype before mini-games.
   "HAMMER DOWN!", "SEND IT!", "THEY'RE BEATING YOU",
-  "ALMOST THERE", "BEAST MODE", "UNHINGED YET?", "YOU GOT THIS", "MORE WATTS!",
-  "FEEL THE BURN", "PROVE THEM WRONG", "CHAMPION ENERGY", "ALL IN!", "__HYPE__",
+  "ALMOST THERE", "BEAST MODE", "UNHINGED YET?",
 ];
 
 function bandForPress(c) {
@@ -417,28 +428,15 @@ function bandForPress(c) {
   return 5;
 }
 
-function pickChallenge(pressCount, lastChallenge) {
+// pickChallenge — returns the challenge string for a given press.
+// Press 1-25: hand-tuned HD_FIRST_25 (linear, no random).
+// Press 26+:  random pick from MASH_TEXT_POOL with FIFO-3 repeat guard via
+//             pickMashText(). fifoRef must be passed in by the caller.
+function pickChallenge(pressCount, fifoRef) {
   if (pressCount >= 1 && pressCount <= HD_FIRST_25.length) {
-    const slot = HD_FIRST_25[pressCount - 1];
-    if (slot === '__HYPE__') {
-      let pick;
-      let attempts = 0;
-      do {
-        pick = HD_HYPE_POOL[Math.floor(Math.random() * HD_HYPE_POOL.length)];
-        attempts++;
-      } while (pick === lastChallenge && HD_HYPE_POOL.length > 1 && attempts < 10);
-      return pick;
-    }
-    return slot;
+    return HD_FIRST_25[pressCount - 1];
   }
-  const band = HD_CHALLENGE_BANDS[bandForPress(pressCount)];
-  let challenge;
-  let attempts = 0;
-  do {
-    challenge = band[Math.floor(Math.random() * band.length)];
-    attempts++;
-  } while (challenge === lastChallenge && band.length > 1 && attempts < 10);
-  return challenge;
+  return pickMashText(MASH_TEXT_POOL, fifoRef);
 }
 
 function setSub(el, text) {
@@ -491,6 +489,9 @@ const HdCta = styled.button`
   padding: var(--hd-pad-y, 14px) 18px;
   border: none;
   border-radius: 16px;
+  touch-action: none;
+  -webkit-user-select: none;
+  user-select: none;
   background: linear-gradient(135deg,
     hsl(var(--hd-hue, 0), 85%, 60%),
     hsl(calc(var(--hd-hue, 0) + 35), 90%, 50%));
@@ -737,8 +738,10 @@ export default function KudosCta({ event, isSheetContext }) {
   const hdLastChallengeAtRef = useRef(0);
   const hdLastBurnRef = useRef('');
   const hdResetTimerRef = useRef(null);
+  const saveFlowInProgressRef = useRef(false);
+  const hdChallengeFifoRef = useRef([]);
   const phraseCooldownRef = useRef(0);
-  const lastPhraseIndexRef = useRef(-1);
+  const phraseFifoRef = useRef([]);
   const sessionStartRef = useRef(0);
   const sessionUidRef = useRef(null);
   const vvCleanupRef = useRef(null);
@@ -850,7 +853,14 @@ export default function KudosCta({ event, isSheetContext }) {
       document.body.style.left = '';
       document.body.style.right = '';
       document.body.style.width = '';
+      document.body.style.overscrollBehavior = '';
       delete document.body.dataset.savedScrollY;
+      // Restore viewport meta so non-game pages are normally zoomable again.
+      const vp = document.querySelector('meta[name="viewport"]');
+      if (vp && vp.dataset.preGameContent) {
+        vp.content = vp.dataset.preGameContent;
+        delete vp.dataset.preGameContent;
+      }
       window.scrollTo(0, savedY);
       if (wasLocked) {
         console.log('[mash-game] GAME END — unlocked, scroll restored to', savedY);
@@ -866,13 +876,29 @@ export default function KudosCta({ event, isSheetContext }) {
   // listener (when a `endsMashSession: true` mini-game fails — fires
   // immediately, no delay).
   const runSaveFlow = useCallback(() => {
-    console.log('[mg-host] runSaveFlow ENTRY | pressCount=' + hdPressCountRef.current);
+    if (saveFlowInProgressRef.current) {
+      console.log('[mg-host] runSaveFlow already in progress — suppressing duplicate call');
+      return;
+    }
+    saveFlowInProgressRef.current = true;
+    console.log('[mg-host] ▼ runSaveFlow ENTRY');
+    console.log(`[mg-host]   pressCount=${hdPressCountRef.current}`);
+    console.log(`[mg-host]   sessionStart=${sessionStartRef.current}`);
+    console.log(`[mg-host]   sessionUid=${sessionUidRef.current}`);
+
     const btn = btnRef.current;
-    if (!btn) return;
+    if (!btn) {
+      console.log('[mg-host]   ✗ No button element found, returning');
+      return;
+    }
+    console.log('[mg-host]   Button element found');
     const row = btn.parentElement;
     const numEl = row && row.querySelector('.mash-num');
     const subEl = row && row.querySelector('.mash-sub');
+    console.log(`[mg-host]   numEl=${!!numEl} | subEl=${!!subEl}`);
+
     if (hdPressCountRef.current <= 0) {
+      console.log('[mg-host]   pressCount <= 0, returning (idle state)');
       btn.classList.remove('is-mashing', 'is-deep-mashing', 'is-saving', 'is-burning');
       btn.dataset.intensity = '0';
       btn.style.setProperty('--hd-rest', '1');
@@ -882,39 +908,56 @@ export default function KudosCta({ event, isSheetContext }) {
       if (subEl) subEl.textContent = '';
       return;
     }
+
     // Phase A — saving
+    console.log(`[mg-host] ▶ PHASE A: Saving | pressCount=${hdPressCountRef.current}`);
     btn.classList.remove('is-mashing', 'is-deep-mashing');
     btn.classList.add('is-saving');
     document.body.dataset.mashPhase = 'saving';   // hides GameStatus
     if (numEl) { numEl.textContent = `saving ${fmtCount(hdPressCountRef.current)}`; numEl.style.fontSize = '28px'; }
     if (subEl) subEl.textContent = '';
+
     setTimeout(() => {
       // Phase B — burn
+      console.log(`[mg-host] ▶ PHASE B: Burning | pressCount=${hdPressCountRef.current}`);
       btn.classList.remove('is-saving');
       btn.classList.add('is-burning');
       document.body.dataset.mashPhase = 'burning';
       let burnMsg;
-      do { burnMsg = HD_BURN_MESSAGES[Math.floor(Math.random() * HD_BURN_MESSAGES.length)]; }
-      while (burnMsg === hdLastBurnRef.current && HD_BURN_MESSAGES.length > 1);
-      hdLastBurnRef.current = burnMsg;
+      if (hdPressCountRef.current < 10) {
+        burnMsg = "TRY AGAIN\nKEEP MASHING TO PLAY";
+      } else {
+        do { burnMsg = HD_BURN_MESSAGES[Math.floor(Math.random() * HD_BURN_MESSAGES.length)]; }
+        while (burnMsg === hdLastBurnRef.current && HD_BURN_MESSAGES.length > 1);
+        hdLastBurnRef.current = burnMsg;
+      }
       if (numEl) { numEl.textContent = burnMsg; numEl.style.fontSize = ''; }
       setTimeout(() => {
         // Phase C — reset
+        console.log(`[mg-host] ▶ PHASE C: Reset | pressCount=${hdPressCountRef.current}`);
         const finalCount = hdPressCountRef.current;
         const sessionStart = sessionStartRef.current;
         const sessionUid = sessionUidRef.current;
+        console.log(`[mg-host]   finalCount=${finalCount} | sessionUid=${sessionUid} | event.id=${event ? event.id : 'N/A'}`);
+
         if (sessionUid && finalCount > 0 && event && event.id) {
+          console.log(`[mg-host]   Writing session data to database...`);
           try {
             const sessionRef = dbPush(dbRef(database, `mashSessions/${event.id}/${sessionUid}`));
+            console.log(`[mg-host]     Created session ref`);
             dbSet(sessionRef, {
               startedAt: sessionStart || Date.now(),
               endedAt: Date.now(),
               count: finalCount,
-            }).catch(() => {});
+            }).catch(() => {
+              console.log(`[mg-host]     dbSet failed (caught)`);
+            });
             runTransaction(
               dbRef(database, `eventMashTotals/${event.id}/${sessionUid}`),
               (cur) => (cur || 0) + finalCount,
-            ).catch(() => {});
+            ).catch(() => {
+              console.log(`[mg-host]     eventMashTotals transaction failed (caught)`);
+            });
             // Cumulative high-score: max-of-best transaction. Writing the
             // numeric directly (not under a `best` child) keeps the txn
             // simple. Path: mashHighScores/${eventId}/${uid}/best.
@@ -924,32 +967,45 @@ export default function KudosCta({ event, isSheetContext }) {
             ).then((res) => {
               if (res && res.committed) {
                 const committedBest = (res.snapshot && res.snapshot.val()) || finalCount;
+                console.log(`[mg-host]     High score transaction committed | best=${committedBest}`);
                 emitMashCumulativeWritten({
                   eventId: event.id,
                   uid: sessionUid,
                   best: committedBest,
                 });
               }
-            }).catch(() => {});
+            }).catch(() => {
+              console.log(`[mg-host]     High score transaction failed (caught)`);
+            });
             logEvent('mash_session_complete', {
               eventId: event.id,
               count: finalCount,
               durationMs: Date.now() - (sessionStart || Date.now()),
             });
-          } catch (_) {}
+            console.log(`[mg-host]   Database writes initiated`);
+          } catch (err) {
+            console.error(`[mg-host]   Exception during database writes:`, err);
+          }
         } else if (finalCount > 0 && event && event.id) {
+          console.log(`[mg-host]   Anonymous session (no sessionUid)`);
           logEvent('mash_session_complete', {
             eventId: event.id,
             count: finalCount,
             anonymous: true,
           });
+        } else {
+          console.log(`[mg-host]   ⚠ Skipping database write (finalCount=${finalCount}, sessionUid=${!!sessionUid}, event=${!!event})`);
         }
+
+        console.log(`[mg-host]   Resetting references...`);
         hdPressCountRef.current = 0;
+        console.log(`[mg-host]     pressCount → 0`);
         hdLastChallengeRef.current = '';
         hdLastChallengeAtRef.current = 0;
         sessionStartRef.current = 0;
         sessionUidRef.current = null;
         btn.style.setProperty('--hd-rest-y', '1');
+        saveFlowInProgressRef.current = false;
         enterIdleState();
       }, KUDOS_BURN_MS);
     }, KUDOS_SAVE_ANIM_MS);
@@ -960,13 +1016,23 @@ export default function KudosCta({ event, isSheetContext }) {
   // sessionEnd. We clear any pending save timer and run the save flow now.
   useEffect(() => {
     const unsub = gameStore.onSessionEnd(() => {
-      console.log('[mg-host] session-end received → triggering save flow');
+      console.log('[mg-host] ▼ SESSION-END listener invoked');
+      console.log(`[mg-host]   Current pressCount: ${hdPressCountRef.current}`);
+      console.log(`[mg-host]   Save timer active: ${hdResetTimerRef.current !== null}`);
+
       if (hdResetTimerRef.current) {
+        console.log(`[mg-host]   Clearing pending save timer`);
         clearTimeout(hdResetTimerRef.current);
         hdResetTimerRef.current = null;
+      } else {
+        console.log(`[mg-host]   ⚠ No pending save timer to clear`);
       }
+
+      console.log(`[mg-host]   ▶ Calling runSaveFlow()`);
       runSaveFlow();
+      console.log(`[mg-host] ✓ SESSION-END listener complete`);
     });
+    console.log('[mg-host] sessionEnd listener registered');
     return unsub;
   }, [runSaveFlow]);
 
@@ -1045,16 +1111,16 @@ export default function KudosCta({ event, isSheetContext }) {
       anchorCx = rect.left + halfW - cumDX;
       try { btn.setPointerCapture(pointerId); } catch (_) {}
       gameStore.handleDragStart({ x: e.clientX, y: e.clientY });
-      window.addEventListener('pointermove', onMove);
-      window.addEventListener('pointerup', onUp);
-      window.addEventListener('pointercancel', onUp);
+      window.addEventListener('pointermove', onMove, { passive: false });
+      window.addEventListener('pointerup', onUp, { passive: false });
+      window.addEventListener('pointercancel', onUp, { passive: false });
     };
 
     function attach() {
       const btn = btnRef.current;
       if (!btn || attached) return;
       attached = true;
-      btn.addEventListener('pointerdown', onDown);
+      btn.addEventListener('pointerdown', onDown, { passive: false });
     }
     function detach() {
       const btn = btnRef.current;
@@ -1167,23 +1233,32 @@ export default function KudosCta({ event, isSheetContext }) {
       // fires for visual feedback so the user knows to resume mashing.
       const POST_MINI_GAME_GRACE_MS = 4000;
       if (activeIdSnapshot != null && activeId == null) {
-        const press = hdPressCountRef.current;
-        if (press > 0 && !hdResetTimerRef.current) {
-          hdResetTimerRef.current = setTimeout(() => {
-            console.log('[mg-host] save-timer FIRED (post-mini-game idle ' + POST_MINI_GAME_GRACE_MS + 'ms)');
-            runSaveFlow();
-          }, POST_MINI_GAME_GRACE_MS);
-          console.log('[mg-host] save-timer RE-ARMED post-mini-game | from="' + activeIdSnapshot + '" pressCount=' + press + ' delay=' + POST_MINI_GAME_GRACE_MS + 'ms');
-          // Visual: trigger the heartbeat ring so the user sees the burn
-          // counting down. Mini-games are meant to chain, so this is the
-          // visual "keep going" cue between games.
-          const btn = btnRef.current;
-          if (btn && document.body.dataset.ambHeartbeat !== 'off') {
-            btn.classList.remove('hd-heartbeat');
-            // eslint-disable-next-line no-unused-expressions
-            btn.offsetWidth;
-            btn.classList.add('hd-heartbeat');
+        // Skip re-arm and heartbeat if a session-end save flow is already
+        // running (endsMashSession mini-game fail). The sessionEndPulse
+        // listener already called runSaveFlow() — arming the timer here
+        // would be a duplicate, and triggering the heartbeat animation
+        // mid-burn makes the UI look like a second failure.
+        if (!saveFlowInProgressRef.current) {
+          const press = hdPressCountRef.current;
+          if (press > 0 && !hdResetTimerRef.current) {
+            hdResetTimerRef.current = setTimeout(() => {
+              console.log('[mg-host] save-timer FIRED (post-mini-game idle ' + POST_MINI_GAME_GRACE_MS + 'ms)');
+              runSaveFlow();
+            }, POST_MINI_GAME_GRACE_MS);
+            console.log('[mg-host] save-timer RE-ARMED post-mini-game | from="' + activeIdSnapshot + '" pressCount=' + press + ' delay=' + POST_MINI_GAME_GRACE_MS + 'ms');
+            // Visual: trigger the heartbeat ring so the user sees the burn
+            // counting down. Mini-games are meant to chain, so this is the
+            // visual "keep going" cue between games.
+            const btn = btnRef.current;
+            if (btn && document.body.dataset.ambHeartbeat !== 'off') {
+              btn.classList.remove('hd-heartbeat');
+              // eslint-disable-next-line no-unused-expressions
+              btn.offsetWidth;
+              btn.classList.add('hd-heartbeat');
+            }
           }
+        } else {
+          console.log('[mg-host] post-mini-game re-arm SKIPPED — session-end save flow already in progress');
         }
       }
       activeIdSnapshot = activeId;
@@ -1239,6 +1314,12 @@ export default function KudosCta({ event, isSheetContext }) {
         eventId: event && event.id,
         uid: user ? user.uid : null,
       });
+      // ── AUDIO START ──
+      // Start main track fade-in on first press (6.5 second fade)
+      const audioManager = getAudioManager();
+      audioManager.startMainTrack('/audio/main-tracks/mash-theme.mp3', 0.7, 6500).catch(err => {
+        console.error('[audio] Failed to start main track on first mash press:', err);
+      });
       // ── MASH GAME START ──
       // Compute the DELTA needed to translate the row from its natural slot
       // to the viewport center-bottom anchor (50vw, 62vh top of row). Using
@@ -1273,7 +1354,16 @@ export default function KudosCta({ event, isSheetContext }) {
         document.body.style.left = '0';
         document.body.style.right = '0';
         document.body.style.width = '100%';
+        document.body.style.overscrollBehavior = 'none';
         document.body.dataset.mashLocked = '1';
+        // Lock viewport zoom for the duration of the game. Pinch-zoom breaks
+        // the fixed-layout canvas and can expose the page beneath it.
+        // Restored in enterIdleState so other pages remain normally zoomable.
+        const vp = document.querySelector('meta[name="viewport"]');
+        if (vp) {
+          vp.dataset.preGameContent = vp.content;
+          vp.content = 'width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no';
+        }
         console.log('[mash-game] LOCKED — page frozen at scrollY=' + savedY);
         // Recompute --btn-dy on visualViewport changes (Android chrome
         // collapse, soft keyboard, etc.) so the migration target stays
@@ -1367,7 +1457,7 @@ export default function KudosCta({ event, isSheetContext }) {
       const emoji = pickSpawnEmoji(pressCount);
       setTimeout(() => spawnHotDog(btn, { rainbow, emoji }), i * stagger);
     }
-    spawnPhrase(btn, phraseCooldownRef, lastPhraseIndexRef);
+    spawnPhrase(btn, phraseCooldownRef, phraseFifoRef, hdPressCountRef.current);
 
     // Rainbow eggs at 25+
     if (pressCount >= 25 && Math.random() < 0.30) {
@@ -1440,10 +1530,10 @@ export default function KudosCta({ event, isSheetContext }) {
     const ambChallenge = document.body.dataset.ambChallenge;
     if (ambChallenge !== 'frozen' && ambChallenge !== 'off') {
       const isHandTuned = pressCount <= HD_FIRST_25.length;
-      const currentDwell = CREW_CHALLENGES.has(hdLastChallengeRef.current) ? 4000 : 2500;
+      const currentDwell = CREW_TEXT_SET.has(hdLastChallengeRef.current) ? 4000 : 2500;
       const shouldRefreshChallenge = isHandTuned || (now - hdLastChallengeAtRef.current >= currentDwell);
       if (shouldRefreshChallenge) {
-        const challenge = pickChallenge(pressCount, hdLastChallengeRef.current);
+        const challenge = pickChallenge(pressCount, hdChallengeFifoRef);
         hdLastChallengeRef.current = challenge;
         hdLastChallengeAtRef.current = now;
         if (subEl) setSub(subEl, challenge);
@@ -1497,6 +1587,7 @@ export default function KudosCta({ event, isSheetContext }) {
         <MashNum className="mash-num">MASH ME</MashNum>
         <MashSub className="mash-sub" />
       </MashOverlay>
+      <MashNowWarning />
       {showNudge && (
         <Toast
           type="button"

@@ -297,18 +297,13 @@ const USER_TRIGGER = 'Generate Eggman\'s take for this ride right now. Follow th
 
 export async function getEggMansTake({ event, rsvpedUsers, weather, forceRefresh = false } = {}) {
   if (!event || !event.id) {
-    console.log('[eggman] skip — no event.id');
     return null;
   }
   const t0 = Date.now();
-  console.log('[eggman] →', event.id, '|', (rsvpedUsers || []).length, 'RSVPs |', weather ? 'wx ✓' : 'wx ✗', forceRefresh ? '| forceRefresh' : '');
   try {
     const systemPrompt = buildSystemPrompt({ event, rsvpedUsers, weather });
     const cacheKey = _buildCacheKey({ event, rsvpedUsers, weather });
-    const archived = isArchived(event.start);
-    const proxBucket = proximityBucket(event.start);
     const ttlMs = ttlForProximity(event.start);
-    console.log('[eggman]   cacheKey:', cacheKey, '| proximity:', proxBucket, '| archived:', archived, '| TTL(min):', Math.round(ttlMs / 60000));
     const text = await runPrompt(USER_TRIGGER, {
       system: systemPrompt,
       cacheKey,
@@ -322,7 +317,6 @@ export async function getEggMansTake({ event, rsvpedUsers, weather, forceRefresh
       console.warn('[eggman] ✗ empty/non-string result for', event.id, '| cacheKey=', cacheKey, '| in', Date.now() - t0, 'ms');
       return null;
     }
-    console.log('[eggman] ✓', event.id, '| chars:', text.length, '| in', Date.now() - t0, 'ms |', text.slice(0, 60).replace(/\n/g, ' '), '…');
     return text.trim();
   } catch (err) {
     console.warn('[eggman] ✗ failed for', event && event.id, '| in', Date.now() - t0, 'ms |', err && (err.message || err));

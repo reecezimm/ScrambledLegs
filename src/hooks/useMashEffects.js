@@ -1,3 +1,5 @@
+import { MASH_TEXT_GENERAL, MASH_TEXT_POOL, pickMashText } from '../game/mashText';
+
 // Module-level counter shared across all KudosCta instances
 // (so different cards don't get independent counters that fight each other)
 export let activeHotDogs = 0;
@@ -600,57 +602,16 @@ export function flashBackground(pressCount) {
   );
 }
 
-export function spawnPhrase(btn, phraseCooldownRef, lastPhraseIndexRef) {
+export function spawnPhrase(btn, phraseCooldownRef, phraseFifoRef, pressCount) {
   if (document.body.dataset.ambBubble === 'off') return;
   const now = Date.now();
   if (now < phraseCooldownRef.current) return;
   phraseCooldownRef.current = now + 5000;
 
-  const PHRASES = [
-    // Core
-    "Get crackin'!", "Egg-cellent!", "Sunny side up!", "You rock!",
-    "Send it!", "Grease lightning!", "Mustard moves!", "Wheels up!",
-    "Yolks on you!", "Hot dog hero!", "Crank it!", "Sender alert!",
-    "Scrambled glory!", "Pedal punisher!", "Bun voyage!",
-    "You're in! 🥚", "Roll call answered!", "See you Wednesday!",
-    "Yolked + stoked!", "Eggs-traordinary!", "Cracked it!",
-    "On the roster!", "Whisk on!", "Wednesday loading…",
-    "Locked and loaded!",
-    // Mash team hype (replaces DOG MODE ACTIVATED + diversifies pool)
-    "LET'S GET SCRAMBLED", "CRACK 'EM ALL", "YOLK ON FIRE",
-    "FULL SEND", "EGG MODE: ON",
-    // Jordan / Bad Egg
-    "Bad Egg approved!", "Jordan would run. You ride.",
-    // SWIDZ
-    "SWIDZ would send it!", "Dave's at the bar — keep going!",
-    // Pig Boy
-    "Pig Boy's watching!", "Pig Boy's wrist approves!",
-    // Reed
-    "Reed's on a lake!", "Boundary waters can wait!",
-    // Casey Newton
-    "Dad speed activated!", "Dr. Newton is proud!",
-    // Tyler VANDAL
-    "VANDAL will finish. Always.", "Vandal heard this story twice!",
-    // Matt Wiley
-    "Wiley showed up late and crushed it!", "IPA energy!",
-    // Derek VanSlyke
-    "Derek's in Spandex. You're not.", "Trail life, no Spandex!",
-    // Will Markes
-    "Markes believes in you!", "Will puts in the work!",
-    // Paul Manoppo
-    "Manoppo had 6 surgeries. Still faster.", "Comeback energy!",
-    // Glarbtron
-    "GLARBTRON approves!", "Supreme entity satisfied.",
-    // Brent St. Martin
-    "Brent hates this. You love it.", "Not Brent's fun — yours!",
-    // Alex Birno
-    "Birno is on the back nine!", "Snowmobile in July energy!",
-  ];
-  let i;
-  do { i = Math.floor(Math.random() * PHRASES.length); }
-  while (i === lastPhraseIndexRef.current && PHRASES.length > 1);
-  lastPhraseIndexRef.current = i;
-  const phrase = PHRASES[i];
+  // Crew-specific taunts only unlock at press 30+. Before that use the
+  // general pool so new users don't get insider references on press 1.
+  const pool = (pressCount != null && pressCount >= 30) ? MASH_TEXT_POOL : MASH_TEXT_GENERAL;
+  const phrase = pickMashText(pool, phraseFifoRef);
 
   const rect = btn.getBoundingClientRect();
   const baseY = rect.top - 8;

@@ -28,7 +28,7 @@ const pigDodge = {
     const pigs = new Set();
 
     const config = {
-      pigSize:        (ctx.config && ctx.config.pigSize)        || 40,
+      obstacleSize:   (ctx.config && ctx.config.obstacleSize)   || (ctx.config && ctx.config.pigSize) || 40,
       gravity:        (ctx.config && ctx.config.gravity)        || 280,
       thrust:         (ctx.config && ctx.config.thrust)         || 220,
       maxSpeed:       (ctx.config && ctx.config.maxSpeed)       || 320,
@@ -38,18 +38,18 @@ const pigDodge = {
       initialDownVy:  (ctx.config && ctx.config.initialDownVy)  || [80, 160],
       initialSideVx:  (ctx.config && ctx.config.initialSideVx)  || 120,
       hitboxShrink:   (ctx.config && ctx.config.hitboxShrink)   || 8,
-      statusText:     (ctx.config && ctx.config.statusText)     || 'DODGE THE PIGS',
+      statusText:     (ctx.config && ctx.config.statusText)     || 'DODGE THE CARS',
+      obstacleEmojis: (ctx.config && ctx.config.obstacleEmojis) || ['🐷'],
       avatar:         (ctx.config && ctx.config.avatar)         || null,
     };
 
     console.log(
-      `[mg] mode pigDodge start | size=${config.pigSize}px gravity=${config.gravity} ` +
+      `[mg] mode pigDodge start | obstacleSize=${config.obstacleSize}px gravity=${config.gravity} ` +
       `thrust=${config.thrust} maxSpeed=${config.maxSpeed} spawnEvery=${config.spawnEveryMs}ms ` +
       `timeout=${ctx.timeoutMs}ms`
     );
 
-    ctx.setStatus(config.statusText);
-    ctx.setSubStatus('HOLD AND DRAG');
+    ctx.setSubStatus(config.statusText);
 
     // ── Avatar overlay — PURE VISUAL, pointer-events: none ──────────────
     // Mirrors Pong's architecture: the button itself is the drag target
@@ -80,10 +80,11 @@ const pigDodge = {
     function makePig(opts) {
       const el = document.createElement('div');
       el.className = 'pig-attacker';
-      el.textContent = '🐷';
+      const obstacleEmoji = config.obstacleEmojis[Math.floor(Math.random() * config.obstacleEmojis.length)];
+      el.textContent = obstacleEmoji;
       el.style.cssText = [
         'position:fixed', 'pointer-events:none', 'z-index:9100',
-        `font-size:${config.pigSize}px`,
+        `font-size:${config.obstacleSize}px`,
         'left:0', 'top:0',
         'will-change:transform',
         'filter:drop-shadow(0 2px 6px rgba(0,0,0,0.6))',
@@ -97,7 +98,7 @@ const pigDodge = {
         rotation: 0,
         offscreenSince: 0,
       };
-      el.style.transform = `translate(${pig.x - config.pigSize / 2}px, ${pig.y - config.pigSize / 2}px)`;
+      el.style.transform = `translate(${pig.x - config.obstacleSize / 2}px, ${pig.y - config.obstacleSize / 2}px)`;
       pigs.add(pig);
       return pig;
     }
@@ -165,7 +166,7 @@ const pigDodge = {
       const hbTop    = btnCy - halfAvatar + shrink;
       const hbBottom = btnCy + halfAvatar - shrink;
 
-      const halfPig = config.pigSize / 2;
+      const halfPig = config.obstacleSize / 2;
       const dead = [];
       const vw = window.innerWidth;
       const vh = window.innerHeight;
@@ -211,7 +212,11 @@ const pigDodge = {
         ) {
           if (!ended) {
             ended = true;
-            console.log('[mg] pigDodge HIT — pig collided with the girl');
+            // CRITICAL: Cancel pending rAF immediately to stop game loop
+            if (rafId) {
+              cancelAnimationFrame(rafId);
+              rafId = 0;
+            }
             ctx.endPhase('lose', 0);
           }
           return;
@@ -261,23 +266,11 @@ const pigDodge = {
       ended = true;
       if (rafId) cancelAnimationFrame(rafId);
       if (spawnTimer) clearInterval(spawnTimer);
-      const finalCount = pigs.size;
       pigs.forEach((pig) => pig.el.remove());
       pigs.clear();
 
       // ── Diagnostic snapshot BEFORE cleanup ─────────────────────────────
-      try {
-        const btnPre = document.querySelector('.hd-cta');
-        const rectPre = btnPre && btnPre.getBoundingClientRect();
-        const cs = getComputedStyle(document.body);
-        console.log('[mg] pigDodge END (pre-cleanup) | btn=' + (rectPre
-          ? `(x=${Math.round(rectPre.left)}, y=${Math.round(rectPre.top)}, w=${Math.round(rectPre.width)}, h=${Math.round(rectPre.height)})`
-          : 'NULL') +
-          ' | --btn-drag-x=' + (cs.getPropertyValue('--btn-drag-x').trim() || '0') +
-          ' --btn-drag-y=' + (cs.getPropertyValue('--btn-drag-y').trim() || '0') +
-          ' | data-button-state=' + (document.body.dataset.buttonState || '-') +
-          ' data-pig-avatar=' + (document.body.dataset.pigAvatar || '-'));
-      } catch (e) { console.warn('[mg] pigDodge log (pre) failed:', e); }
+      // Diagnostic snapshot BEFORE cleanup removed — no logging
 
       // Pure-visual avatar — just remove the element + clear the body attr.
       // No pointer listeners to detach (KudosCta's drag wiring handles drag
@@ -296,39 +289,14 @@ const pigDodge = {
       // eslint-disable-next-line no-unused-expressions
       document.body.offsetWidth;
 
-      // ── Diagnostic snapshot AFTER cleanup ───────────────────────────────
-      try {
-        const btnPost = document.querySelector('.hd-cta');
-        const rectPost = btnPost && btnPost.getBoundingClientRect();
-        const cs = getComputedStyle(document.body);
-        console.log('[mg] pigDodge END (post-cleanup) | btn=' + (rectPost
-          ? `(x=${Math.round(rectPost.left)}, y=${Math.round(rectPost.top)}, w=${Math.round(rectPost.width)}, h=${Math.round(rectPost.height)})`
-          : 'NULL') +
-          ' | --btn-drag-x=' + (cs.getPropertyValue('--btn-drag-x').trim() || '0') +
-          ' --btn-drag-y=' + (cs.getPropertyValue('--btn-drag-y').trim() || '0') +
-          ' | data-button-state=' + (document.body.dataset.buttonState || '-') +
-          ' data-snap-back=' + (document.body.dataset.snapBack || '-'));
-      } catch (e) { console.warn('[mg] pigDodge log (post) failed:', e); }
+      // ── Diagnostic snapshot AFTER cleanup removed — no logging
 
       requestAnimationFrame(() => {
         delete document.body.dataset.snapBack;
-        // ── Diagnostic snapshot ONE FRAME LATER ────────────────────────────
-        // If --btn-drag-x/y are nonzero here, something re-set them after
-        // cleanup (a stale rAF, a leftover listener, or another mode).
-        try {
-          const btn1 = document.querySelector('.hd-cta');
-          const rect1 = btn1 && btn1.getBoundingClientRect();
-          const cs = getComputedStyle(document.body);
-          console.log('[mg] pigDodge END (+1 frame) | btn=' + (rect1
-            ? `(x=${Math.round(rect1.left)}, y=${Math.round(rect1.top)}, w=${Math.round(rect1.width)}, h=${Math.round(rect1.height)})`
-            : 'NULL') +
-            ' | --btn-drag-x=' + (cs.getPropertyValue('--btn-drag-x').trim() || '0') +
-            ' --btn-drag-y=' + (cs.getPropertyValue('--btn-drag-y').trim() || '0'));
-        } catch (e) { console.warn('[mg] pigDodge log (+1 frame) failed:', e); }
+        // ── Diagnostic snapshot ONE FRAME LATER removed — no logging
       });
       ctx.setStatus(null);
       ctx.setSubStatus(null);
-      console.log(`[mg] pigDodge cleanup | despawned ${finalCount} pigs in flight`);
     };
   },
 };

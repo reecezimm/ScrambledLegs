@@ -51,6 +51,9 @@ export const initialState = {
   // declare `startAtMs` so they can't fire too soon regardless of how
   // fast the user is mashing.
   sessionStartMs: null,
+  // Counter that increments each time a success outcome triggers MASH NOW! warning.
+  // Component uses this to detect new warnings and re-trigger its 2.5s timer.
+  flashWarningCounter: 0,
   resolved: resolveDefaults(),
 };
 
@@ -69,6 +72,8 @@ function resolveDefaults() {
     phaseKind: 'idle',
     outcome: null,
     score: null,
+    flashWarning: null,
+    flashWarningCounter: 0,
   };
 }
 
@@ -110,6 +115,19 @@ export function reduce(state, action) {
       // rules.onLose.endsMashSession, the sessionEndPulse fires when the
       // mini-game NATURALLY completes (last phase exits), giving the user
       // ~2 seconds of "FAILED" feedback before the save flow takes over.
+
+      // Fire MASH NOW! the instant the play phase ends with a win — while the
+      // outcome message is still showing — so the user has maximum mashing time.
+      // Exclude preamble (no play phase, not a real game).
+      const endingPhase = currentPhase(state);
+      const endingMg = currentMiniGame(state);
+      const shouldShowWarning = outcome === 'win'
+        && endingPhase && endingPhase.kind === 'play'
+        && endingMg && endingMg.id !== 'preamble';
+      if (shouldShowWarning) {
+        console.log(`[warning] ⚠️  MASH NOW! triggered at play-end | pressCount=${state.pressCount} | mg=${endingMg.id}`);
+      }
+
       const next = {
         ...state,
         active: {
@@ -119,6 +137,8 @@ export function reduce(state, action) {
         },
         modeStatusOverride: null,
         modeSubStatus: null,
+        flashWarning: shouldShowWarning ? 'MASH NOW!' : state.flashWarning,
+        flashWarningCounter: shouldShowWarning ? state.flashWarningCounter + 1 : state.flashWarningCounter,
       };
       // Critical: re-resolve after advancePhase. Without this, state.resolved
       // stays computed against the OLD phase (the one just ending), so any
@@ -224,8 +244,14 @@ function advancePhase(state, now) {
     // Fire sessionEndPulse if rules.onLose.endsMashSession was triggered
     // (the lose outcome propagated all the way through any outcome status
     // phase). Host (KudosCta) listens and runs the save→burn→reset flow.
+    console.log(`[director] ▼ Checking session-end criteria`);
+    console.log(`[director]   outcome=${outcome} | rules.onLose=${rules.onLose ? 'exists' : 'null'} | rules.onLose.endsMashSession=${rules.onLose ? rules.onLose.endsMashSession : 'N/A'}`);
+
     const fireSessionEnd = outcome === 'lose'
       && rules.onLose && rules.onLose.endsMashSession;
+
+    console.log(`[director]   fireSessionEnd=${fireSessionEnd} (outcome=lose? ${outcome === 'lose'}, has onLose? ${!!rules.onLose}, onLose.endsMashSession? ${rules.onLose ? rules.onLose.endsMashSession : false})`);
+
     // ── Diagnostic ────────────────────────────────────────────────────
     // Log the EXACT outcome → bonus computation when a mini-game wraps up.
     // If a user sees a -X bonus on what they thought was a win, this line
@@ -238,6 +264,10 @@ function advancePhase(state, now) {
       (fireSessionEnd ? ' | endsMashSession=TRUE' : '')
     );
     /* eslint-enable no-console */
+
+    const newSessionEndPulse = fireSessionEnd ? state.sessionEndPulse + 1 : state.sessionEndPulse;
+    console.log(`[director]   sessionEndPulse: ${state.sessionEndPulse} → ${newSessionEndPulse} (increment=${fireSessionEnd})`);
+
     return {
       ...state,
       active: null,
@@ -245,9 +275,13 @@ function advancePhase(state, now) {
       bonusCount: Math.max(0, bonus),
       modeStatusOverride: null,
       modeSubStatus: null,
-      sessionEndPulse: fireSessionEnd
-        ? state.sessionEndPulse + 1
-        : state.sessionEndPulse,
+      sessionEndPulse: newSessionEndPulse,
+      // Clear the warning now that the mini-game is fully done. The warning
+      // was set during the play-phase-end (endPhase case) and displayed
+      // throughout the outcome status phase. Clearing here resets the
+      // flashWarning → null so the component's else-branch can run on the
+      // next game and the dependency comparison works cleanly.
+      flashWarning: null,
     };
   }
   return {
@@ -346,6 +380,8 @@ function resolve(state) {
 
   r.outcome = state.active && state.active.lastOutcome;
   r.score = state.active && state.active.lastScore;
+  r.flashWarning = state.flashWarning;
+  r.flashWarningCounter = state.flashWarningCounter;
 
   return { ...state, resolved: r };
 }
