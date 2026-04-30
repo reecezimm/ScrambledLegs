@@ -209,7 +209,7 @@ export const PONG = {
   },
   phases: [
     { kind: 'status',    text: 'PONG',                                 presses: 5 },
-    { kind: 'status',    text: 'KEEP THE BALL ALIVE\nWITH THE BUTTON', presses: 5 },
+    { kind: 'status',    text: 'KEEP THE BALL ALIVE\nDRAG THE BUTTON', presses: 5 },
     { kind: 'play',
       mode: 'pong',
       timeout: { kind: 'ms', value: 10000, outcome: 'win' },

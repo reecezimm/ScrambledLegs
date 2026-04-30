@@ -116,8 +116,9 @@ const ToggleBtn = styled.button`
 
 function splitFirstTwoSentences(text) {
   if (!text) return { preview: '', rest: '' };
-  // Show only the FIRST sentence by default. Rest hidden behind "Read more".
-  const re = /([^.!?]+[.!?]+\s+){1}/;
+  // Show the first TWO sentences by default so there's enough context before
+  // the "Read more" gate.
+  const re = /([^.!?]+[.!?]+\s+){2}/;
   const m = text.match(re);
   if (!m) return { preview: text, rest: '' };
   const preview = m[0].trim();
@@ -220,12 +221,15 @@ export default function EggMansTake({ event, weather }) {
           </Quote>
           {hasMore && (
             <ToggleBtn type="button" onClick={() => {
+              // Require sign-in to read more — opens auth modal for guests.
+              if (!expanded && !auth.currentUser) {
+                window.dispatchEvent(new Event('auth:open'));
+                return;
+              }
               const next = !expanded;
               setExpanded(next);
               if (next) {
                 try { logEvent('eggman_read_more', { eventId: event && event.id }); } catch (_) {}
-                // Mark this signed-in user as having interacted with the event
-                // (used by the Bad Eggs derivation if they don't RSVP).
                 try {
                   const u = auth.currentUser;
                   if (u && event && event.id) {

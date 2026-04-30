@@ -370,6 +370,7 @@ const GlobalStyle = createGlobalStyle`
     z-index: auto !important;
   }
 
+
   /* Vignette fades while the canvas owns the screen — canvas does the
      darkening job once it's full. */
   body[data-mash-locked="1"] .mash-vignette {

@@ -43,12 +43,6 @@ const pigDodge = {
       avatar:         (ctx.config && ctx.config.avatar)         || null,
     };
 
-    console.log(
-      `[mg] mode pigDodge start | obstacleSize=${config.obstacleSize}px gravity=${config.gravity} ` +
-      `thrust=${config.thrust} maxSpeed=${config.maxSpeed} spawnEvery=${config.spawnEveryMs}ms ` +
-      `timeout=${ctx.timeoutMs}ms`
-    );
-
     ctx.setSubStatus(config.statusText);
 
     // ── Avatar overlay — PURE VISUAL, pointer-events: none ──────────────

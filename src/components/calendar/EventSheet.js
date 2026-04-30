@@ -365,7 +365,6 @@ function SheetContent({ event, onClose }) {
 
           <WeatherPanel event={event} onData={handleWeatherData} />
 
-          <KudosCta event={event} isSheetContext={true} />
 
           <RsvpCrewPanel event={event} />
 

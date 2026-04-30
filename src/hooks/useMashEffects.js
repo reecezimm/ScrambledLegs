@@ -92,12 +92,8 @@ export function setMashEnergy(pressCount) {
   const prevLevel = parseInt(document.body.dataset.mashLevel || '0', 10);
   if (level > 0) document.body.dataset.mashLevel = String(level);
   else delete document.body.dataset.mashLevel;
-  if (level !== prevLevel && level > 0) {
-    console.log('[mash-game] LEVEL', level, '— pressCount', pressCount);
-  }
   // Stage transition logs at key thresholds
   if (pressCount === 1 || pressCount === 25) {
-    if (pressCount === 25) console.log('[mash-game] canvas full — UI takeover (game mode)');
     dumpMashLayers(`press ${pressCount}`);
   }
 }
@@ -146,17 +142,6 @@ export function dumpMashLayers(tag = '') {
       });
     }
     cur = cur.parentElement;
-  }
-  console.log('[mash-layers]', tag);
-  console.log('  canvas:', dump(canvas, 'canvas'));
-  console.log('  row:   ', dump(row, 'row'));
-  if (ancestors.length === 0) {
-    console.log('  row ancestors creating stacking contexts: NONE');
-  } else {
-    console.log(`  row ancestors creating stacking contexts (${ancestors.length}, child→root):`);
-    ancestors.forEach((a, i) => {
-      console.log(`    [${i}]`, a.tag, '| z=' + a.z, '| pos=' + a.pos, '| backdrop=' + a.backdropFilter, '| transform=' + a.transform);
-    });
   }
 }
 
@@ -329,7 +314,6 @@ export function dumpMashLayout(tag = '') {
       ` (if naturalY changes between presses, surrounding content has shifted the row)`);
   }
   lines.push(`──────────────────────────────────`);
-  console.log(lines.join('\n'));
 }
 
 export function clearMashEnergy() {
@@ -417,10 +401,6 @@ export function purgeMashWorld() {
   delete document.body.dataset.phaseKind;
   delete document.body.dataset.mashPhase;
 
-  // 4. Console summary so we can see if there was anything to purge.
-  if (purged > 0) {
-    console.log(`[mash-game] purgeMashWorld | removed ${purged} stray DOM nodes`);
-  }
 }
 
 const SHOCKWAVE_SELECTOR = [

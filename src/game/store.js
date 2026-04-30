@@ -71,23 +71,13 @@ function setState(next) {
 
   // ── Session End Pulse Detection ────────────────────────────────────────
   if (next.sessionEndPulse > prev.sessionEndPulse) {
-    console.log(`[store] ▼ Session end pulse detected`);
-    console.log(`[store]   sessionEndPulse: ${prev.sessionEndPulse} → ${next.sessionEndPulse}`);
-    console.log(`[store]   Active listeners count: ${sessionEndListeners.size}`);
-    let listenerIndex = 0;
     sessionEndListeners.forEach((fn) => {
-      listenerIndex++;
-      console.log(`[store]   ▶ Invoking sessionEndListener #${listenerIndex}/${sessionEndListeners.size}`);
       try {
         fn();
-        console.log(`[store]   ✓ sessionEndListener #${listenerIndex} completed successfully`);
       } catch (err) {
-        console.error(`[store]   ✗ sessionEndListener #${listenerIndex} threw error:`, err);
+        console.error(`[store]   ✗ sessionEndListener threw error:`, err);
       }
     });
-    console.log(`[store] ✓ All sessionEndListeners invoked (total: ${sessionEndListeners.size})`);
-  } else if (prev.sessionEndPulse !== next.sessionEndPulse) {
-    console.log(`[store] ⚠ sessionEndPulse changed but not incrementing: ${prev.sessionEndPulse} → ${next.sessionEndPulse}`);
   }
 
   logPhaseTransition(prev, next);
@@ -168,13 +158,6 @@ function syncModeLifecycle(prev, next) {
 
   // Exit prior play phase: transition back to main audio
   if (prevPlay && !nextPlay) {
-    const prevMg = prev.schedule[prev.active.miniGameIdx];
-    const prevPhase = prevMg && prevMg.phases[prev.active.phaseIndex];
-    console.log(`[game] ▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬`);
-    console.log(`[game] ◀ EXITING mini-game play phase`);
-    console.log(`[game]   Game: ${prevMg ? prevMg.id : '?'}`);
-    console.log(`[game]   Current phase: ${prevPhase ? prevPhase.kind : '?'} → exiting to status/outcome`);
-    console.log(`[game] ▬ Triggering audio transition back to main track ▬`);
     audioManager.transitionBackToMain(1000).catch(err => {
       console.error('[game] ✗ Failed to transition back to main:', err.message || err);
     });
@@ -186,21 +169,11 @@ function syncModeLifecycle(prev, next) {
   if (nextPlay) {
     // Transition to mini-game audio (happens concurrently with startMode)
     const mg = next.schedule[next.active.miniGameIdx];
-    const nextPhase = mg && mg.phases[next.active.phaseIndex];
     if (mg && mg.backgroundMusic) {
       const { filePath, volume } = mg.backgroundMusic;
-      console.log(`[game] ▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬`);
-      console.log(`[game] ► ENTERING mini-game play phase`);
-      console.log(`[game]   Game: ${mg.id} (${mg.label})`);
-      console.log(`[game]   Current phase: entering play (mode=${nextPhase ? nextPhase.mode : '?'})`);
-      console.log(`[game] ▬ Triggering audio transition to mini-game track ▬`);
-      console.log(`[game]   Audio file: ${filePath}`);
-      console.log(`[game]   Target volume: ${(volume || 0.7) * 100}%`);
       audioManager.transitionToMiniGame(filePath, volume || 0.7, 1000).catch(err => {
         console.error('[game] ✗ Failed to switch mini-game audio:', err.message || err);
       });
-    } else {
-      console.log(`[game] ⚠ Mini-game ${mg ? mg.id : '?'} has no backgroundMusic config`);
     }
     startMode(next);
   }

@@ -54,11 +54,6 @@ const pong = {
 
     let hits = 0;
 
-    console.log(
-      `[mg] mode pong start | base=${BASE_SPEED.toFixed(0)}px/s baseSpeedMult=${baseSpeedMult.toFixed(2)} ` +
-      `mult=${SPEED_MULT} max=${MAX_SPEED}px/s ball=${BALL_SIZE}px timeout=${ctx.timeoutMs}ms`
-    );
-
     ctx.setSubStatus('0 HITS');
 
     // ── Ball DOM — styled white sphere, not an emoji ──────────────────────

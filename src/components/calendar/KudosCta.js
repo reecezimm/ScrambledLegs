@@ -765,6 +765,7 @@ export default function KudosCta({ event, isSheetContext }) {
     // Publish the event context so HighScoreHud can subscribe to globalBest
     // immediately — without waiting for a press. Re-fires when event/user
     // changes via the deps below.
+    console.log(`[hs] emitEventContext from KudosCta | eventId=${event && event.id} uid=${user ? user.uid : null}`);
     emitMashEventContext({
       eventId: event && event.id,
       uid: user ? user.uid : null,
@@ -862,9 +863,6 @@ export default function KudosCta({ event, isSheetContext }) {
         delete vp.dataset.preGameContent;
       }
       window.scrollTo(0, savedY);
-      if (wasLocked) {
-        console.log('[mash-game] GAME END — unlocked, scroll restored to', savedY);
-      }
     } catch (e) {
       console.warn('[mash-game] GAME END failed:', e && e.message);
     }
@@ -877,28 +875,19 @@ export default function KudosCta({ event, isSheetContext }) {
   // immediately, no delay).
   const runSaveFlow = useCallback(() => {
     if (saveFlowInProgressRef.current) {
-      console.log('[mg-host] runSaveFlow already in progress — suppressing duplicate call');
       return;
     }
     saveFlowInProgressRef.current = true;
-    console.log('[mg-host] ▼ runSaveFlow ENTRY');
-    console.log(`[mg-host]   pressCount=${hdPressCountRef.current}`);
-    console.log(`[mg-host]   sessionStart=${sessionStartRef.current}`);
-    console.log(`[mg-host]   sessionUid=${sessionUidRef.current}`);
 
     const btn = btnRef.current;
     if (!btn) {
-      console.log('[mg-host]   ✗ No button element found, returning');
       return;
     }
-    console.log('[mg-host]   Button element found');
     const row = btn.parentElement;
     const numEl = row && row.querySelector('.mash-num');
     const subEl = row && row.querySelector('.mash-sub');
-    console.log(`[mg-host]   numEl=${!!numEl} | subEl=${!!subEl}`);
 
     if (hdPressCountRef.current <= 0) {
-      console.log('[mg-host]   pressCount <= 0, returning (idle state)');
       btn.classList.remove('is-mashing', 'is-deep-mashing', 'is-saving', 'is-burning');
       btn.dataset.intensity = '0';
       btn.style.setProperty('--hd-rest', '1');
@@ -910,7 +899,6 @@ export default function KudosCta({ event, isSheetContext }) {
     }
 
     // Phase A — saving
-    console.log(`[mg-host] ▶ PHASE A: Saving | pressCount=${hdPressCountRef.current}`);
     btn.classList.remove('is-mashing', 'is-deep-mashing');
     btn.classList.add('is-saving');
     document.body.dataset.mashPhase = 'saving';   // hides GameStatus
@@ -918,8 +906,6 @@ export default function KudosCta({ event, isSheetContext }) {
     if (subEl) subEl.textContent = '';
 
     setTimeout(() => {
-      // Phase B — burn
-      console.log(`[mg-host] ▶ PHASE B: Burning | pressCount=${hdPressCountRef.current}`);
       btn.classList.remove('is-saving');
       btn.classList.add('is-burning');
       document.body.dataset.mashPhase = 'burning';
@@ -934,72 +920,59 @@ export default function KudosCta({ event, isSheetContext }) {
       if (numEl) { numEl.textContent = burnMsg; numEl.style.fontSize = ''; }
       setTimeout(() => {
         // Phase C — reset
-        console.log(`[mg-host] ▶ PHASE C: Reset | pressCount=${hdPressCountRef.current}`);
         const finalCount = hdPressCountRef.current;
         const sessionStart = sessionStartRef.current;
         const sessionUid = sessionUidRef.current;
-        console.log(`[mg-host]   finalCount=${finalCount} | sessionUid=${sessionUid} | event.id=${event ? event.id : 'N/A'}`);
 
         if (sessionUid && finalCount > 0 && event && event.id) {
-          console.log(`[mg-host]   Writing session data to database...`);
           try {
             const sessionRef = dbPush(dbRef(database, `mashSessions/${event.id}/${sessionUid}`));
-            console.log(`[mg-host]     Created session ref`);
             dbSet(sessionRef, {
               startedAt: sessionStart || Date.now(),
               endedAt: Date.now(),
               count: finalCount,
-            }).catch(() => {
-              console.log(`[mg-host]     dbSet failed (caught)`);
-            });
+            }).catch(() => {});
             runTransaction(
               dbRef(database, `eventMashTotals/${event.id}/${sessionUid}`),
               (cur) => (cur || 0) + finalCount,
-            ).catch(() => {
-              console.log(`[mg-host]     eventMashTotals transaction failed (caught)`);
-            });
-            // Cumulative high-score: max-of-best transaction. Writing the
-            // numeric directly (not under a `best` child) keeps the txn
-            // simple. Path: mashHighScores/${eventId}/${uid}/best.
+            ).catch(() => {});
+            // High score write — path: mashHighScores/{eventId}/{uid}/best
+            console.log(`[hs] writing | path=mashHighScores/${event.id}/${sessionUid}/best finalCount=${finalCount}`);
             runTransaction(
               dbRef(database, `mashHighScores/${event.id}/${sessionUid}/best`),
               (cur) => Math.max(cur || 0, finalCount),
             ).then((res) => {
               if (res && res.committed) {
                 const committedBest = (res.snapshot && res.snapshot.val()) || finalCount;
-                console.log(`[mg-host]     High score transaction committed | best=${committedBest}`);
+                console.log(`[hs] write committed | best=${committedBest} eventId=${event.id} uid=${sessionUid}`);
                 emitMashCumulativeWritten({
                   eventId: event.id,
                   uid: sessionUid,
                   best: committedBest,
                 });
               }
-            }).catch(() => {
-              console.log(`[mg-host]     High score transaction failed (caught)`);
+            }).catch((err) => {
+              console.log(`[hs] write FAILED | path=mashHighScores/${event.id}/${sessionUid}/best err=${err && err.message}`);
             });
             logEvent('mash_session_complete', {
               eventId: event.id,
               count: finalCount,
               durationMs: Date.now() - (sessionStart || Date.now()),
             });
-            console.log(`[mg-host]   Database writes initiated`);
           } catch (err) {
-            console.error(`[mg-host]   Exception during database writes:`, err);
+            console.error(`[hs] exception during database writes:`, err);
           }
         } else if (finalCount > 0 && event && event.id) {
-          console.log(`[mg-host]   Anonymous session (no sessionUid)`);
           logEvent('mash_session_complete', {
             eventId: event.id,
             count: finalCount,
             anonymous: true,
           });
         } else {
-          console.log(`[mg-host]   ⚠ Skipping database write (finalCount=${finalCount}, sessionUid=${!!sessionUid}, event=${!!event})`);
+          console.log(`[hs] skipping write | finalCount=${finalCount} sessionUid=${!!sessionUid} eventId=${event ? event.id : 'null'}`);
         }
 
-        console.log(`[mg-host]   Resetting references...`);
         hdPressCountRef.current = 0;
-        console.log(`[mg-host]     pressCount → 0`);
         hdLastChallengeRef.current = '';
         hdLastChallengeAtRef.current = 0;
         sessionStartRef.current = 0;
@@ -1016,23 +989,12 @@ export default function KudosCta({ event, isSheetContext }) {
   // sessionEnd. We clear any pending save timer and run the save flow now.
   useEffect(() => {
     const unsub = gameStore.onSessionEnd(() => {
-      console.log('[mg-host] ▼ SESSION-END listener invoked');
-      console.log(`[mg-host]   Current pressCount: ${hdPressCountRef.current}`);
-      console.log(`[mg-host]   Save timer active: ${hdResetTimerRef.current !== null}`);
-
       if (hdResetTimerRef.current) {
-        console.log(`[mg-host]   Clearing pending save timer`);
         clearTimeout(hdResetTimerRef.current);
         hdResetTimerRef.current = null;
-      } else {
-        console.log(`[mg-host]   ⚠ No pending save timer to clear`);
       }
-
-      console.log(`[mg-host]   ▶ Calling runSaveFlow()`);
       runSaveFlow();
-      console.log(`[mg-host] ✓ SESSION-END listener complete`);
     });
-    console.log('[mg-host] sessionEnd listener registered');
     return unsub;
   }, [runSaveFlow]);
 
@@ -1178,7 +1140,6 @@ export default function KudosCta({ event, isSheetContext }) {
         }
         spawnPressCountBurst(delta, x, y);
       }
-      console.log('[mg-host] bonus', delta > 0 ? '+' + delta : delta, '| pressCount', before, '→', hdPressCountRef.current);
     });
     return unsub;
   }, []);
@@ -1216,11 +1177,9 @@ export default function KudosCta({ event, isSheetContext }) {
         if (hdResetTimerRef.current) {
           clearTimeout(hdResetTimerRef.current);
           hdResetTimerRef.current = null;
-          console.log('[mg-host] save-timer PAUSED (gameClockPaused=' + !!r.gameClockPaused + ' mashingMode=' + r.mashingMode + ')');
         }
       } else if (!paused && pausedSnapshot) {
         pausedSnapshot = false;
-        console.log('[mg-host] unpause flip — deferring save-timer re-arm to mini-game end');
       }
 
       // Mini-game fully complete (active goes from non-null to null) —
@@ -1242,10 +1201,8 @@ export default function KudosCta({ event, isSheetContext }) {
           const press = hdPressCountRef.current;
           if (press > 0 && !hdResetTimerRef.current) {
             hdResetTimerRef.current = setTimeout(() => {
-              console.log('[mg-host] save-timer FIRED (post-mini-game idle ' + POST_MINI_GAME_GRACE_MS + 'ms)');
               runSaveFlow();
             }, POST_MINI_GAME_GRACE_MS);
-            console.log('[mg-host] save-timer RE-ARMED post-mini-game | from="' + activeIdSnapshot + '" pressCount=' + press + ' delay=' + POST_MINI_GAME_GRACE_MS + 'ms');
             // Visual: trigger the heartbeat ring so the user sees the burn
             // counting down. Mini-games are meant to chain, so this is the
             // visual "keep going" cue between games.
@@ -1257,8 +1214,6 @@ export default function KudosCta({ event, isSheetContext }) {
               btn.classList.add('hd-heartbeat');
             }
           }
-        } else {
-          console.log('[mg-host] post-mini-game re-arm SKIPPED — session-end save flow already in progress');
         }
       }
       activeIdSnapshot = activeId;
@@ -1306,7 +1261,6 @@ export default function KudosCta({ event, isSheetContext }) {
     gameStore.setPressCount(pressCount);
     // Mirror to the high-score bus so HighScoreHud / Celebration can react.
     emitMashCurrent(pressCount);
-    console.log('[mash-game] press', pressCount);
     if (pressCount === 1) {
       sessionStartRef.current = Date.now();
       sessionUidRef.current = user ? user.uid : null;
@@ -1340,9 +1294,6 @@ export default function KudosCta({ event, isSheetContext }) {
         const targetCy = vh * 0.85;
         const dx = Math.round(targetCx - rowCx);
         const dy = Math.round(targetCy - rowCy);
-        console.log('[mash-game] GAME START — rect:', {
-          left: Math.round(r.left), top: Math.round(r.top), width: Math.round(r.width),
-        }, '→ delta:', { dx, dy });
         document.body.style.setProperty('--btn-dx', `${dx}px`);
         document.body.style.setProperty('--btn-dy', `${dy}px`);
         document.body.style.setProperty('--migration-progress', '0');
@@ -1364,7 +1315,6 @@ export default function KudosCta({ event, isSheetContext }) {
           vp.dataset.preGameContent = vp.content;
           vp.content = 'width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no';
         }
-        console.log('[mash-game] LOCKED — page frozen at scrollY=' + savedY);
         // Recompute --btn-dy on visualViewport changes (Android chrome
         // collapse, soft keyboard, etc.) so the migration target stays
         // anchored to the actually-visible viewport bottom-fifth.
@@ -1449,7 +1399,7 @@ export default function KudosCta({ event, isSheetContext }) {
     // Cap concurrent emojis at 12 per press (was 15) and stagger spawns
     // across a wider window (~1100ms vs 800ms) so they release in a more
     // visible cascade rather than a tight burst.
-    const dogCount = Math.min(pressCount, 12);
+    const dogCount = Math.min(pressCount, 8);
     const stagger = Math.max(22, Math.floor(1100 / dogCount));
     const pRainbow = rainbowChance(pressCount);
     for (let i = 0; i < dogCount; i++) {
@@ -1560,11 +1510,8 @@ export default function KudosCta({ event, isSheetContext }) {
     );
     if (!cantExtend) {
       hdResetTimerRef.current = setTimeout(() => {
-        console.log('[mg-host] save-timer FIRED (idle ' + KUDOS_SAVE_DELAY_MS + 'ms after press ' + pressCount + ')');
         runSaveFlow();
       }, KUDOS_SAVE_DELAY_MS);
-    } else {
-      console.log('[mg-host] save-timer NOT armed at press ' + pressCount + ' | gameClockPaused=' + !!(r && r.gameClockPaused) + ' mashingMode=' + (r && r.mashingMode));
     }
   }, [mash, updateMashFocus, user, event, runSaveFlow]);
 

@@ -53,12 +53,6 @@ const twilight = {
     let rafId = 0;
     let lastTime = performance.now();
 
-    console.log(
-      `[mg] mode twilight start | reward=${REWARD} size=${SIZE_PX}px ` +
-      `baseSpeed=${BASE_SPEED_MIN}-${BASE_SPEED_MAX}px/s burst=${BURST_MULT}× for ${BURST_DURATION_MS}ms ` +
-      `minConcurrent=${MIN_CONCURRENT} timeout=${ctx.timeoutMs}ms`
-    );
-
     const prevBodyBg = document.body.style.background;
     const canvas = document.getElementById('mash-canvas');
     const prevCanvasBg = canvas ? canvas.style.background : '';
@@ -304,7 +298,7 @@ const twilight = {
     }
 
     // ── Initial burst spawn + start the rAF loop ────────────────────────────
-    ctx.setSubStatus('TAP THE BEERS');
+    ctx.setSubStatus('TAP THE BEERS\nKEEP MASHING');
     const burst = () => { if (!cancelled) spawn(); };
     for (let i = 0; i < MIN_CONCURRENT; i++) {
       staggerTimers.push(setTimeout(burst, i * STAGGER_MS));
@@ -324,9 +318,6 @@ const twilight = {
       const c = document.getElementById('mash-canvas');
       if (c) c.style.background = prevCanvasBg || '';
       ctx.setSubStatus(null);
-      console.log(
-        `[mg] twilight cleanup | hits=${hitCount}/${spawnedCount} totalScore=${totalScore}`
-      );
     };
   },
 };

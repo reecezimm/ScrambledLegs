@@ -188,7 +188,7 @@ const goldenEgg = {
     }
 
     // Kick off
-    ctx.setSubStatus('TAP THE GOLDEN EGG');
+    ctx.setSubStatus('TAP THE EGGS\nKEEP MASHING');
     spawn();
 
     // Cleanup on phase exit

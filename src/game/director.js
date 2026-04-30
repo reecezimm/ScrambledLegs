@@ -124,9 +124,6 @@ export function reduce(state, action) {
       const shouldShowWarning = outcome === 'win'
         && endingPhase && endingPhase.kind === 'play'
         && endingMg && endingMg.id !== 'preamble';
-      if (shouldShowWarning) {
-        console.log(`[warning] ⚠️  MASH NOW! triggered at play-end | pressCount=${state.pressCount} | mg=${endingMg.id}`);
-      }
 
       const next = {
         ...state,
@@ -244,29 +241,10 @@ function advancePhase(state, now) {
     // Fire sessionEndPulse if rules.onLose.endsMashSession was triggered
     // (the lose outcome propagated all the way through any outcome status
     // phase). Host (KudosCta) listens and runs the save→burn→reset flow.
-    console.log(`[director] ▼ Checking session-end criteria`);
-    console.log(`[director]   outcome=${outcome} | rules.onLose=${rules.onLose ? 'exists' : 'null'} | rules.onLose.endsMashSession=${rules.onLose ? rules.onLose.endsMashSession : 'N/A'}`);
-
     const fireSessionEnd = outcome === 'lose'
       && rules.onLose && rules.onLose.endsMashSession;
 
-    console.log(`[director]   fireSessionEnd=${fireSessionEnd} (outcome=lose? ${outcome === 'lose'}, has onLose? ${!!rules.onLose}, onLose.endsMashSession? ${rules.onLose ? rules.onLose.endsMashSession : false})`);
-
-    // ── Diagnostic ────────────────────────────────────────────────────
-    // Log the EXACT outcome → bonus computation when a mini-game wraps up.
-    // If a user sees a -X bonus on what they thought was a win, this line
-    // tells you the recorded outcome and the source rule that fired.
-    /* eslint-disable no-console */
-    console.log(
-      `[mg] mini-game COMPLETE id=${mg.id} outcome=${outcome} score=${score == null ? '-' : score} ` +
-      `bonus=${appliedDelta >= 0 ? '+' : ''}${appliedDelta} via=${appliedSource} ` +
-      `bonusCount ${state.bonusCount} → ${Math.max(0, bonus)}` +
-      (fireSessionEnd ? ' | endsMashSession=TRUE' : '')
-    );
-    /* eslint-enable no-console */
-
     const newSessionEndPulse = fireSessionEnd ? state.sessionEndPulse + 1 : state.sessionEndPulse;
-    console.log(`[director]   sessionEndPulse: ${state.sessionEndPulse} → ${newSessionEndPulse} (increment=${fireSessionEnd})`);
 
     return {
       ...state,
