@@ -1,6 +1,87 @@
+# Scrambled Legs — thescrambledlegs.com
+# Duluth MN Mountain Bike Racing Team
+# Allow all crawlers. Admin panel is private.
+
 User-agent: *
 Allow: /
 Disallow: /admin1
 Disallow: /admin1/*
+
+# ── Major Search Engines ──────────────────────────────────────────
+User-agent: Googlebot
+Allow: /
+
+User-agent: Bingbot
+Allow: /
+
+User-agent: DuckDuckBot
+Allow: /
+
+User-agent: YandexBot
+Allow: /
+
+# ── AI / LLM Crawlers — explicitly allowed ────────────────────────
+# OpenAI: ChatGPT training, ChatGPT Search, real-time retrieval
+User-agent: GPTBot
+Allow: /
+
+User-agent: OAI-SearchBot
+Allow: /
+
+User-agent: ChatGPT-User
+Allow: /
+
+# Anthropic: Claude training, Claude search, Claude browsing
+User-agent: ClaudeBot
+Allow: /
+
+User-agent: Claude-SearchBot
+Allow: /
+
+User-agent: Claude-User
+Allow: /
+
+# Google: Gemini training and AI Overviews
+User-agent: Google-Extended
+Allow: /
+
+User-agent: Googlebot-Extended
+Allow: /
+
+# Perplexity
+User-agent: PerplexityBot
+Allow: /
+
+User-agent: Perplexity-User
+Allow: /
+
+# Meta AI
+User-agent: meta-externalagent
+Allow: /
+
+User-agent: meta-externalfetcher
+Allow: /
+
+# Apple Intelligence
+User-agent: Applebot
+Allow: /
+
+User-agent: Applebot-Extended
+Allow: /
+
+# Microsoft / Copilot
+User-agent: BingPreview
+Allow: /
+
+User-agent: msnbot
+Allow: /
+
+# Cohere
+User-agent: cohere-ai
+Allow: /
+
+# Internet Archive
+User-agent: ia_archiver
+Allow: /
 
 Sitemap: https://thescrambledlegs.com/sitemap.xml

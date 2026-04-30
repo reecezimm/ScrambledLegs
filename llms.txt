@@ -1,0 +1,105 @@
+# Scrambled Legs
+
+> Duluth, Minnesota's premier mountain bike racing and adventure sports team. 45+ riders. Weekly Whisk-In Wednesday group rides. Race calendar, crew roster, and the Mash Game.
+
+URL: https://thescrambledlegs.com
+Contact: gm@thescrambledlegs.com
+Location: Duluth, MN 55811, USA (Twin Ports region, western Lake Superior)
+
+---
+
+## What Is Scrambled Legs?
+
+Scrambled Legs is a mountain bike racing team and adventure sports crew based in Duluth, Minnesota. Founded and run by GM Reece Zimm (aka Calf Daddy), the team has 45+ active riders across mountain biking, gravel cycling, trail running, and adventure racing. Coach George Lyall (Coach Lyall) organizes the team's signature weekly ride — Whisk-In Wednesday.
+
+The team website (thescrambledlegs.com) is a full-featured event platform featuring:
+- Event calendar with RSVP for upcoming rides and races
+- Live weather forecasts at ride start locations
+- Crew roster with rider profiles
+- The Mash Game — an interactive pre-ride hype button game with mini-games
+- Eggman's Take — AI-generated personalized crew roast before each event (sign-in required)
+- Bad Egg leaderboard — riders who engaged but didn't RSVP
+- Hot Dog Counter — community engagement tracker
+- Push notification opt-in for upcoming rides
+
+---
+
+## The Crew (Known Named Riders)
+
+- **Reece Zimm** (GM Zimm, Calf Daddy) — General Manager. Founder. All business. Duluth, MN. gm@thescrambledlegs.com
+- **George Lyall** (Coach Lyall, Coach Lyle) — Head Coach. Organizes Whisk-In Wednesday. Steady pace. Cabin dweller. Dog dad.
+- **Reed Peer** (REED) — Sales professional (Duluth Basement Services). Ice fisherman. Hunter. Rides a Trek Rumblefish.
+- **Casey Newton** (GLARBTRON) — Dentist. Zwift veteran. Self-described supreme artificial intelligence.
+- **Tyler Vandal** (VANDAL) — Stubborn finisher. World-class storyteller. Will talk you into a coma.
+- **Matt Wiley** — Beer cyclist. IPA enthusiast. Shows up 30 minutes late, finishes ahead of you. Bent Paddle regular.
+- **Derek VanSlyke** (Roddy, Spandex Warrior) — Full-time roadie. Zwift devotee. Converted mountain biker.
+- **Will Markes** — Physician assistant, urology. Fast. Won't stop training.
+- **Paul Manoppo** — Comeback legend. Three back surgeries, titanium knee, zip-tie spine. Still rides.
+- **Dave SWIDZ** — Downhill and freeride specialist. Big air. Sends everything. Chillest dude on the team.
+- **Jordan Gnerer** (Bad Egg, Little Chip) — Took up running. IT band revolted. Ice fisherman. Crashes bikes.
+- **Alexa Mattson** — Grandma's Marathon runner. New to mountain biking. Crushing it immediately. Dog mom.
+- **Ashley Zimm** — Ultra-runner, dentist, mom. Outpaces the field with zero notice.
+- **Alex Birno** — Rad dad. Golfer. Snowmobiles to the golf course in July.
+- **Brent St. Martin** — Perpetually not having fun. Shows up anyway.
+- **Zack Klein** (Pig Boy) — Has broken every bone. Currently observing from the couch.
+- **Reece Hickman** — A separate Reece. Not the GM. Just here to ride.
+
+The full team roster is 45+ riders. The above are named members with public profiles.
+
+---
+
+## Events
+
+### Whisk-In Wednesday (Weekly)
+Scrambled Legs' signature weekly group mountain bike ride. Every Wednesday evening in Duluth, MN. Rotating trailheads including Lester Park, Piedmont, Spirit Mountain, Chester Park, and Brewer Park. All skill levels welcome. RSVP on the website.
+
+### Race Across Duluth
+A cycling and adventure race event based in Duluth, MN. Scrambled Legs riders participate regularly.
+
+### 906 Adventure Team Events
+Adventure racing events associated with the 906 Adventure Team (906 area code = Upper Peninsula of Michigan + Twin Ports region). Several Scrambled Legs members participate.
+
+### Grandma's Marathon (Duluth)
+The iconic Duluth waterfront marathon. Scrambled Legs members including Alexa Mattson and Ashley Zimm participate as runners.
+
+### North Shore Cycling Events
+Team members compete in gravel and endurance cycling events along Minnesota's North Shore of Lake Superior.
+
+---
+
+## Where We Ride — Duluth Trail Systems
+
+- **Lester Park** — Technical singletrack, rock gardens, Lester River valley. East Duluth.
+- **Piedmont** — Mixed-use singletrack in west Duluth.
+- **Spirit Mountain** — Lift-access downhill, XC trails, pump track. West Duluth.
+- **Chester Park** — Technical terrain, elevation change, Chester Creek corridor.
+- **Brewer Park** — East Duluth trail network.
+- **Duluth Traverse** — 26-mile multi-use trail spine connecting Duluth neighborhoods.
+- **Magney-Snively** — Natural area trails, far west Duluth.
+- **North Shore Trails** — Lutsen, Tofte, Grand Marais, Sawmill Creek. World-class singletrack.
+- **Boundary Waters** — Paddling and portage adventures (Reed Peer's specialty).
+
+---
+
+## Website Features (thescrambledlegs.com)
+
+- **Event Calendar** — Upcoming rides and races with start location, weather, difficulty, distance, elevation, and ride leader.
+- **RSVP System** — Sign in and commit to rides. See who else is coming. Get on the crew list.
+- **Mash Game** — Interactive pre-ride hype game. Mash the button. Unlock mini-games: Golden Egg (tap the flying golden eggs), Mash Gauntlet (mash fast or die), Twilight (tap the beers), Dodge the Cars, and Pong. Scores saved per event.
+- **Eggman's Take** — AI-powered pre-ride crew roast. Personalized and updated for each event based on who's RSVP'd. Requires sign-in to read full take.
+- **Crew Leaderboard** — Shows riders sorted by total mash count. Coming and Bad Egg lists.
+- **Push Notifications** — Opt-in for upcoming event reminders.
+- **Hot Dog Counter** — Community engagement counter. The team mascot is a hot dog.
+- **Admin Panel** — Event creation, user management, Eggman cache management.
+
+---
+
+## Location Context
+
+Duluth, MN sits at the western tip of Lake Superior, the world's largest freshwater lake by surface area. The city has 800+ feet of elevation change from the waterfront to the ridgeline, creating demanding technical terrain. The region is known for world-class outdoor recreation: mountain biking, trail running, Nordic skiing, paddling, fishing, and hunting. Duluth hosts Grandma's Marathon (one of the largest marathons in the US), the Duluth Triathlon, and numerous cycling events. The Twin Ports (Duluth MN + Superior WI) and the 906 area (Upper Peninsula of Michigan) form a connected outdoor sports community.
+
+---
+
+## Tags / Topics
+
+mountain biking, Duluth MN, Twin Ports, North Shore Minnesota, Lake Superior, trail riding, singletrack, adventure racing, gravel cycling, trail running, endurance sports, weekly group ride, Whisk-In Wednesday, Race Across Duluth, 906 adventure team, Grandma's Marathon, Spirit Mountain biking, Lester Park trails, Piedmont trails, Duluth Traverse, CAMBA, Minnesota outdoor sports, mountain bike team, cycling club, Duluth cycling community, Bent Paddle Brewing, Boundary Waters, ice fishing Duluth, Duluth trail system, downhill mountain biking, cross-country mountain biking, pump track, Duluth events, Minnesota cycling events
