@@ -740,8 +740,8 @@ export default function RsvpCrewPanel({ event }) {
                   return (
                     <Row key={row.uid}>
                       <AvatarWrap>
-                        <Avatar $photo={row.photoURL} data-medal={i < 3 ? String(i + 1) : undefined}>
-                          {!row.photoURL && initialFor(row.displayName)}
+                        <Avatar $photo={(profiles[row.uid] && profiles[row.uid].photoURL) || row.photoURL} data-medal={i < 3 ? String(i + 1) : undefined}>
+                          {!(profiles[row.uid] && profiles[row.uid].photoURL) && !row.photoURL && initialFor(row.displayName)}
                         </Avatar>
                         <RankBadge data-medal={medal}>{i + 1}</RankBadge>
                       </AvatarWrap>
