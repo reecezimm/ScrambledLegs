@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useRef, useState } from 'react';
 import styled, { keyframes } from 'styled-components';
 import { ref, onValue, get, update, serverTimestamp } from 'firebase/database';
 import { database, auth } from '../../services/firebase';
@@ -133,6 +133,10 @@ export default function EggMansTake({ event, weather }) {
   const [rsvps, setRsvps] = useState({});
   const [totals, setTotals] = useState({});
   const [profilesMap, setProfilesMap] = useState({});
+  // Tracks which rsvpSig the last profile fetch was completed for, so the
+  // Eggman generation effect waits for profiles before firing — prevents the
+  // FALLBACK_BLURB race where generation fires before profiles arrive.
+  const profilesReadySigRef = useRef('');
   const [expanded, setExpanded] = useState(false);
   // Bumped by `staleSession:soft` to force a forceRefresh re-fetch.
   const [staleTick, setStaleTick] = useState(0);
@@ -165,8 +169,11 @@ export default function EggMansTake({ event, weather }) {
         const map = {};
         snaps.forEach((snap, i) => { if (snap.val()) map[rsvpUids[i]] = snap.val(); });
         setProfilesMap(map);
+        profilesReadySigRef.current = rsvpSig;
       })
-      .catch(() => {});
+      .catch(() => {
+        profilesReadySigRef.current = rsvpSig; // mark done even on error
+      });
   }, [rsvpSig]); // eslint-disable-line react-hooks/exhaustive-deps
   const wxSig = weather
     ? `${weather.code ?? weather.desc ?? ''}_${weather.temp ?? ''}_${weather.precip >= 50 ? 'wet' : 'dry'}`
@@ -174,6 +181,12 @@ export default function EggMansTake({ event, weather }) {
 
   useEffect(() => {
     if (!event || !eventId) return undefined;
+    // Wait for profile fetch to complete for the current RSVP set before
+    // generating — prevents FALLBACK_BLURB appearing because generation fired
+    // before the async profile reads came back.
+    if (rsvpUids.length > 0 && profilesReadySigRef.current !== rsvpSig) {
+      return undefined;
+    }
     let cancelled = false;
     setLoading(true);
     const rsvpedUsers = Object.entries(rsvps).map(([uid, r]) => ({
