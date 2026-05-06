@@ -134,7 +134,6 @@ const FloatingEgg = styled.div`
   animation: ${floatAnimation} ${props => props.duration || '20s'} ease-in-out infinite;
   animation-delay: ${props => props.delay || '0s'};
   transform-origin: center;
-  will-change: transform;
   
   @media (max-width: 768px) {
     font-size: calc(${props => props.size || '36px'} * 0.8);
@@ -377,9 +376,9 @@ function Home() {
     // Function to determine how many eggs to show based on screen width
     const getEggCount = () => {
       const width = window.innerWidth;
-      if (width <= 480) return 6; // Fewer eggs on mobile
-      if (width <= 768) return 8; // Medium count on tablets
-      return 12; // Full count on desktop
+      if (width <= 480) return 3;
+      if (width <= 768) return 4;
+      return 6;
     };
     
     // Create floating eggs with random properties

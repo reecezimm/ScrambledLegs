@@ -512,43 +512,34 @@ class AudioManager {
 
   // ── Private: Fade Animation ────────────────────────────────────────────────
 
-  _fadeTrack(audioElement, fromVolume, toVolume, durationMs, trackLabel = 'unknown') {
+  _fadeTrack(audioElement, fromVolume, toVolume, durationMs) {
     return new Promise((resolve) => {
-      if (!audioElement) {
-        resolve();
-        return;
+      if (!audioElement) { resolve(); return; }
+
+      // Per-fade cancellation token — stored on activeTransition so
+      // _cancelTransition can stop ALL concurrent fades immediately,
+      // regardless of how many are in flight (e.g. crossfade Promise.all).
+      const token = { cancelled: false };
+      if (this.activeTransition) {
+        if (!this.activeTransition._fadeTokens) this.activeTransition._fadeTokens = [];
+        this.activeTransition._fadeTokens.push(token);
       }
 
       const startTime = Date.now();
       const startVol = fromVolume;
       const targetVol = toVolume;
-      let lastProgressLog = 0;
 
       const tick = () => {
-        if (!audioElement) {
-          resolve();
-          return;
-        }
+        if (token.cancelled) { resolve(); return; }
 
         const elapsed = Date.now() - startTime;
         const progress = Math.min(elapsed / durationMs, 1);
-        const newVolume = startVol + (targetVol - startVol) * progress;
-
-        audioElement.volume = Math.max(0, Math.min(1, newVolume));
-
-        // Log progress at 25%, 50%, 75%, 100%
-        const progressPercent = Math.round(progress * 100 / 25) * 25;
-        if (progressPercent > lastProgressLog && progressPercent <= 100) {
-          lastProgressLog = progressPercent;
-        }
+        audioElement.volume = Math.max(0, Math.min(1, startVol + (targetVol - startVol) * progress));
 
         if (progress < 1) {
           requestAnimationFrame(tick);
         } else {
           audioElement.volume = targetVol;
-          // Verify actual volume was set correctly
-          const actualVol = audioElement.volume;
-          const volumeMatch = Math.abs(actualVol - targetVol) < 0.01;
           resolve();
         }
       };
@@ -561,12 +552,11 @@ class AudioManager {
 
   _cancelTransition() {
     if (!this.activeTransition) return;
-
-
-    if (this.activeTransition.animationFrameId) {
-      cancelAnimationFrame(this.activeTransition.animationFrameId);
+    // Cancel every concurrent fade via token — covers both fades in a
+    // Promise.all crossfade, not just whichever rAF ID was stored last.
+    if (this.activeTransition._fadeTokens) {
+      this.activeTransition._fadeTokens.forEach(t => { t.cancelled = true; });
     }
-
     this.activeTransition = null;
   }
 

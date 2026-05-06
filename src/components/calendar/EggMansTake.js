@@ -118,7 +118,7 @@ function splitFirstTwoSentences(text) {
   if (!text) return { preview: '', rest: '' };
   // Show the first TWO sentences by default so there's enough context before
   // the "Read more" gate.
-  const re = /([^.!?]+[.!?]+\s+){2}/;
+  const re = /([^.!?]+[.!?]+\s*){2}/;
   const m = text.match(re);
   if (!m) return { preview: text, rest: '' };
   const preview = m[0].trim();

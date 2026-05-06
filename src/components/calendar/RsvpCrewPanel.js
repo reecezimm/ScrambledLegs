@@ -518,14 +518,14 @@ export default function RsvpCrewPanel({ event }) {
   // Bad Eggs derivation. Public read so anonymous viewers also see who flaked.
   const [interactions, setInteractions] = useState({});
   useEffect(() => {
-    if (!event || !event.id) {
+    if (!event || !event.id || !user) {
       setInteractions({});
       return undefined;
     }
     const rInt = ref(database, `eventInteractions/${event.id}`);
     const unsub = onValue(rInt, (s) => setInteractions(s.val() || {}));
     return () => unsub();
-  }, [event]);
+  }, [event, user]);
 
   // Track current user's RSVP state.
   useEffect(() => {
@@ -654,11 +654,13 @@ export default function RsvpCrewPanel({ event }) {
     return { crew: crewRows, badEggs: eggRows };
   }, [rsvps, totals, interactions]);
 
-  // Hydrate Bad Egg profiles (their displayName isn't on the rsvp record).
+  // Hydrate profiles for both crew (Coming) and Bad Eggs — photos on the
+  // Coming list come from the RSVP record snapshot which can be stale or
+  // missing; fetching fresh from userProfiles ensures avatars always show.
   useEffect(() => {
     if (!user) return undefined;
-    const uidsToFetch = badEggs
-      .map((r) => r.uid)
+    const allUids = [...crew.map((r) => r.uid), ...badEggs.map((r) => r.uid)];
+    const uidsToFetch = allUids
       .filter((uid) => !(uid in profiles));
     if (uidsToFetch.length === 0) return undefined;
     let cancelled = false;
@@ -679,7 +681,7 @@ export default function RsvpCrewPanel({ event }) {
       if (!cancelled) setProfiles((prev) => ({ ...prev, ...results }));
     })();
     return () => { cancelled = true; };
-  }, [badEggs, user, profiles]);
+  }, [crew, badEggs, user, profiles]);
 
   // Display count: real RSVPs if present, otherwise the deterministic teaser.
   const realCount = Object.keys(rsvps).length;

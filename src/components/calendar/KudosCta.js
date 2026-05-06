@@ -451,8 +451,8 @@ function setSub(el, text) {
 
 // ─── Styled Components ────────────────────────────────────────────────────────
 const ctaPulse = keyframes`
-  0%, 100% { box-shadow: 0 6px 22px rgba(255,107,107,0.40); }
-  50%       { box-shadow: 0 10px 34px rgba(255,107,107,0.70); }
+  0%, 100% { opacity: 0.92; }
+  50%       { opacity: 1; }
 `;
 
 const ctaThrob = keyframes`
@@ -765,7 +765,6 @@ export default function KudosCta({ event, isSheetContext }) {
     // Publish the event context so HighScoreHud can subscribe to globalBest
     // immediately — without waiting for a press. Re-fires when event/user
     // changes via the deps below.
-    console.log(`[hs] emitEventContext from KudosCta | eventId=${event && event.id} uid=${user ? user.uid : null}`);
     emitMashEventContext({
       eventId: event && event.id,
       uid: user ? user.uid : null,
@@ -825,6 +824,7 @@ export default function KudosCta({ event, isSheetContext }) {
       clearTimeout(hdResetTimerRef.current);
       hdResetTimerRef.current = null;
     }
+    saveFlowInProgressRef.current = false;
     // Comprehensive world-purge: removes every stray spawned DOM node
     // (eggs, beers, stars, pigs, balls, avatars, phrase floaters), restores
     // the body + canvas backgrounds (Twilight overrides them), and force-
@@ -899,7 +899,9 @@ export default function KudosCta({ event, isSheetContext }) {
     }
 
     // Phase A — saving
-    btn.classList.remove('is-mashing', 'is-deep-mashing');
+    // Remove heartbeat before saving so its forwards-fill transform/filter
+    // doesn't stay locked on the button during the save and burn phases.
+    btn.classList.remove('is-mashing', 'is-deep-mashing', 'hd-heartbeat');
     btn.classList.add('is-saving');
     document.body.dataset.mashPhase = 'saving';   // hides GameStatus
     if (numEl) { numEl.textContent = `saving ${fmtCount(hdPressCountRef.current)}`; numEl.style.fontSize = '28px'; }
@@ -937,14 +939,12 @@ export default function KudosCta({ event, isSheetContext }) {
               (cur) => (cur || 0) + finalCount,
             ).catch(() => {});
             // High score write — path: mashHighScores/{eventId}/{uid}/best
-            console.log(`[hs] writing | path=mashHighScores/${event.id}/${sessionUid}/best finalCount=${finalCount}`);
             runTransaction(
               dbRef(database, `mashHighScores/${event.id}/${sessionUid}/best`),
               (cur) => Math.max(cur || 0, finalCount),
             ).then((res) => {
               if (res && res.committed) {
                 const committedBest = (res.snapshot && res.snapshot.val()) || finalCount;
-                console.log(`[hs] write committed | best=${committedBest} eventId=${event.id} uid=${sessionUid}`);
                 emitMashCumulativeWritten({
                   eventId: event.id,
                   uid: sessionUid,
@@ -952,7 +952,6 @@ export default function KudosCta({ event, isSheetContext }) {
                 });
               }
             }).catch((err) => {
-              console.log(`[hs] write FAILED | path=mashHighScores/${event.id}/${sessionUid}/best err=${err && err.message}`);
             });
             logEvent('mash_session_complete', {
               eventId: event.id,
@@ -968,8 +967,6 @@ export default function KudosCta({ event, isSheetContext }) {
             count: finalCount,
             anonymous: true,
           });
-        } else {
-          console.log(`[hs] skipping write | finalCount=${finalCount} sessionUid=${!!sessionUid} eventId=${event ? event.id : 'null'}`);
         }
 
         hdPressCountRef.current = 0;
@@ -1199,7 +1196,15 @@ export default function KudosCta({ event, isSheetContext }) {
         // mid-burn makes the UI look like a second failure.
         if (!saveFlowInProgressRef.current) {
           const press = hdPressCountRef.current;
-          if (press > 0 && !hdResetTimerRef.current) {
+          if (press > 0) {
+            // Always replace any existing timer with the post-mini-game grace
+            // period. A press during the outcome status phase re-arms the idle
+            // save timer (2500ms), which would block the heartbeat via the old
+            // !hdResetTimerRef.current guard — now we clear and replace it.
+            if (hdResetTimerRef.current) {
+              clearTimeout(hdResetTimerRef.current);
+              hdResetTimerRef.current = null;
+            }
             hdResetTimerRef.current = setTimeout(() => {
               runSaveFlow();
             }, POST_MINI_GAME_GRACE_MS);
@@ -1209,8 +1214,7 @@ export default function KudosCta({ event, isSheetContext }) {
             const btn = btnRef.current;
             if (btn && document.body.dataset.ambHeartbeat !== 'off') {
               btn.classList.remove('hd-heartbeat');
-              // eslint-disable-next-line no-unused-expressions
-              btn.offsetWidth;
+              void btn.offsetWidth; // flush CSSOM so remove+add is not batched as a no-op
               btn.classList.add('hd-heartbeat');
             }
           }
@@ -1363,28 +1367,29 @@ export default function KudosCta({ event, isSheetContext }) {
       }
       // First press in the session — if signed in, mark this event as
       // interacted-with so they qualify for the Bad Eggs list if they
-      // never RSVP. Fire-and-forget; safe if rules reject.
+      // never RSVP. Guarded by sessionStorage so repeat sessions in the
+      // same page load don't fire redundant writes.
       if (user && event && event.id) {
-        try {
-          dbSet(
-            dbRef(database, `eventInteractions/${event.id}/${user.uid}/lastAt`),
-            Date.now()
-          ).catch(() => {});
-          dbSet(
-            dbRef(database, `eventInteractions/${event.id}/${user.uid}/mashed`),
-            true
-          ).catch(() => {});
-        } catch (_) {}
+        const interactionKey = `sl_mashed_${event.id}`;
+        let alreadyWritten = false;
+        try { alreadyWritten = !!sessionStorage.getItem(interactionKey); } catch (_) {}
+        if (!alreadyWritten) {
+          try {
+            sessionStorage.setItem(interactionKey, '1');
+          } catch (_) {}
+          try {
+            dbSet(
+              dbRef(database, `eventInteractions/${event.id}/${user.uid}/lastAt`),
+              Date.now()
+            ).catch(() => {});
+            dbSet(
+              dbRef(database, `eventInteractions/${event.id}/${user.uid}/mashed`),
+              true
+            ).catch(() => {});
+          } catch (_) {}
+        }
       }
     }
-    try {
-      logEvent('mash_button_clicked', {
-        eventId: event && event.id,
-        pressCount,
-        uid: user ? user.uid : null,
-        signedIn: !!user,
-      });
-    } catch (_) {}
     const row = btn.parentElement;
     const numEl = row && row.querySelector('.mash-num');
     const subEl = row && row.querySelector('.mash-sub');
@@ -1399,7 +1404,7 @@ export default function KudosCta({ event, isSheetContext }) {
     // Cap concurrent emojis at 12 per press (was 15) and stagger spawns
     // across a wider window (~1100ms vs 800ms) so they release in a more
     // visible cascade rather than a tight burst.
-    const dogCount = Math.min(pressCount, 8);
+    const dogCount = Math.min(pressCount, 5);
     const stagger = Math.max(22, Math.floor(1100 / dogCount));
     const pRainbow = rainbowChance(pressCount);
     for (let i = 0; i < dogCount; i++) {
@@ -1423,7 +1428,7 @@ export default function KudosCta({ event, isSheetContext }) {
     // resets the heartbeat so it only plays through if the user pauses.
     if (document.body.dataset.ambHeartbeat !== 'off') {
       btn.classList.remove('hd-heartbeat');
-      void btn.offsetWidth; // force reflow so the animation actually restarts
+      void btn.offsetWidth; // flush CSSOM so remove+add is not batched as a no-op
       btn.classList.add('hd-heartbeat');
     } else {
       btn.classList.remove('hd-heartbeat');
@@ -1440,9 +1445,10 @@ export default function KudosCta({ event, isSheetContext }) {
     const hue = (pressCount * 14) % 360;
     btn.style.setProperty('--hd-hue', String(hue));
 
-    // Mash energy + shockwave
-    setMashEnergy(pressCount);
-    applyShockwave();
+    // Mash energy + shockwave (shockwave only during intro phase — canvas
+    // covers the calendar after press 25 so the effect isn't visible anyway).
+    setMashEnergy(pressCount, btn);
+    if (pressCount < 25) applyShockwave();
 
     // Strobe
     const strobeBoost = 1.5 + Math.min(pressCount * 0.04, 1.5);

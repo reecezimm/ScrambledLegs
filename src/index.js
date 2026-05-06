@@ -14,13 +14,7 @@ import './services/errorLogger';
 // Per-tab session tracking — writes to sessions/{sid}, attributes events.
 import './services/sessionTracker';
 
-// Create unique IDs for the application
 const BUILD_ID = `${process.env.NODE_ENV}-${new Date().toISOString().replace(/[:.]/g, '')}`;
-// eslint-disable-next-line no-unused-vars
-const BUILD_TIMESTAMP = new Date().getTime();
-
-// Log startup information
-console.log(`Application starting with build ID: ${BUILD_ID}`);
 
 const GlobalStyle = createGlobalStyle`
   * {
@@ -525,23 +519,8 @@ const GlobalStyle = createGlobalStyle`
 
   /* ── idleEmergencyPulse ── */
   @keyframes idleEmergencyPulse {
-    0%, 100% {
-      transform: scale(1);
-      text-shadow:
-        0 0 8px rgba(255,255,255,0.55),
-        0 0 18px rgba(255,199,44,0.55),
-        0 0 30px rgba(255,107,107,0.45),
-        0 4px 14px rgba(0,0,0,0.55);
-    }
-    50% {
-      transform: scale(1.06);
-      text-shadow:
-        0 0 18px rgba(255,255,255,0.95),
-        0 0 36px rgba(255,199,44,0.9),
-        0 0 60px rgba(255,107,107,0.7),
-        0 0 90px rgba(255,255,200,0.4),
-        0 4px 18px rgba(0,0,0,0.55);
-    }
+    0%, 100% { transform: scale(1);    opacity: 0.85; }
+    50%       { transform: scale(1.06); opacity: 1;    }
   }
 
   /* ── burnFlash ── */

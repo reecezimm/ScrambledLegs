@@ -9,13 +9,13 @@ const IS_MOBILE = typeof window !== 'undefined' &&
 
 // Simple mobile-vs-desktop scaling. Mobile gets a 15% cap reduction
 // (80→68) and a 25% shorter lifetime to keep paint cost tolerable.
-export const MAX_ACTIVE_HOTDOGS = IS_MOBILE ? 68 : 80;
+export const MAX_ACTIVE_HOTDOGS = IS_MOBILE ? 25 : 25;
 const LIFETIME_SCALE = IS_MOBILE ? 0.75 : 1.0;
 
 export function incActiveHotDogs() { activeHotDogs++; }
 export function decActiveHotDogs() { activeHotDogs = Math.max(0, activeHotDogs - 1); }
 
-export function setMashEnergy(pressCount) {
+export function setMashEnergy(pressCount, btnEl) {
   const energy = Math.min(Math.max(pressCount / 25, 0), 1);
   const overdrive = Math.min(Math.max((pressCount - 50) / 50, 0), 1);
   document.body.style.setProperty('--mash-energy', energy.toFixed(3));
@@ -58,21 +58,15 @@ export function setMashEnergy(pressCount) {
   // Track the button's actual height so the sub can be translated by exactly
   // -btnH-gap to land just above the button, regardless of padding/scale.
   try {
-    const btnEl = document.querySelector('.hd-cta');
-    if (btnEl) {
-      document.body.style.setProperty('--btn-h', btnEl.clientHeight + 'px');
+    const el = btnEl || document.querySelector('.hd-cta');
+    if (el) {
+      document.body.style.setProperty('--btn-h', el.clientHeight + 'px');
     }
   } catch (_) {}
 
-  // Re-anchor the migration target every press. The press-1 capture freezes
-  // the row's natural position, but content above (e.g. EggMansTake AI text
-  // loading async) can grow the card and push the row down post-capture. By
-  // press 30 the button can drift below the viewport. Each press, compute
-  // the row's CURRENT natural position (rect.top - transformY) and rewrite
-  // --btn-dy so the migration target stays anchored to vh * 0.85.
   try {
     if (document.body.dataset.mashLocked === '1') {
-      const row = document.querySelector('.kudos-row');
+      const row = (btnEl && btnEl.parentElement) || document.querySelector('.kudos-row');
       if (row) {
         const cs = getComputedStyle(row);
         const tMatch = cs.transform && cs.transform.match(/matrix\(([^)]+)\)/);
@@ -92,10 +86,6 @@ export function setMashEnergy(pressCount) {
   const prevLevel = parseInt(document.body.dataset.mashLevel || '0', 10);
   if (level > 0) document.body.dataset.mashLevel = String(level);
   else delete document.body.dataset.mashLevel;
-  // Stage transition logs at key thresholds
-  if (pressCount === 1 || pressCount === 25) {
-    dumpMashLayers(`press ${pressCount}`);
-  }
 }
 
 /**
@@ -425,9 +415,11 @@ const SHOCKWAVE_SELECTOR = [
   '.crew-rank',
 ].join(',');
 
+let _cachedShockwaveEls = null;
+
 export function applyShockwave() {
-  const els = document.querySelectorAll(SHOCKWAVE_SELECTOR);
-  els.forEach(el => {
+  if (!_cachedShockwaveEls) _cachedShockwaveEls = document.querySelectorAll(SHOCKWAVE_SELECTOR);
+  _cachedShockwaveEls.forEach(el => {
     el.style.setProperty('--jx', ((Math.random() - 0.5) * 2).toFixed(2));
     el.style.setProperty('--jy', ((Math.random() - 0.5) * 2).toFixed(2));
     el.style.setProperty('--jr', ((Math.random() - 0.5) * 2).toFixed(2));
@@ -435,6 +427,7 @@ export function applyShockwave() {
 }
 
 export function clearShockwave() {
+  _cachedShockwaveEls = null;
   const els = document.querySelectorAll(SHOCKWAVE_SELECTOR);
   els.forEach(el => {
     el.style.removeProperty('--jx');

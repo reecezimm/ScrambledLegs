@@ -95,6 +95,9 @@ const pong = {
       ctx.setSubStatus(`${hits} HIT${hits === 1 ? '' : 'S'}`);
     }
 
+    // Cache button ref once — it doesn't change between frames.
+    const cachedBtn = document.querySelector('.hd-cta');
+
     function tick(now) {
       if (cancelled || ended) return;
       const dt = Math.min(0.033, (now - lastTime) / 1000);
@@ -103,10 +106,7 @@ const pong = {
       const w = window.innerWidth;
       const h = window.innerHeight;
 
-      // Read paddle (mash button) bounds ONCE per frame. The button is the
-      // actual collider — ball reflects off its TOP, LEFT, and RIGHT edges.
-      // The bottom-of-VIEWPORT (not bottom-of-button) is the miss line.
-      const btn = document.querySelector('.hd-cta');
+      const btn = cachedBtn;
       let bL = Infinity, bR = -Infinity, bT = Infinity, bB = -Infinity;
       if (btn) {
         const r = btn.getBoundingClientRect();

@@ -20,7 +20,7 @@ import { app, database } from './firebase';
 import { ref, get, set, remove, serverTimestamp } from 'firebase/database';
 import { BUILD_SHA } from './buildInfo';
 
-const DEFAULT_MODEL = 'gemini-2.5-flash';
+const DEFAULT_MODEL = 'gemini-3-flash-preview';
 const LOCK_TTL_MS = 30000;
 const POLL_INTERVAL_MS = 1000;
 const POLL_MAX_MS = 5000;
@@ -46,7 +46,7 @@ function _composePrompt(prompt, data) {
 }
 
 function _buildRequest(prompt, options = {}) {
-  const { data, system, maxTokens, temperature } = options;
+  const { data, system, maxTokens, temperature, thinkingLevel } = options;
   const userText = _composePrompt(prompt, data);
   const req = {
     contents: [{ role: 'user', parts: [{ text: userText }] }],
@@ -57,6 +57,7 @@ function _buildRequest(prompt, options = {}) {
   const generationConfig = {};
   if (typeof maxTokens === 'number') generationConfig.maxOutputTokens = maxTokens;
   if (typeof temperature === 'number') generationConfig.temperature = temperature;
+  if (thinkingLevel) generationConfig.thinkingConfig = { thinkingLevel };
   if (Object.keys(generationConfig).length) req.generationConfig = generationConfig;
   return req;
 }

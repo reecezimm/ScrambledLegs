@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useMemo, useState } from 'react';
 import styled from 'styled-components';
 import { useParams } from 'react-router-dom';
 import { useEvents } from '../../hooks/useEvents';
@@ -131,7 +131,13 @@ export default function CalendarWidget() {
     };
   }, []);
 
-  const { upcoming, past } = partitionEvents(events);
+  // partitionMinute changes every 60s so archived events re-partition promptly
+  // without recalculating on every 1-second tick.
+  const partitionMinute = Math.floor(Date.now() / 60000);
+  const { upcoming, past } = useMemo(
+    () => partitionEvents(events),
+    [events, partitionMinute] // eslint-disable-line react-hooks/exhaustive-deps
+  );
 
   const featuredEvent = upcoming[0] || null;
   const comingUpEvents = upcoming.slice(1);

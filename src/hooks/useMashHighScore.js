@@ -56,7 +56,6 @@ export function emitEventContext({ eventId, uid }) {
   const nextEv = eventId || null;
   const nextUid = uid || null;
   if (_session.eventId === nextEv && _session.uid === nextUid) return;
-  console.log(`[hs] emitEventContext | eventId=${nextEv} uid=${nextUid} (was eventId=${_session.eventId} uid=${_session.uid})`);
   _session = { eventId: nextEv, uid: nextUid, active: _session.active };
   notify('sessionStart', _session);
 }
@@ -150,35 +149,29 @@ export function useMashHighScore() {
   useEffect(() => {
     setCumulative(null);
     if (!sessionInfo.eventId || !sessionInfo.uid) {
-      console.log(`[hs] cumulative listener SKIPPED | eventId=${sessionInfo.eventId} uid=${sessionInfo.uid}`);
       return undefined;
     }
     const path = `mashHighScores/${sessionInfo.eventId}/${sessionInfo.uid}/best`;
-    console.log(`[hs] cumulative listener subscribing | path=${path}`);
     const r = dbRef(database, path);
     const unsub = onValue(r, (snap) => {
       const val = snap.val();
-      console.log(`[hs] cumulative received | path=${path} raw=${JSON.stringify(val)} → setting ${typeof val === 'number' ? val : 0}`);
       setCumulative(typeof val === 'number' ? val : 0);
     }, (err) => {
-      console.log(`[hs] cumulative read error | path=${path} err=${err && err.message}`);
       setCumulative(0);
     });
     return () => unsub();
   }, [sessionInfo.eventId, sessionInfo.uid]);
 
   // RTDB listener for the GLOBAL top score across all users for this event.
-  // Queries the per-user `best` fields and grabs the largest. Doesn't
-  // require a uid (anonymous users still see the score-to-beat).
+  // Deferred until the session is active (first press) — HUD is hidden until
+  // current > 0 so there's no visual benefit to loading this before pressing.
   useEffect(() => {
     setGlobalBest(null);
     setGlobalBestUid(null);
     if (!sessionInfo.eventId) {
-      console.log(`[hs] globalBest listener SKIPPED | eventId=${sessionInfo.eventId}`);
       return undefined;
     }
     const path = `mashHighScores/${sessionInfo.eventId}`;
-    console.log(`[hs] globalBest listener subscribing | path=${path}`);
     const q = query(
       dbRef(database, path),
       orderByChild('best'),
@@ -192,11 +185,9 @@ export function useMashHighScore() {
         const n = v && typeof v.best === 'number' ? v.best : 0;
         if (n > topVal) { topVal = n; topKey = child.key; }
       });
-      console.log(`[hs] globalBest received | eventId=${sessionInfo.eventId} topVal=${topVal} topUid=${topKey}`);
       setGlobalBest(topVal);
       setGlobalBestUid(topKey);
     }, (err) => {
-      console.log(`[hs] globalBest read error | path=${path} err=${err && err.message}`);
       setGlobalBest(0);
       setGlobalBestUid(null);
     });

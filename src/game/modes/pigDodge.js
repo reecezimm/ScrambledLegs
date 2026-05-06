@@ -127,12 +127,15 @@ const pigDodge = {
       }
     }
 
+    // Cache button ref once — it doesn't change between frames.
+    const cachedBtn = document.querySelector('.hd-cta');
+
     function tick(now) {
       if (cancelled || ended) return;
       const dt = Math.min(0.05, (now - lastTime) / 1000);
       lastTime = now;
 
-      const btn = document.querySelector('.hd-cta');
+      const btn = cachedBtn;
       if (!btn) {
         rafId = requestAnimationFrame(tick);
         return;

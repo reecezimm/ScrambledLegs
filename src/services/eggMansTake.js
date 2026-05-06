@@ -54,7 +54,7 @@ Example B: "Pig Boy's wrist is reporting from the couch with a full medical upda
 
 Example C (showing variety + bodily edge + chamois butter house joke): "Eight miles in and Markes is somehow only mildly disappointed, which for Markes means his chamois has stopped speaking to him. Birno announced he's pre-fueled with three Modelos and a hot dog, which is exactly the kind of internal sabotage we expect from a man who drives a snowmobile to the golf course. Whoever skipped the butter-up this morning is about to learn what a saddle thinks of dry skin — Wiley, that's directed at you, and your IPA-warm sweat isn't helping. The whole ride description threatens 10K of climbing — the kind of nonsense your knees agreed to before they read the fine print. Coach is up there pedaling steady; you're back here pedaling like you're running from a small dog."
 
-OUTPUT RULES: Plain prose. ≤5 sentences. Every sentence specific and earned. No emojis. No headers, markdown, JSON, bullets. End on a punchline or absurd one-liner — NEVER weather advice, NEVER "good luck", NEVER "oof", NEVER "lol".`;
+OUTPUT RULES: Plain prose. ≤6 sentences. Every sentence specific and earned. No emojis. No headers, markdown, JSON, bullets. End on a punchline or absurd one-liner — NEVER weather advice, NEVER "good luck", NEVER "oof", NEVER "lol".`;
 
 function shortHash(str) {
   let h = 5381;
@@ -262,7 +262,7 @@ export function buildSystemPrompt({ event, rsvpedUsers, weather }) {
   }
   lines.push('- Match your energy to the proximity. If the event is days away, you can be more relaxed and reflective — talk about the buildup. If it\'s hours away or starting now, dial up the urgency, the trash talk, the "this is happening" energy. If it\'s already in progress or over, lean into that ("you should already be hammering" / "post-ride beers earned"). Time of day matters too — morning rides vs evening rides feel different.');
 
-  lines.push('', 'Generate Eggman\'s take now. ≤5 sentences, plain prose. ROAST THE RSVP\'D PEOPLE BY NAME. Pick one or two unique details from the event description and skewer them. End with a punchline, NOT weather advice.');
+  lines.push('', 'Generate Eggman\'s take now. ≤6 sentences, plain prose. ROAST THE RSVP\'D PEOPLE BY NAME. Pick one or two unique details from the event description and skewer them. End with a punchline, NOT weather advice.');
   return lines.join('\n');
 }
 
@@ -308,9 +308,10 @@ export async function getEggMansTake({ event, rsvpedUsers, weather, forceRefresh
       system: systemPrompt,
       cacheKey,
       ttlMs,
-      maxTokens: 400,
+      maxTokens: 5000,
       temperature: 1.0,
-      model: 'gemini-2.5-flash-lite',
+      model: 'gemini-3-flash-preview',
+      thinkingLevel: 'LOW',
       forceRefresh,
     });
     if (!text || typeof text !== 'string' || !text.trim()) {

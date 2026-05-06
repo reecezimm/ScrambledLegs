@@ -57,11 +57,9 @@ export default function MashNowWarning() {
   useEffect(() => {
     if (r && r.flashWarning) {
       setIsVisible(true);
-      console.log(`[warning] ⚠️  MASH NOW! triggered | pressCount=${state.pressCount}`);
 
       const timer = setTimeout(() => {
         setIsVisible(false);
-        console.log(`[warning] ✓ MASH NOW! cleared after 2500ms`);
       }, 2500);
 
       return () => clearTimeout(timer);
@@ -73,8 +71,6 @@ export default function MashNowWarning() {
   if (!isVisible || !r || !r.flashWarning) {
     return null;
   }
-
-  console.log(`[MashNowWarning] 🎯 Rendering MASH NOW! warning | pressCount=${state.pressCount}`);
 
   return (
     <Wrap>

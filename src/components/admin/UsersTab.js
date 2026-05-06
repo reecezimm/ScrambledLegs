@@ -1,8 +1,9 @@
-import React, { useEffect, useMemo, useState } from 'react';
+import React, { useEffect, useMemo, useRef, useState } from 'react';
 import ReactDOM from 'react-dom';
 import styled, { keyframes } from 'styled-components';
 import { ref as dbRef, onValue, update as dbUpdate, query as dbQuery, orderByChild, limitToLast } from 'firebase/database';
-import { database, auth } from '../../services/firebase';
+import { ref as storageRef, uploadBytes, getDownloadURL } from 'firebase/storage';
+import { database, auth, storage } from '../../services/firebase';
 import { sendResetEmail, ADMIN_EMAILS } from '../../services/auth';
 import { findProfile } from '../../data/crewProfiles';
 
@@ -409,6 +410,8 @@ function UserDetailSheet({ user, mashByEvent, rsvpsByEvent, eventsById, sessions
   const [blurbSaving, setBlurbSaving] = useState(false);
   const [genderDraft, setGenderDraft] = useState(user.gender || '');
   const [genderSaving, setGenderSaving] = useState(false);
+  const [photoUploading, setPhotoUploading] = useState(false);
+  const photoInputRef = useRef(null);
   const [resetBusy, setResetBusy] = useState(false);
   const [adminBusy, setAdminBusy] = useState(false);
   const [confirmDel, setConfirmDel] = useState(false);
@@ -556,6 +559,63 @@ function UserDetailSheet({ user, mashByEvent, rsvpsByEvent, eventsById, sessions
     finally { setGenderSaving(false); }
   };
 
+  const onPhotoSelected = async (e) => {
+    const file = e.target.files && e.target.files[0];
+    if (!file) return;
+    if (!file.type.startsWith('image/')) { setErr('File must be an image.'); return; }
+    if (file.size > 5 * 1024 * 1024) { setErr('Image must be under 5 MB.'); return; }
+    setErr(''); setInfo('');
+    setPhotoUploading(true);
+    try {
+      // Compress client-side via canvas before upload.
+      // GIF: upload as-is (canvas loses animation, only captures frame 1).
+      // PNG: resize to max 512px, keep PNG so transparency is preserved.
+      // Everything else (JPEG, WebP, HEIC, etc.): resize + convert to JPEG 80%.
+      let uploadBlob;
+      let uploadMime;
+      if (file.type === 'image/gif') {
+        uploadBlob = file;
+        uploadMime = 'image/gif';
+      } else {
+        const isPng = file.type === 'image/png';
+        uploadMime = isPng ? 'image/png' : 'image/jpeg';
+        uploadBlob = await new Promise((resolve, reject) => {
+          const img = new Image();
+          img.onerror = reject;
+          img.onload = () => {
+            const MAX = 512;
+            const scale = Math.min(1, MAX / Math.max(img.width, img.height));
+            const w = Math.round(img.width * scale);
+            const h = Math.round(img.height * scale);
+            const canvas = document.createElement('canvas');
+            canvas.width = w;
+            canvas.height = h;
+            canvas.getContext('2d').drawImage(img, 0, 0, w, h);
+            canvas.toBlob(
+              (blob) => blob ? resolve(blob) : reject(new Error('Compression failed')),
+              uploadMime,
+              isPng ? undefined : 0.80
+            );
+            URL.revokeObjectURL(img.src);
+          };
+          img.src = URL.createObjectURL(file);
+        });
+      }
+
+      const path = `profilePics/${user.uid}`;
+      const sRef = storageRef(storage, path);
+      await uploadBytes(sRef, uploadBlob, { contentType: uploadMime });
+      const url = await getDownloadURL(sRef);
+      await dbUpdate(dbRef(database, `userProfiles/${user.uid}`), { photoURL: url });
+      setInfo('Photo updated.');
+    } catch (e) {
+      setErr((e && e.message) || 'Upload failed');
+    } finally {
+      setPhotoUploading(false);
+      if (photoInputRef.current) photoInputRef.current.value = '';
+    }
+  };
+
   const onRemoveDevice = async (tokenHash) => {
     setErr('');
     try {
@@ -612,9 +672,36 @@ function UserDetailSheet({ user, mashByEvent, rsvpsByEvent, eventsById, sessions
           <Card>
             <CardLabel>Identity</CardLabel>
             <div style={{ display: 'flex', gap: 14, alignItems: 'center', marginBottom: 12 }}>
-              <SmallAvatar style={{ width: 64, height: 64, fontSize: 28 }} $photo={user.photoURL}>
-                {!user.photoURL && (user.displayName || user.email || '?').charAt(0)}
-              </SmallAvatar>
+              <div style={{ position: 'relative', flexShrink: 0 }}>
+                <SmallAvatar style={{ width: 64, height: 64, fontSize: 28 }} $photo={user.photoURL}>
+                  {!user.photoURL && (user.displayName || user.email || '?').charAt(0)}
+                </SmallAvatar>
+                <button
+                  type="button"
+                  disabled={photoUploading}
+                  onClick={() => photoInputRef.current && photoInputRef.current.click()}
+                  title="Upload profile photo"
+                  style={{
+                    position: 'absolute', inset: 0, borderRadius: '50%',
+                    background: photoUploading ? 'rgba(0,0,0,0.55)' : 'rgba(0,0,0,0)',
+                    border: 'none', cursor: 'pointer', display: 'flex',
+                    alignItems: 'center', justifyContent: 'center',
+                    fontSize: 18, transition: 'background 0.15s',
+                    color: '#fff',
+                  }}
+                  onMouseEnter={e => e.currentTarget.style.background = 'rgba(0,0,0,0.55)'}
+                  onMouseLeave={e => !photoUploading && (e.currentTarget.style.background = 'rgba(0,0,0,0)')}
+                >
+                  {photoUploading ? '…' : '📷'}
+                </button>
+                <input
+                  ref={photoInputRef}
+                  type="file"
+                  accept="image/*"
+                  style={{ display: 'none' }}
+                  onChange={onPhotoSelected}
+                />
+              </div>
               <div style={{ flex: 1, minWidth: 0 }}>
                 {editingName ? (
                   <div style={{ display: 'flex', gap: 6 }}>
