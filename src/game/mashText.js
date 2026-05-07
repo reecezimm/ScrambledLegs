@@ -293,6 +293,12 @@ export const MASH_TEXT_CREW = [
   "Alexa's talking your ear off and still pulling away. Stop listening. Start mashing.",
   "Alexa stopped, helped a stranger, called her mom, walked her dog, and is still faster than you.",
   "Six weeks on a mountain bike and Alexa is doing this to you. Embarrassing.",
+  // Annalise Peck (Ana)
+  "Ana is sun gazing at the summit. She beat you here twenty minutes ago.",
+  "Ana found inner peace on that descent. You found your brakes.",
+  "She's in savasana. She finished. You're still on the climb.",
+  "Ana signed up for this race ten minutes ago. She's already ahead of you.",
+  "Ana is aligned with the cheeseburger. You are not.",
   // Kai Syck (King Kai)
   "King Kai showed up. That name alone carries a legal obligation to send it.",
   "Kai Syck is too nice to drop you. He'll hype you the whole climb. Still faster.",
